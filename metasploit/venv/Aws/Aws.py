@@ -1,6 +1,7 @@
 import boto3
 import paramiko
-from . import config
+from metasploit.venv.Aws import config
+from metasploit.venv.Aws import custom_exceptions
 
 EC2 = 'ec2'
 
@@ -22,7 +23,7 @@ class Aws:
 
     def __init__(self):
         if Aws.aws_instance is not None:
-            raise Exception("cannot init the instance, please use Aws.get_aws_instance() method")
+            raise custom_exceptions.InitializeNewInstanceUsingConstructorException()
         self.client = boto3.client(EC2)
         self.resource = boto3.resource(EC2)
         self.session = boto3.Session()
@@ -361,7 +362,7 @@ class Instance:
         """
         self.instance_obj = Instance.aws.resource.create_instances(**kwargs)[0]
         self.instance_obj.wait_until_running()
-        self.reload()
+        self._reload()
         self.commands_list = []
 
     def get_instance_id(self):
@@ -388,7 +389,7 @@ class Instance:
     def get_instance_obj(self):
         return self.instance_obj
 
-    def reload(self):
+    def _reload(self):
         self.instance_obj.reload()
 
     def start(self):
@@ -396,38 +397,38 @@ class Instance:
         Start the instance and wait till is is on running state
 
         """
-        if self.get_state()['Name'] == 'stopped':
+        if self.get_state()['Name'] == config.STOPPED_STATE:
             self.instance_obj.start()
             self.instance_obj.wait_until_running()
-            self.reload()
+            self._reload()
 
     def stop(self):
         """
         Stop the instance and wait till it's in a stopped state
 
         """
-        if self.get_state()['Name'] == 'running':
+        if self.get_state()['Name'] == config.RUNNING_STATE:
             self.instance_obj.stop()
             self.instance_obj.wait_until_stopped()
-            self.reload()
+            self._reload()
 
     def reboot(self):
         """
         Reboot the instance and wait till it's in a running state
 
         """
-        if self.get_state()['Name'] == 'running':
+        if self.get_state()['Name'] == config.RUNNING_STATE:
             self.instance_obj.reboot()
             self.instance_obj.wait_until_running()
-            self.reload()
+            self._reload()
 
     def terminate(self):
         """
-        Terminate the instance and make the current instance None
+        Terminate the instance and delete the current instance
 
         """
         self.instance_obj.terminate()
-        self.instance_obj = None
+        del self
 
     def execute_commands(self, commands):
         """
@@ -436,15 +437,17 @@ class Instance:
         Args:
             commands (list(str)) - list of all the commands to execute on the instance
 
+        Raises:
+            Exception in case the command fails over the instance
         """
-        if self.get_state()['Name'] == 'running':
+        if self.get_state()['Name'] == config.RUNNING_STATE:
             ssh_flag = True
             while ssh_flag:
                 try:
                     ssh = self.SSH(
                         hostname=self.get_public_dns_name(),
                         username=config.USER_NAME,
-                        private_key='/home/gafik/MetasploitFinalProject/default_key_pair_name.pem'
+                        private_key=config.DEFAULT_PRIVATE_KEY_PATH
                     )
                     for command in commands:
                         stdin, stdout, stderr = ssh.execute_command(command=command)
@@ -457,12 +460,13 @@ class Instance:
                             self.commands_list.append(cmd_details)
                         else:
                             ssh_flag = False
-                            raise Exception("Command execution failed!")
+                            raise custom_exceptions.CommandFailureException(
+                                cmd=command, instance_id=self.get_instance_id()
+                            )
                     ssh.close_connection()
                     ssh_flag = False
                 except Exception as error:
                     print(error)
-            print("done")
 
     class SSH:
         """
@@ -522,18 +526,5 @@ class Instance:
 
 
 ins = Instance(config.CREATE_INSTANCES_DICT)
-ins.execute_commands(['sudo yum install -y docker'])
-
-
-#
-# # aws.get_credentials()
-# # print(aws.get_pair_keys_names())
-# # print(aws.delete_key_pairs(**{"KeyName": "myFirstInstance"}))
-# group_id = aws.create_security_group(GroupName='new_security_group', Description='something')
-# aws.modify_security_group(group_id=group_id, IpProtocol='tcp', FromPort=22, ToPort=22, CidrIp='0.0.0.0/0')
-#aws.create_instances(config.CREATE_INSTANCES_DICT)
-# print("all done")
-# aws.stop_instances()
-#aws.get_chosen_state_of_instances("terminated")
-# aws.launch_instances()
-# aws.stop_instances()
+ins.execute_commands(['ls -la', 'not good command'])
+print("all done")
