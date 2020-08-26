@@ -19,5 +19,5 @@ class InitializeNewInstanceUsingConstructorException(Exception):
     """
 
     def __init__(self):
-        self.msg = "Cannot init the instance using constructor, please use use Aws.get_aws_instance() method"
+        self.msg = "Cannot init the instance using constructor, please use AwsAccess.get_aws_access_instance() method"
         super().__init__(self.msg)

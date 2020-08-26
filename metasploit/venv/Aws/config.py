@@ -23,10 +23,6 @@ MODIFY_SECURITY_GROUP_DICT = {'group_id': DEFAULT_SECURITY_GROUP_ID,
                               'ToPort': SSH_PORT,
                               'CidrIp': CIDR_IP}
 
-SEND_COMMAND_DICT = {'InstanceIds': ['i-0d88035ac1884d2f6'],
-                     "DocumentName": 'AWS-RunShellScript',
-                     "Parameters": {'commands': ["ls -la"]}}
-
 USER_NAME = 'ec2-user'
 RUNNING_STATE = 'running'
 STOPPED_STATE = 'stopped'
