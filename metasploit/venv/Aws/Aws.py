@@ -339,8 +339,4 @@ client2 = docker.DockerClient(base_url='tcp://3.131.82.175:2375')
 print()
 
 
-# print("done")
-# ins = Instance(config.CREATE_INSTANCES_DICT)
-# ins.execute_commands(['ls -la', 'not good command'])
-# print("all done")
 
