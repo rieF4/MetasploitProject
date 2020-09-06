@@ -383,7 +383,9 @@ class Instance:
             hostname=self.get_public_dns_name(), username=config.USER_NAME, private_key=config.DEFAULT_PRIVATE_KEY_PATH
         )
         self._init_docker_server_on_instance()
-        self._docker = Docker(protocol='tcp', docker_server_ip=self.get_public_ip_address(), docker_port=2375)
+        self._docker = Docker(
+            protocol='tcp', docker_server_ip=self.get_public_ip_address(), docker_port=config.DOCKER_PORT
+        )
 
     def get_commands(self):
         return self._commands
@@ -601,8 +603,31 @@ class InstanceCollection(object):
 
         Args:
             instance: an instance object to be added.
+
+        Returns:
+            True if addition was successful, False otherwise.
         """
-        InstanceCollection.instances.append(instance)
+        if isinstance(instance, Instance):
+            InstanceCollection.instances.append(instance)
+            return True
+        return False
+
+    @staticmethod
+    def remove(instance_id):
+        """
+        Remove the instance from the collection.
+
+        Args:
+            instance_id (str): the instance id to delete.
+
+        Returns:
+            True if removing the instance was successful, False otherwise.
+        """
+        for ins in InstanceCollection.instances:
+            if ins.get_instance_id() == aws_api.get_resource().Instance(instance_id):
+                InstanceCollection.instances.remove(ins)
+                return True
+        return False
 
 
 aws_api = AwsAccess.get_aws_access_instance()
@@ -713,7 +738,8 @@ def delete_security_group(security_group_id):
     try:
         aws_api.get_resource().SecurityGroup(security_group_id).delete()
         return True
-    except Exception:
+    except Exception as e:
+        print(e)
         return False
 
 
@@ -802,10 +828,30 @@ def create_instance(kwargs):
         Instance: instance object if successful, None otherwise
             """
     try:
-        instance = Instance(**kwargs)
+        instance = Instance(kwargs)
         InstanceCollection.add(instance=instance)
         return instance
-    except Exception:
+    except Exception as e:
+        print(e)
+        return None
+
+
+def create_container(instance, image, command, kwargs):
+    """
+    Create a container over a an instance ID.
+
+    Args:
+        instance (Instance): instance object.
+        image (str): image name that the docker will be created with.
+        command (str): the command to run on the container.
+        kwargs (dict): https://docker-py.readthedocs.io/en/stable/containers.html#container-objects
+    """
+    try:
+        return instance.get_docker().get_container_collection().create(
+            image=image, command=command, **kwargs
+        )
+    except Exception as e:
+        print(e)
         return None
 
 
@@ -897,8 +943,8 @@ class Docker(object):
         return self.docker_client.configs
 
 
+
 ins = Instance(config.CREATE_INSTANCES_DICT)
 d = ins.get_docker()
 print("started AWS file ")
 ins.terminate()
-
