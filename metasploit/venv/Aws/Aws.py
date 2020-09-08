@@ -829,8 +829,10 @@ def create_instance(kwargs):
             """
     try:
         instance = Instance(kwargs)
-        InstanceCollection.add(instance=instance)
-        return instance
+        if InstanceCollection.add(instance=instance):
+            return instance
+        else:
+            print("could not add instance")
     except Exception as e:
         print(e)
         return None
@@ -944,7 +946,7 @@ class Docker(object):
 
 
 
-ins = Instance(config.CREATE_INSTANCES_DICT)
-d = ins.get_docker()
-print("started AWS file ")
-ins.terminate()
+# ins = Instance(config.CREATE_INSTANCES_DICT)
+# d = ins.get_docker()
+# print("started AWS file ")
+# ins.terminate()
