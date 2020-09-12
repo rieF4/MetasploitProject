@@ -163,226 +163,77 @@ class AwsAccess:
     #     return instances_ids
 
 
-class Image:
+
+# class KeyPair:
+#     """
+#     This class represents a Key pair in AWS ec2
+#
+#     Attributes:
+#         key_pair_obj (KeyPair) - The object of the key pair
+#     """
+#     aws = AwsAccess.get_aws_access_instance()
+#
+#     def __init__(self, key_name):
+#         """
+#         Creates a new keyPair object
+#
+#         Args:
+#             key_name (str) - The key pair will be created with the provided given name
+#         """
+#         self.key_pair_obj = KeyPair.aws.resource.KeyPair(key_name)
+#
+#     def get_name(self):
+#         return self.key_pair_obj.key_name
+#
+#     def get_id(self):
+#         return self.key_pair_obj.key_id
+#
+#     def delete(self, kwargs):
+#         """
+#         Deletes the specified key pair, by removing the public key from Amazon EC2.
+#
+#         Args:
+#             kwargs =
+#                 KeyPairId='string',
+#                 DryRun=True|False
+#         """
+#         self.key_pair_obj.delete(**kwargs)
+
+
+class DockerServerInstance(object):
     """
-    This class represents an image in the AWS ec2
+    This class represents an instance in AWS with a docker server configured.
 
     Attributes:
-        image_obj (Image) - The object of the image
-    """
-    aws = AwsAccess.get_aws_access_instance()
-
-    def __init__(self, image_id):
-        """
-        Creates a new Image object
-
-        Args:
-            image_id  (str) - The image id will be used to define the image object
-        """
-        self.image_obj = Image.aws.resource.Image(image_id)
-
-    def get_id(self):
-        return self.image_obj.image_id
-
-    def get_type(self):
-        return self.image_obj.image_type
-
-    def get_state(self):
-        return self.image_obj.state
-
-    def reload(self):
-        self.image_obj.reload()
-
-
-class KeyPair:
-    """
-    This class represents a Key pair in AWS ec2
-
-    Attributes:
-        key_pair_obj (KeyPair) - The object of the key pair
-    """
-    aws = AwsAccess.get_aws_access_instance()
-
-    def __init__(self, key_name):
-        """
-        Creates a new keyPair object
-
-        Args:
-            key_name (str) - The key pair will be created with the provided given name
-        """
-        self.key_pair_obj = KeyPair.aws.resource.KeyPair(key_name)
-
-    def get_name(self):
-        return self.key_pair_obj.key_name
-
-    def get_id(self):
-        return self.key_pair_obj.key_id
-
-    def delete(self, kwargs):
-        """
-        Deletes the specified key pair, by removing the public key from Amazon EC2.
-
-        Args:
-            kwargs =
-                KeyPairId='string',
-                DryRun=True|False
-        """
-        self.key_pair_obj.delete(**kwargs)
-
-
-class SecurityGroup:
-    """
-    This class represents a security group in AWS ec2
-
-    Attributes:
-        _security_group_obj (SecurityGroup) - Object of the security group
-    """
-    aws = AwsAccess.get_aws_access_instance()
-
-    def __init__(self, kwargs):
-        """
-            Creates a new security group in the user's _session in ec2 AWS
-
-            Args:
-                kwargs(dict) - This is the API post request to create a security group in AWS
-
-            Examples:
-                kwargs =
-                    Description='string',
-                    GroupName='string',
-                    VpcId='string',
-                    TagSpecifications=[
-                    {
-                        'ResourceType': '_client-vpn-endpoint'|'customer-gateway'
-                        'Tags': [
-                            {
-                                'Key': 'string',
-                                'Value': 'string'
-                            },
-                        ]
-                    },
-                ],
-                    DryRun=True|False
-        """
-        self._security_group_obj = SecurityGroup.aws.client.create_security_group(**kwargs)
-
-    def get_group_id(self):
-        return self._security_group_obj.group_id
-
-    def get_group_name(self):
-        return self._security_group_obj.group_name
-
-    def reload(self):
-        self._security_group_obj.reload()
-
-    def get_group_obj(self):
-        return self._security_group_obj
-
-    def modify(self, kwargs):
-        """
-        Modify the security group configuration
-
-        Args:
-            kwargs(dict) - This is the API post request to modify a security group in AWS
-
-        Examples:
-            kwargs =
-                     DryRun=True|False,
-                     IpPermissions=[
-                {
-                    'FromPort': 123,
-                    'IpProtocol': 'string',
-                    'IpRanges': [
-                        {
-                            'CidrIp': 'string',
-                            'Description': 'string'
-                        },
-                    ],
-                    'Ipv6Ranges': [
-                        {
-                            'CidrIpv6': 'string',
-                            'Description': 'string'
-                        },
-                    ],
-                    'PrefixListIds': [
-                    {
-                        'Description': 'string',
-                        'PrefixListId': 'string'
-                    },
-                 ],
-                'ToPort': 123,
-                'UserIdGroupPairs': [
-                    {
-                        'Description': 'string',
-                        'GroupId': 'string',
-                        'GroupName': 'string',
-                        'PeeringStatus': 'string',
-                        'UserId': 'string',
-                        'VpcId': 'string',
-                        'VpcPeeringConnectionId': 'string'
-                    },
-                ]
-            },
-        ],
-                    CidrIp='string',
-                    FromPort=123,
-                    IpProtocol='string',
-                    ToPort=123,
-                    SourceSecurityGroupName='string',
-                    SourceSecurityGroupOwnerId='string'
-        """
-        self._security_group_obj.authorize_ingress(**kwargs)
-
-    def delete(self, kwargs):
-        """
-        Deletes a security group in ec2 AWS
-
-        Args:
-            kwargs =
-                GroupId='string',
-                GroupName='string',
-                DryRun=True|False
-        """
-        self._security_group_obj.delete(**kwargs)
-
-
-class Instance:
-    """
-    This class represents an instance in AWS
-
-    Attributes:
-        _instance_obj (Instance): a aws instance type.
+        _instance_obj (Aws.Instance): a aws instance object.
         _commands (list(Command)): a list of all the _commands that were executed on this instance.
         _ssh (SSH): a SSH client that opens a connection to the instance.
         _docker (Docker): a docker class that represents docker-container over an instance.
     """
-    aws = AwsAccess.get_aws_access_instance()
 
-    def __init__(self, kwargs):
+    def __init__(self, instance_obj, ssh_flag=False, init_docker_server_flag=False):
         """
         Args:
-            kwargs (dict) - The API post request to create the instance
+            instance_obj (Aws.Instance): Aws instance object.
+            ssh_flag (bool): indicate if the instance requires a SSH connection.
+            True to open connection, False otherwise.
+            init_docker_server_flag (bool): indicate if the instance needs to be configured with a docker server.
+            True to deploy docker server, False means it's already deployed.
 
-        Examples:
-            kwargs =
-                ImageId='ami-0bdcc6c05dec346bf',
-                InstanceType='t2.micro',
-                MaxCount=1,
-                MinCount=1,
-                KeyName='MyFirstInstance'
-                SecurityGroupIds=['group_id']
-
-            instance = self._resource.create_instances(**kwargs)
-            The get API call is an instance object
         """
-        self._instance_obj = Instance.aws.get_resource().create_instances(**kwargs)[0]
-        self._instance_obj.wait_until_running()
-        self._reload()
+        self._instance_obj = instance_obj
         self._commands = []
-        self._ssh = SSH(
-            hostname=self.get_public_dns_name(), username=config.USER_NAME, private_key=config.DEFAULT_PRIVATE_KEY_PATH
-        )
-        self._init_docker_server_on_instance()
+
+        if ssh_flag:
+            self._ssh = SSH(
+                hostname=self.get_public_dns_name(),
+                username=config.USER_NAME,
+                private_key=config.DEFAULT_PRIVATE_KEY_PATH
+            )
+
+        if init_docker_server_flag:
+            self._init_docker_server_on_instance()
+
         self._docker = Docker(
             protocol='tcp', docker_server_ip=self.get_public_ip_address(), docker_port=config.DOCKER_PORT
         )
@@ -462,7 +313,6 @@ class Instance:
 
         """
         self._instance_obj.terminate()
-        del self
 
     def execute_shell_commands(self, commands):
         """
@@ -573,66 +423,6 @@ class Instance:
             return self._command
 
 
-class InstanceCollection(object):
-    instances = []
-
-    @staticmethod
-    def get(instance_id):
-        """
-        Get the instance object by id.
-
-        Args:
-            instance_id (str): the instance id to search for.
-
-        Returns:
-            Instance: an instance object if found, None otherwise.
-        """
-        for ins in InstanceCollection.instances:
-            if ins.get_instance_id() == aws_api.get_resource().Instance(instance_id):
-                return ins
-        return None
-
-    @staticmethod
-    def list():
-        return InstanceCollection.instances
-
-    @staticmethod
-    def add(instance):
-        """
-        Add an instance object to the collection.
-
-        Args:
-            instance: an instance object to be added.
-
-        Returns:
-            True if addition was successful, False otherwise.
-        """
-        if isinstance(instance, Instance):
-            InstanceCollection.instances.append(instance)
-            return True
-        return False
-
-    @staticmethod
-    def remove(instance_id):
-        """
-        Remove the instance from the collection.
-
-        Args:
-            instance_id (str): the instance id to delete.
-
-        Returns:
-            True if removing the instance was successful, False otherwise.
-        """
-        for ins in InstanceCollection.instances:
-            if ins.get_instance_id() == aws_api.get_resource().Instance(instance_id):
-                InstanceCollection.instances.remove(ins)
-                return True
-        return False
-
-
-aws_api = AwsAccess.get_aws_access_instance()
-
-
 class SSH:
     """
     This is a class to connect with ssh to a remote machine.
@@ -717,12 +507,13 @@ def create_security_group(kwargs):
                 DryRun=True|False
 
         Returns:
-            str: a security group id if created, empty string otherwise.
+            SecurityGroup: a security group object if created, None otherwise.
     """
     try:
-        return aws_api.get_client().create_security_group(**kwargs)['GroupId']
-    except Exception:
-        return ""
+        return aws_api.get_resource().SecurityGroup(aws_api.get_client().create_security_group(**kwargs)['GroupId'])
+    except Exception as e:
+        print(e)
+        return None
 
 
 def delete_security_group(security_group_id):
@@ -825,14 +616,31 @@ def create_instance(kwargs):
         The get API call is an instance object
 
     Returns:
-        Instance: instance object if successful, None otherwise
-            """
+        DockerServerInstance: instance object if successful, None otherwise
+    """
     try:
-        instance = Instance(kwargs)
-        if InstanceCollection.add(instance=instance):
-            return instance
-        else:
-            print("could not add instance")
+        aws_instance = aws_api.get_resource().create_instances(**kwargs)[0]
+        aws_instance.wait_until_running()
+        aws_instance.reload()
+        return DockerServerInstance(instance_obj=aws_instance, ssh_flag=True, init_docker_server_flag=True)
+    except Exception as e:
+        print(e)
+        return None
+
+
+def get_docker_server_instance(id, ssh_flag=False):
+    """
+    Get the docker server instance object.
+
+    Args:
+        id (str): instance id.
+        ssh_flag (bool): True if ssh connection needs to be deployed, False otherwise.
+
+    Returns:
+        DockerServerInstance: a docker server object if exits, None otherwise.
+    """
+    try:
+        return DockerServerInstance(instance_obj=aws_api.get_resource().Instance(id), ssh_flag=ssh_flag)
     except Exception as e:
         print(e)
         return None
@@ -843,10 +651,13 @@ def create_container(instance, image, command, kwargs):
     Create a container over a an instance ID.
 
     Args:
-        instance (Instance): instance object.
+        instance (DockerServerInstance): instance docker server object.
         image (str): image name that the docker will be created with.
         command (str): the command to run on the container.
-        kwargs (dict): https://docker-py.readthedocs.io/en/stable/containers.html#container-objects
+        kwargs (dict): Keyword arguments: https://docker-py.readthedocs.io/en/stable/containers.html#container-objects
+
+    Returns:
+        Container: a container object if created successfully, False otherwise.
     """
     try:
         return instance.get_docker().get_container_collection().create(
@@ -871,6 +682,7 @@ def create_new_key_pair(key_name):
         return aws_api.get_resource().KeyPair(key_name)
     except Exception:
         return None
+
 
 
 class Docker(object):
@@ -945,8 +757,13 @@ class Docker(object):
         return self.docker_client.configs
 
 
+aws_api = AwsAccess.get_aws_access_instance()
 
-# ins = Instance(config.CREATE_INSTANCES_DICT)
+
+# ins = create_instance(kwargs=config.CREATE_INSTANCES_DICT)
 # d = ins.get_docker()
+# d2 = DockerServerInstance(instance_obj=aws_api.get_resource().Instance(ins.get_instance_id())).get_docker()
+#
 # print("started AWS file ")
 # ins.terminate()
+

@@ -1,12 +1,12 @@
 from metasploit.venv.Aws import Aws
-from flask import Flask, Response
+from flask import Flask, Response, make_response
 from flask import jsonify
 from pymongo import MongoClient
 from flask_restful import Api, abort, request
 
 
-app = Flask(__name__)
-api = Api(app=app)
+# app = Flask(__name__)
+# api = Api(app=app)
 
 db_client = MongoClient(
     'mongodb+srv://Metasploit:FVDxbg312@metasploit.gdvxn.mongodb.net/metasploit?retryWrites=true&w=majority'
@@ -14,9 +14,17 @@ db_client = MongoClient(
 metasploit_db = db_client['Metasploit']
 
 ID = "_id"
+CONTAINERS = "Containers"
+DOCKER = "Docker"
+PUSH = "$push"
+SET = "$set"
+INSTANCES = "Instances"
+
+# make_response()
 
 class DatabaseCollections:
     INSTANCES = metasploit_db['instances']
+    INSTANCES_OBJECTS = metasploit_db['instancesObjects']
     SECURITY_GROUPS = metasploit_db['securityGroups']
     KEY_PAIRS = metasploit_db['keyPairs']
 
@@ -53,17 +61,17 @@ class EndpointAction(object):
             kwargs (dict): Keyword arguments.
 
         Returns:
-            Jsonify: A jsonify response of the requested action.
+            Jsonify: A jsonify response of the requested action if found, None otherwise.
         """
         # Perform the function
         answer = self.function(*args, **kwargs)
 
         # Create the answer (bundle it in a correctly formatted HTTP answer)
-        if isinstance(answer, str):
+        if isinstance(answer, tuple):
             # If it's a string, we bundle it has a HTML-like answer
-            self.response = Response(answer, status=200, headers={})
-        else:
-            # If it's something else (dict, ..) we jsonify and send it
+            # self.response = Response(answer, status=200, headers={})
+            return answer
+        elif isinstance(answer, dict):
             self.response = jsonify(answer)
 
         return self.response
@@ -79,7 +87,7 @@ class FlaskAppWrapper(object):
     app = Flask(__name__)
 
     def __init__(self):
-        self._api = Api(app=app)
+        self._api = Api(app=FlaskAppWrapper.app)
 
     def get_app(self):
         """
@@ -132,27 +140,78 @@ class FlaskAppWrapper(object):
                 print(e)
 
 
+def error_decorator(func):
+    def wrapper(*args, **kwargs):
+        api_response = func(*args, **kwargs)
+        if api_response.get_response():
+            return api_response.get_response()
+        else:
+            abort(Response(api_response.get_error(), api_response.get_http_status_code()))
+    return wrapper
+
+
+class ApiResponse(object):
+    """
+    This is a class to represent an API response.
+
+    Attributes:
+        response (dict): a response from the database.
+        http_status_code (int): the http status code of the response.
+        error (str): error message if needed.
+    """
+    def __init__(self, response, http_status_code=200, error=""):
+        self._response = response
+        self._http_status_code = http_status_code
+        self._error = error
+
+    def get_response(self):
+        return self._response
+
+    def get_http_status_code(self):
+        return self._http_status_code
+
+    def get_error(self):
+        return self._error
+
+
 class SecurityGroupsApi(object):
-    
+
     @staticmethod
+    @error_decorator
     def get_security_groups():
         """
         Get all the security groups available in the database.
 
         Returns:
-            Json: a json representation of the security groups response.
+            dict: a security groups response if found, empty dict otherwise.
         """
-        return find_documents(
-            request={},  # means bring everything in the collection
+        security_groups = find_documents(
+            document={},  # means bring everything in the collection
             collection_type=DatabaseCollections.SECURITY_GROUPS,
             collection_name="SecurityGroups",
             single_document=False
         )
-    
+
+        return ApiResponse(
+            response=security_groups,
+            http_status_code=200 if security_groups else 404,
+            error="There aren't any security groups to display"
+        )
+        # return security_groups if security_groups else abort(Response("There aren't any security groups available", 404))
+
     @staticmethod
     def get_specific_security_group(id):
-        return find_documents(request={ID: id}, collection_type=DatabaseCollections.SECURITY_GROUPS)
-    
+        """
+        Get specific security group.
+
+        Args:
+            id (str): security group id.
+
+        Returns:
+            dict: a security group response if found, empty dict otherwise.
+        """
+        return find_documents(document={ID: id}, collection_type=DatabaseCollections.SECURITY_GROUPS)
+
     @staticmethod
     def create_security_groups():
         """
@@ -172,35 +231,45 @@ class SecurityGroupsApi(object):
         }
 
         Returns:
-            Json: a json representation of a security group response.
+            dict: a security groups response if created successfully, empty dict otherwise.
         """
         security_groups_requests = request.json
         security_groups_response = {}
-        for index, req in enumerate(security_groups_requests.values(), 1):
-            security_group_id = Aws.create_security_group(kwargs=req)
 
-            if security_group_id:
+        for key, req in security_groups_requests.items():
+            security_group_obj = Aws.create_security_group(kwargs=req)
+
+            if security_group_obj:
                 security_group_database = prepare_security_group_response(
-                    id=security_group_id, path=request.base_url
+                    security_group_obj=security_group_obj, path=request.base_url
                 )
                 DatabaseCollections.SECURITY_GROUPS.insert_one(document=security_group_database)
-                security_groups_response[index] = security_group_database
+                security_groups_response[key] = security_group_database
             else:
                 abort(409, message=f"Unable to create a new security group with the following params: {req}")
 
         return security_groups_response
-    
+
     @staticmethod
     def delete_specific_security_group(id):
-        security_group = find_documents(request={ID: id}, collection_type=DatabaseCollections.SECURITY_GROUPS)
+        """
+        Delete a security group by id.
+
+        Args:
+            id (str): security group id.
+
+        Returns:
+
+        """
+        security_group = find_documents(document={ID: id}, collection_type=DatabaseCollections.SECURITY_GROUPS)
+
         if Aws.delete_security_group(security_group_id=id):
-            if delete_documents(
-                    collection_type=DatabaseCollections.SECURITY_GROUPS, document=security_group, single_document=True
-            ):
-                return {}, 204  # means success
+
+            if delete_documents(collection_type=DatabaseCollections.SECURITY_GROUPS, document=security_group):
+                return '', 204  # means success
         else:
-            return {}, 202
-    
+            return '', 404
+
     @staticmethod
     def modify_security_group_inbound_permissions(id):
         """
@@ -210,21 +279,23 @@ class SecurityGroupsApi(object):
             id (str): the id of the security group.
 
         Returns:
-            Json: a json object parsed as a dictionary to the client.
+            dict: a security group response with the modification.
         """
         inbound_permissions_update_request = request.json
         err_msg = f"unable to update security group {id}"
-        find_documents(request={ID: id}, collection_type=DatabaseCollections.SECURITY_GROUPS)
+        document = {ID: id}
+
+        find_documents(document=document, collection_type=DatabaseCollections.SECURITY_GROUPS)
 
         if Aws.modify_security_group(security_group_id=id, kwargs=inbound_permissions_update_request):
             ip_permissions = Aws.aws_api.get_resource().SecurityGroup(id).ip_permissions
             if update_document(
                     fields={"IpPermissionsInbound": ip_permissions},
                     collection_type=DatabaseCollections.SECURITY_GROUPS,
-                    operation="$set",
+                    operation=SET,
                     id=id
             ):
-                return find_documents(request={ID: id}, collection_type=DatabaseCollections.SECURITY_GROUPS)
+                return find_documents(document=document, collection_type=DatabaseCollections.SECURITY_GROUPS)
             else:
                 abort(409, message=err_msg)
         else:
@@ -232,7 +303,7 @@ class SecurityGroupsApi(object):
 
 
 class InstancesApi(object):
-    
+
     @staticmethod
     def create_instances():
         """
@@ -260,53 +331,71 @@ class InstancesApi(object):
         }
 
         Returns:
-            Json: a json representation of a create instances response.
+            dict: a create instances response with, empty dict otherwise.
         """
         create_instances_requests = request.json
         create_instances_response = {}
 
-        for index, req in enumerate(create_instances_requests.values(), 1):
+        for key, req in create_instances_requests.items():
+            instance_obj = Aws.create_instance(kwargs=req)
 
-            instance = Aws.create_instance(kwargs=req)
-
-            if instance:
-                instance_response = prepare_instance_response(instance_obj=instance, path=request.base_url)
+            if instance_obj:
+                instance_response = prepare_instance_response(instance_obj=instance_obj, path=request.base_url)
                 DatabaseCollections.INSTANCES.insert_one(document=instance_response)
-                create_instances_response[index] = instance_response
+                create_instances_response[key] = instance_response
             else:
                 abort(409, message=f"Unable to create a new instance with the following params {req}")
 
         return create_instances_response
-    
+
     @staticmethod
     def get_all_instances():
         """
         Get all the instances available at the server.
 
         Returns:
-             dict: a json representation of the instances response.
+             dict: the instances response, empty dict otherwise.
         """
         return find_documents(
-            request={},  # means bring everything in the collection
+            document={},  # means bring everything in the collection
             collection_type=DatabaseCollections.INSTANCES,
-            collection_name="Instances",
+            collection_name=INSTANCES,
             single_document=False
         )
-    
+
     @staticmethod
     def get_specific_instance(id):
-        return find_documents(request={ID: id}, collection_type=DatabaseCollections.INSTANCES)
-    
+        """
+        Get a specific instance by ID.
+
+        Args:
+            id (str): instance id.
+
+        Returns:
+            dict: a instance response if found, empty dict otherwise.
+        """
+        return find_documents(document={ID: id}, collection_type=DatabaseCollections.INSTANCES)
+
     @staticmethod
     def delete_instance(id):
-        instance_document = find_documents(request={ID: id}, collection_type=DatabaseCollections.INSTANCES)
-        instance_obj = Aws.InstanceCollection.get(instance_id=id)
-        print(Aws.InstanceCollection.list())
-        if instance_obj:
-            instance_obj.terminate()
-            if Aws.InstanceCollection.remove(instance_id=id) and delete_documents(
-                    collection_type=DatabaseCollections.INSTANCES, query=instance_document
-            ):
+        """
+        Delete a specific instance by ID.
+
+        Args:
+            id (str): instance id.
+
+        Returns:
+
+        """
+        document = {ID: id}
+        instance_document = find_documents(document=document, collection_type=DatabaseCollections.INSTANCES)
+
+        docker_server_instance = Aws.get_docker_server_instance(id=id)
+
+        if docker_server_instance and instance_document:
+            docker_server_instance.terminate()
+
+            if delete_documents(collection_type=DatabaseCollections.INSTANCES, document=instance_document):
                 return {}, 204  # means success
             else:
                 return 202
@@ -315,34 +404,43 @@ class InstancesApi(object):
 
 
 class ContainersApi(object):
-    
+
     @staticmethod
     def create_containers(id):
+        """
+        Create containers by instance ID. Containers will be created over the instance with the specified ID.
+
+        Args:
+            id (str): instance ID.
+
+        Returns:
+            dict: a create containers response.
+        """
         create_containers_requests = request.json
-        instance_obj = Aws.InstanceCollection.get(instance_id=id)
+        docker_server_instance = Aws.get_docker_server_instance(id=id)
 
-        create_containers_response = {"Containers": []}
+        create_containers_response = {CONTAINERS: []}
 
-        if instance_obj:
+        if docker_server_instance:
             for image, req in create_containers_requests.items():
                 container_obj = Aws.create_container(
-                    instance_id=instance_obj, image=image,
+                    instance=docker_server_instance, image=image,
                     kwargs=req, command=req.pop('Command', None)
                 )
                 if container_obj:
-                    if find_documents(request={ID: id}, collection_type=DatabaseCollections.INSTANCES):
+                    if find_documents(document={ID: id}, collection_type=DatabaseCollections.INSTANCES):
                         container_response = create_container_response(container_obj=container_obj)
                         if update_document(
                                 fields={
-                                    "Docker": {
-                                        "Containers": container_response
+                                    DOCKER: {
+                                        CONTAINERS: container_response
                                     }
                                 },
                                 collection_type=DatabaseCollections.INSTANCES,
-                                operation="$push",
+                                operation=PUSH,
                                 id=id
                         ):
-                            create_containers_response["Containers"].append(container_response)
+                            create_containers_response[CONTAINERS].append(container_response)
                     else:
                         return {"massege": f"could not update container {container_obj.id} in the database"}
                 else:
@@ -350,49 +448,95 @@ class ContainersApi(object):
             return create_containers_response
         else:
             return {"massege": f"could not find instance with ID {id}"}
-        
+
     @staticmethod
     def get_all_instance_containers(id):
-        instance_response = find_documents(
-            request={ID: id}, collection_type=DatabaseCollections.INSTANCES)
-        return instance_response["Docker"]["Containers"]
-    
+        """
+        Get all the containers of a specific instance.
+
+        Args:
+            id (str): instance ID.
+
+        Returns:
+            dict: a containers response, empty dict otherwise.
+        """
+        return {
+            CONTAINERS: find_documents(
+                document={ID: id}, collection_type=DatabaseCollections.INSTANCES, collection_name=CONTAINERS
+            )[DOCKER][CONTAINERS]
+        }
+
+
     @staticmethod
     def get_instance_container(instance_id, container_id):
+        """
+        Get a container by instance and container IDs
 
-        instance_response = find_documents(request={ID: instance_id}, collection_type=DatabaseCollections.INSTANCES)
+        Args:
+            instance_id (str): instance ID.
+            container_id (str): container ID.
 
-        for cont_resp in instance_response["Docker"]["Containers"]:
+        Returns:
+            dict: container response if found, empty dict otherwise.
+        """
+
+        instance_response = find_documents(document={ID: instance_id}, collection_type=DatabaseCollections.INSTANCES)
+
+        for cont_resp in instance_response[DOCKER][CONTAINERS]:
             if container_id == cont_resp["id"]:
                 return cont_resp
-        return jsonify(409, message=f"Container with id {container_id} does not exist")
-        
+        return {}
 
-def find_documents(request, collection_type, collection_name="", single_document=True):
+    @staticmethod
+    def get_all_instances_containers():
+        """
+        Get all the containers of all the instances
+
+        Returns:
+            dict: all containers response if there are any, empty dict otherwise.
+        """
+        instances_documents = find_documents(
+            document={},
+            collection_type=DatabaseCollections.INSTANCES,
+            collection_name=INSTANCES,
+            single_document=False
+        )
+
+        all_containers_response = {}
+
+        for ins_doc in instances_documents[INSTANCES]:
+            all_containers_response[ins_doc[ID]] = {CONTAINERS: []}
+            for container_doc in ins_doc[DOCKER][CONTAINERS]:
+                all_containers_response[ins_doc[ID]][CONTAINERS].append(container_doc)
+
+        return all_containers_response
+
+
+def find_documents(document, collection_type, collection_name="", single_document=True):
     """
     Find a document in the database, and return a parsed dict response of the document if it was found.
 
     Args:
-        request (dict): The request that was made by the client.
+        document (dict): The document to search for.
         collection_type (pymongo.Collection): the collection that the request should be searched on.
-        collection_name (str): the collection name. etc: SecurityGroupsApi, Instances, KeyPair
+        collection_name (str): the collection name. etc: SecurityGroups, Instances, KeyPair
         single_document (bool): indicate if the search should be on a single document.
 
     Returns:
-        dict: the result from database if it was found, otherwise raises an error.
+        dict: the result from database if it was found, otherwise empty dict.
     """
     if single_document:
-        database_result = collection_type.find_one(request)
-        return database_result if database_result else abort(409)
+        database_result = collection_type.find_one(filter=document)
+        return database_result if database_result else {}
     else:
         parsed_response = {collection_name: []}
-        database_result = collection_type.find(request)
+        database_result = collection_type.find(document)
         for result in database_result:
             parsed_response[collection_name].append(result)
         if parsed_response[collection_name]:
             return parsed_response
         else:
-            abort(409)
+            return {}
 
 
 def update_document(fields, collection_type, operation, id):
@@ -453,19 +597,17 @@ def delete_documents(collection_type, document={}, single_document=True):
         return False
 
 
-def prepare_security_group_response(id, path):
+def prepare_security_group_response(security_group_obj, path):
     """
     Create a security group parsed response for the client.
 
     Args:
-        id (str): the id of the security group.
-        path (str) the api path to the newly created security group
+        security_group_obj (SecurityGroup): security group object.
+        path (str): the api path to the newly created security group
 
     Returns:
         dict: a parsed security group response.
     """
-    security_group_obj = Aws.aws_api.get_resource().SecurityGroup(id)
-
     return {
         "_id": security_group_obj.group_id,
         "Description": security_group_obj.description,
@@ -481,7 +623,7 @@ def prepare_instance_response(instance_obj, path):
     Prepare a create instance parsed response for the client.
 
     Args:
-        instance_obj (Instance): an instance object that was created.
+        instance_obj (DockerServerInstance): an instance object that was created.
         path (str): the api path to the newly created instance.
 
     Returns:
@@ -616,21 +758,27 @@ if __name__ == "__main__":
             [HttpMethods.DELETE]
         ),
         (
-            '/Instance/<id>/CreateContainers',
+            '/DockerServerInstance/<id>/CreateContainers',
             'ContainersApi.create_containers',
             ContainersApi.create_containers,
             [HttpMethods.POST]
         ),
         (
-            '/Instance/<id>/Get/Containers',
+            '/DockerServerInstance/<id>/Get/Containers',
             'ContainersApi.get_all_instance_containers',
             ContainersApi.get_all_instance_containers,
             [HttpMethods.GET]
         ),
         (
-            '/Instance/<instance_id>/Get/Container/<container_id>',
+            '/DockerServerInstance/<instance_id>/Get/Container/<container_id>',
             'ContainersApi.get_instance_container',
             ContainersApi.get_instance_container,
+            [HttpMethods.GET]
+        ),
+        (
+            '/DockerServerInstances/Get/Containers',
+            'ContainersApi.get_all_instances_containers',
+            ContainersApi.get_all_instances_containers,
             [HttpMethods.GET]
         )
     )
