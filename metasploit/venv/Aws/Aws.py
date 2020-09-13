@@ -3,7 +3,7 @@ import docker
 import paramiko
 from metasploit.venv.Aws import custom_exceptions
 from metasploit.venv.Aws import config
-
+from botocore.exceptions import ClientError, ParamValidationError
 
 EC2 = 'ec2'
 
@@ -481,6 +481,19 @@ class SSH:
         return self._private_key
 
 
+def get_security_group_object(id):
+    """
+    Returns the security group object by the ID.
+
+    Args:
+        id (str): security group ID.
+
+    Returns:
+        SecurityGroup: a security group object
+    """
+    return aws_api.get_resource().SecurityGroup(id)
+
+
 def create_security_group(kwargs):
     """
     Creates a new security group in ec2 AWS.
@@ -507,31 +520,13 @@ def create_security_group(kwargs):
                 DryRun=True|False
 
         Returns:
-            SecurityGroup: a security group object if created, None otherwise.
+            SecurityGroup: a security group object if created.
+
+        Raises:
+            ParamValidationError: in case kwargs params are not valid to create a new security group.
+            ClientError: in case there is a duplicate security group that exits with the same name.
     """
-    try:
-        return aws_api.get_resource().SecurityGroup(aws_api.get_client().create_security_group(**kwargs)['GroupId'])
-    except Exception as e:
-        print(e)
-        return None
-
-
-def delete_security_group(security_group_id):
-    """
-    Deletes a security group in AWS.
-
-    Args:
-        security_group_id (str): the id of the security group.
-
-    Returns:
-        True if security group deletion was successful, False otherwise.
-    """
-    try:
-        aws_api.get_resource().SecurityGroup(security_group_id).delete()
-        return True
-    except Exception as e:
-        print(e)
-        return False
+    return get_security_group_object(aws_api.get_client().create_security_group(**kwargs)['GroupId'])
 
 
 def modify_security_group(security_group_id, kwargs):
@@ -587,15 +582,11 @@ def modify_security_group(security_group_id, kwargs):
                         ToPort=123,
                         SourceSecurityGroupName='string',
                         SourceSecurityGroupOwnerId='string'
-            Returns:
-                True if success security group modification was successful, False otherwise
+            Raises:
+                ParamValidationError: in case kwargs params are not valid to create a new security group.
+                ClientError: in case the security group ID is not valid.
     """
-    try:
-        aws_api.get_resource().SecurityGroup(security_group_id).authorize_ingress(**kwargs)
-        return True
-    except Exception as e:
-        print(e)
-        return False
+    aws_api.get_resource().SecurityGroup(security_group_id).authorize_ingress(**kwargs)
 
 
 def create_instance(kwargs):
@@ -759,6 +750,15 @@ class Docker(object):
 
 aws_api = AwsAccess.get_aws_access_instance()
 
+
+
+# sg = delete_security_group(security_group_id="dsfdsf")
+# sg = create_security_group({
+#     "1": {
+#         "Description11": "dsfdsf",
+#         "GroupName11": "sdfdsf"
+#     }
+# })
 
 # ins = create_instance(kwargs=config.CREATE_INSTANCES_DICT)
 # d = ins.get_docker()

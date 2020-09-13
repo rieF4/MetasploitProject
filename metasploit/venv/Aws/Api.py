@@ -1,12 +1,16 @@
 from metasploit.venv.Aws import Aws
-from flask import Flask, Response, make_response
+from flask import Flask
 from flask import jsonify
 from pymongo import MongoClient
 from flask_restful import Api, abort, request
+from botocore.exceptions import ClientError, ParamValidationError
+from werkzeug.exceptions import BadRequest
+from metasploit.venv.Aws.custom_exceptions import (
+    ResourceNotFoundError,
+    SecurityGroupNotFoundError,
+    DuplicateResourceError
+)
 
-
-# app = Flask(__name__)
-# api = Api(app=app)
 
 db_client = MongoClient(
     'mongodb+srv://Metasploit:FVDxbg312@metasploit.gdvxn.mongodb.net/metasploit?retryWrites=true&w=majority'
@@ -19,14 +23,29 @@ DOCKER = "Docker"
 PUSH = "$push"
 SET = "$set"
 INSTANCES = "Instances"
+SECURITY_GROUPS = "SecurityGroups"
+SECURITY_GROUP = "SecurityGroup"
 
-# make_response()
 
 class DatabaseCollections:
     INSTANCES = metasploit_db['instances']
     INSTANCES_OBJECTS = metasploit_db['instancesObjects']
     SECURITY_GROUPS = metasploit_db['securityGroups']
     KEY_PAIRS = metasploit_db['keyPairs']
+
+
+class HttpCodes:
+    OK = 200
+    CREATED = 201
+    ACCEPTED = 202
+    NO_CONTENT = 204
+    BAD_REQUEST = 400
+    UNAUTHORIZED = 401
+    FORBIDDEN = 403
+    NOT_FOUND = 404
+    METHOD_NOT_ALLOWED = 405
+    DUPLICATE = 409
+    INTERNAL_SERVER_ERROR = 500
 
 
 class HttpMethods:
@@ -64,17 +83,7 @@ class EndpointAction(object):
             Jsonify: A jsonify response of the requested action if found, None otherwise.
         """
         # Perform the function
-        answer = self.function(*args, **kwargs)
-
-        # Create the answer (bundle it in a correctly formatted HTTP answer)
-        if isinstance(answer, tuple):
-            # If it's a string, we bundle it has a HTML-like answer
-            # self.response = Response(answer, status=200, headers={})
-            return answer
-        elif isinstance(answer, dict):
-            self.response = jsonify(answer)
-
-        return self.response
+        return self.function(*args, **kwargs)
 
 
 class FlaskAppWrapper(object):
@@ -140,13 +149,79 @@ class FlaskAppWrapper(object):
                 print(e)
 
 
-def error_decorator(func):
+def validate_request_type():
+    """
+    Validate the client request type (dict).
+
+    Returns:
+        tuple(bool, str): a tuple that indicates if the request type is ok. (True, 'Success') for a valid request type,
+        otherwise, (False, err)
+
+    Raises:
+         BadRequest:
+         TypeError:
+         AttributeError:
+    """
+    try:
+        req = request.json
+        if not isinstance(req, dict):
+            return False, "Request type is not a dictionary form."
+        return True, 'Success'
+    except (BadRequest, TypeError, AttributeError) as err:
+        return False, err
+
+
+def post_put_patch_decorator(func):
     def wrapper(*args, **kwargs):
-        api_response = func(*args, **kwargs)
-        if api_response.get_response():
-            return api_response.get_response()
-        else:
-            abort(Response(api_response.get_error(), api_response.get_http_status_code()))
+
+        type_validation, msg = validate_request_type()
+
+        if not type_validation:
+            http_error_code = HttpCodes.BAD_REQUEST
+            return jsonify(prepare_error_response(msg=msg, http_error_code=http_error_code)), http_error_code
+
+        try:
+            api_response = func(*args, **kwargs)
+        except ResourceNotFoundError as err:
+            return jsonify(
+                prepare_error_response(
+                    msg=err.__str__(), http_error_code=HttpCodes.NOT_FOUND, req=request.json, path=request.base_url
+                )
+            )
+
+        return make_response(api_response=api_response)
+
+    return wrapper
+
+
+def make_response(api_response):
+    """
+    Returns an api response to the client.
+
+    Args:
+        (ApiResponse): api response object.
+
+    Returns:
+        tuple (Json, int): a (response, status_code) for the client if there is a valid response,
+        (error, error_status_code) otherwise.
+    """
+    resp = api_response.get_response()
+    http_status_code = api_response.get_http_status_code()
+    error = api_response.get_error()
+
+    if resp:
+        return jsonify(resp), http_status_code
+    else:
+        return jsonify(error), http_status_code
+
+
+def get_decorator(func):
+    def wrapper(*args, **kwargs):
+        try:
+            api_response = func(*args, **kwargs)
+        except ResourceNotFoundError as err:
+            return ApiResponse()
+
     return wrapper
 
 
@@ -157,9 +232,9 @@ class ApiResponse(object):
     Attributes:
         response (dict): a response from the database.
         http_status_code (int): the http status code of the response.
-        error (str): error message if needed.
+        error (dict): error response if needed.
     """
-    def __init__(self, response, http_status_code=200, error=""):
+    def __init__(self, response={}, http_status_code=200, error={}):
         self._response = response
         self._http_status_code = http_status_code
         self._error = error
@@ -177,42 +252,46 @@ class ApiResponse(object):
 class SecurityGroupsApi(object):
 
     @staticmethod
-    @error_decorator
+    @get_decorator
     def get_security_groups():
         """
         Get all the security groups available in the database.
 
         Returns:
-            dict: a security groups response if found, empty dict otherwise.
+            ApiResponse: a api response object with security groups response, http status code and error in case needed.
         """
         security_groups = find_documents(
             document={},  # means bring everything in the collection
             collection_type=DatabaseCollections.SECURITY_GROUPS,
-            collection_name="SecurityGroups",
+            collection_name=SECURITY_GROUPS,
             single_document=False
         )
 
-        return ApiResponse(
-            response=security_groups,
-            http_status_code=200 if security_groups else 404,
-            error="There aren't any security groups to display"
-        )
-        # return security_groups if security_groups else abort(Response("There aren't any security groups available", 404))
+        if security_groups:
+            return ApiResponse(response=security_groups, http_status_code=HttpCodes.OK)
+        else:
+            raise SecurityGroupNotFoundError(type=SECURITY_GROUPS)
 
     @staticmethod
+    @get_decorator
     def get_specific_security_group(id):
         """
-        Get specific security group.
+        Get specific security group by id.
 
         Args:
             id (str): security group id.
 
         Returns:
-            dict: a security group response if found, empty dict otherwise.
+            ApiResponse: a api response object with security group response, http status code and error in case needed.
         """
-        return find_documents(document={ID: id}, collection_type=DatabaseCollections.SECURITY_GROUPS)
+        security_group = find_documents(document={ID: id}, collection_type=DatabaseCollections.SECURITY_GROUPS)
+        if security_group:
+            return ApiResponse(response=security_group, http_status_code=HttpCodes.OK)
+        else:
+            raise SecurityGroupNotFoundError(type=SECURITY_GROUP, id=id)
 
     @staticmethod
+    @post_put_patch_decorator
     def create_security_groups():
         """
         Create dynamic amount of security groups.
@@ -231,46 +310,66 @@ class SecurityGroupsApi(object):
         }
 
         Returns:
-            dict: a security groups response if created successfully, empty dict otherwise.
+            ApiResponse: a api response object with security group response, http status code and error in case needed.
+
+        Raises:
+            ParamValidationError: in case the parameters by the client to create security groups are not valid.
+            ClientError: in case there is a duplicate resource that is already exits.
         """
+
         security_groups_requests = request.json
         security_groups_response = {}
 
-        for key, req in security_groups_requests.items():
-            security_group_obj = Aws.create_security_group(kwargs=req)
+        http_status_code = HttpCodes.CREATED
 
-            if security_group_obj:
+        for key, req in security_groups_requests.items():
+            try:
+                security_group_obj = Aws.create_security_group(kwargs=req)
+
                 security_group_database = prepare_security_group_response(
                     security_group_obj=security_group_obj, path=request.base_url
                 )
                 DatabaseCollections.SECURITY_GROUPS.insert_one(document=security_group_database)
                 security_groups_response[key] = security_group_database
-            else:
-                abort(409, message=f"Unable to create a new security group with the following params: {req}")
+            except (ParamValidationError, ClientError) as err:
 
-        return security_groups_response
+                http_status_code = HttpCodes.DUPLICATE if isinstance(err, ClientError) else HttpCodes.BAD_REQUEST
+
+                security_groups_response[key] = prepare_error_response(
+                    msg=err.__str__(), http_error_code=http_status_code, req=req
+                )
+
+        return ApiResponse(response=security_groups_response, http_status_code=http_status_code)
 
     @staticmethod
+    @get_decorator
     def delete_specific_security_group(id):
         """
-        Delete a security group by id.
+        Deletes a security group by id.
 
         Args:
             id (str): security group id.
 
         Returns:
-
+            ApiResponse: an api response object to the client that represents whether or not the request was success.
         """
         security_group = find_documents(document={ID: id}, collection_type=DatabaseCollections.SECURITY_GROUPS)
-
-        if Aws.delete_security_group(security_group_id=id):
-
-            if delete_documents(collection_type=DatabaseCollections.SECURITY_GROUPS, document=security_group):
-                return '', 204  # means success
+        if security_group:
+            try:
+                Aws.get_security_group_object(id=id).delete()
+                if delete_documents(collection_type=DatabaseCollections.SECURITY_GROUPS, document=security_group):
+                    return ApiResponse(http_status_code=HttpCodes.NO_CONTENT)
+            except ClientError as err:
+                return ApiResponse(
+                    http_status_code=HttpCodes.NOT_FOUND, error=prepare_error_response(
+                        msg=err.__str__(), http_error_code=HttpCodes.NOT_FOUND, path=request.base_url
+                    )
+                )
         else:
-            return '', 404
+            raise SecurityGroupNotFoundError(type=SECURITY_GROUP, id=id)
 
     @staticmethod
+    @post_put_patch_decorator
     def modify_security_group_inbound_permissions(id):
         """
         Modify a security group InboundPermissions.
@@ -282,24 +381,39 @@ class SecurityGroupsApi(object):
             dict: a security group response with the modification.
         """
         inbound_permissions_update_request = request.json
-        err_msg = f"unable to update security group {id}"
         document = {ID: id}
 
-        find_documents(document=document, collection_type=DatabaseCollections.SECURITY_GROUPS)
+        http_status_code = HttpCodes.OK
 
-        if Aws.modify_security_group(security_group_id=id, kwargs=inbound_permissions_update_request):
-            ip_permissions = Aws.aws_api.get_resource().SecurityGroup(id).ip_permissions
-            if update_document(
-                    fields={"IpPermissionsInbound": ip_permissions},
-                    collection_type=DatabaseCollections.SECURITY_GROUPS,
-                    operation=SET,
-                    id=id
-            ):
-                return find_documents(document=document, collection_type=DatabaseCollections.SECURITY_GROUPS)
-            else:
-                abort(409, message=err_msg)
+        security_group_response = find_documents(document=document, collection_type=DatabaseCollections.SECURITY_GROUPS)
+
+        if security_group_response:
+            try:
+                security_group_obj = Aws.get_security_group_object(id=id)
+                security_group_obj.authorize_ingress(**inbound_permissions_update_request)
+                ip_permissions = security_group_obj.ip_permissions
+
+                if update_document(
+                        fields={"IpPermissionsInbound": ip_permissions},
+                        collection_type=DatabaseCollections.SECURITY_GROUPS,
+                        operation=PUSH,
+                        id=id
+                ):
+                    return ApiResponse(response=security_group_response, http_status_code=http_status_code)
+
+            except (ParamValidationError, ClientError, TypeError) as err:
+                http_status_code = HttpCodes.BAD_REQUEST
+                return ApiResponse(
+                    http_status_code=http_status_code,
+                    error=prepare_error_response(
+                        msg=err.__str__(),
+                        http_error_code=http_status_code,
+                        req=inbound_permissions_update_request,
+                        path=request.base_url
+                    )
+                )
         else:
-            abort(409, message=err_msg)
+            raise SecurityGroupNotFoundError(type=SECURITY_GROUP, id=id)
 
 
 class InstancesApi(object):
@@ -595,6 +709,31 @@ def delete_documents(collection_type, document={}, single_document=True):
     except Exception as e:
         print(e)
         return False
+
+
+def prepare_error_response(msg, http_error_code, req=None, path=None):
+    """
+    Prepare an error response for a resource.
+
+    Args:
+        msg (str): error message to send.
+        http_error_code (int): the http error code.
+        req (dict): the request by the client.
+        path (str): The path in the api the error occurred.
+
+    Returns:
+        dict: parsed error response for the client.
+    """
+    return {
+        "Error":
+            {
+                "Message": msg,
+                "Code": http_error_code,
+                "Request": req,
+                "Path": path
+            }
+    }
+
 
 
 def prepare_security_group_response(security_group_obj, path):
