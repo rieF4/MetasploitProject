@@ -489,7 +489,7 @@ def get_security_group_object(id):
         id (str): security group ID.
 
     Returns:
-        SecurityGroup: a security group object
+        SecurityGroup: a security group object if found.
     """
     return aws_api.get_resource().SecurityGroup(id)
 
