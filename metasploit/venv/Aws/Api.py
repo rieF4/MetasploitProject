@@ -8,7 +8,7 @@ from werkzeug.exceptions import BadRequest
 from metasploit.venv.Aws.custom_exceptions import (
     ResourceNotFoundError,
     SecurityGroupNotFoundError,
-    DuplicateResourceError
+    InstanceNotFoundError
 )
 
 
@@ -23,6 +23,7 @@ DOCKER = "Docker"
 PUSH = "$push"
 SET = "$set"
 INSTANCES = "Instances"
+INSTANCE = "Instance"
 SECURITY_GROUPS = "SecurityGroups"
 SECURITY_GROUP = "SecurityGroup"
 
@@ -39,6 +40,7 @@ class HttpCodes:
     CREATED = 201
     ACCEPTED = 202
     NO_CONTENT = 204
+    MULTI_STATUS = 207
     BAD_REQUEST = 400
     UNAUTHORIZED = 401
     FORBIDDEN = 403
@@ -73,14 +75,14 @@ class EndpointAction(object):
 
     def __call__(self, *args, **kwargs):
         """
-        Standard method that effectively perform the stored function of this endpoint.
+        Standard method that effectively perform the stored function of its endpoint.
 
         Args:
             args (list): Arguments to give to the stored function.
             kwargs (dict): Keyword arguments.
 
         Returns:
-            Jsonify: A jsonify response of the requested action if found, None otherwise.
+           tuple (Json, int): an API response to the client.
         """
         # Perform the function
         return self.function(*args, **kwargs)
@@ -171,60 +173,61 @@ def validate_request_type():
         return False, err.__str__()
 
 
-def error_validation(func):
+def request_error_validation(api_function):
     def wrapper(*args, **kwargs):
-
-        http_error_code = HttpCodes.BAD_REQUEST
 
         if request.method not in [HttpMethods.GET, HttpMethods.DELETE]:
             type_validation, msg = validate_request_type()
 
             if not type_validation:
-                return jsonify(
-                    prepare_error_response(msg=msg, http_error_code=http_error_code)
-                ), http_error_code
+                return make_error_response(msg=msg, http_error_code=HttpCodes.BAD_REQUEST)
         try:
-            api_response = func(*args, **kwargs)
-        except (ResourceNotFoundError, ParamValidationError, ClientError) as err:
-
-            if isinstance(err, ResourceNotFoundError):
-                http_error_code = HttpCodes.NOT_FOUND
-            elif isinstance(err, ClientError):
-                http_error_code = HttpCodes.DUPLICATE
-            elif isinstance(err, ParamValidationError):
-                http_error_code = HttpCodes.BAD_REQUEST
-
-            return jsonify(
-                prepare_error_response(
-                    msg=err.__str__(), http_error_code=http_error_code, req=request.json, path=request.base_url
-                )
-            ), http_error_code
+            api_response = api_function(*args, **kwargs)
+        except ResourceNotFoundError as err:
+            return make_error_response(
+                msg=err.__str__(), http_error_code=HttpCodes.NOT_FOUND, req=request.json, path=request.base_url
+            )
 
         return make_response(api_response=api_response)
 
     return wrapper
 
 
+def make_error_response(msg, http_error_code, req=None, path=None):
+    """
+    Make error response for the client.
+
+    Args:
+        msg (str): error message to send.
+        http_error_code (int): the http error code.
+        req (dict): the request by the client.
+        path (str): The path in the api the error occurred.
+
+    Returns:
+        tuple (Json, int): (error, error_status_code) for the client.
+    """
+    return jsonify(
+        prepare_error_response(
+            msg=msg.__str__(), http_error_code=http_error_code, req=req, path=path
+        )
+    ), http_error_code
+
+
 def make_response(api_response):
     """
-    Returns an api response to the client.
+    Returns a json and http status code to the client.
 
     Args:
         (ApiResponse): api response object.
 
     Returns:
-        tuple (Json, int): a (response, status_code) for the client if there is a valid response,
-        (error, error_status_code) otherwise.
+        tuple (Json, int): a (response, status_code) for the client.
     """
     resp = api_response.get_response()
     http_status_code = api_response.get_http_status_code()
-    error = api_response.get_error()
 
     if resp:
         return jsonify(resp), http_status_code
-    elif error:
-        return jsonify(error), http_status_code
-
     return jsonify(''), http_status_code
 
 
@@ -252,16 +255,23 @@ class ApiResponse(object):
         return self._error
 
 
-class SecurityGroupsApi(object):
+class CollectionApi(object):
+    """
+    Base class for all the collection API classes
+    """
+    pass
+
+
+class SecurityGroupsApi(CollectionApi):
 
     @staticmethod
-    @error_validation
+    @request_error_validation
     def get_security_groups():
         """
         Get all the security groups available in the database.
 
         Returns:
-            ApiResponse: a api response object with security groups response, http status code and error in case needed.
+            ApiResponse: an api response object.
 
          Raises:
             SecurityGroupNotFoundError: in case there is not a security groups.
@@ -279,7 +289,7 @@ class SecurityGroupsApi(object):
             raise SecurityGroupNotFoundError(type=SECURITY_GROUPS)
 
     @staticmethod
-    @error_validation
+    @request_error_validation
     def get_specific_security_group(id):
         """
         Get specific security group by ID.
@@ -288,7 +298,7 @@ class SecurityGroupsApi(object):
             id (str): security group ID.
 
         Returns:
-            ApiResponse: a api response object with security group response, http status code and error in case needed.
+            ApiResponse: an api response object.
 
         Raises:
             SecurityGroupNotFoundError: in case there is not a security group with the ID.
@@ -300,7 +310,7 @@ class SecurityGroupsApi(object):
             raise SecurityGroupNotFoundError(type=SECURITY_GROUP, id=id)
 
     @staticmethod
-    @error_validation
+    @request_error_validation
     def create_security_groups():
         """
         Create dynamic amount of security groups.
@@ -319,7 +329,7 @@ class SecurityGroupsApi(object):
         }
 
         Returns:
-            ApiResponse: a api response object with security group response, http status code and error in case needed.
+            ApiResponse: an api response object.
 
         Raises:
             ParamValidationError: in case the parameters by the client to create security groups are not valid.
@@ -329,6 +339,8 @@ class SecurityGroupsApi(object):
         security_groups_requests = request.json
         security_groups_response = {}
 
+        is_valid = False
+        is_error = False
         http_status_code = HttpCodes.CREATED
 
         for key, req in security_groups_requests.items():
@@ -340,6 +352,8 @@ class SecurityGroupsApi(object):
                 )
                 DatabaseCollections.SECURITY_GROUPS.insert_one(document=security_group_database)
                 security_groups_response[key] = security_group_database
+
+                is_valid = True
             except (ParamValidationError, ClientError) as err:
 
                 http_status_code = HttpCodes.DUPLICATE if isinstance(err, ClientError) else HttpCodes.BAD_REQUEST
@@ -348,10 +362,14 @@ class SecurityGroupsApi(object):
                     msg=err.__str__(), http_error_code=http_status_code, req=req
                 )
 
+                is_error = True
+
+        if is_valid and is_error:
+            http_status_code = HttpCodes.MULTI_STATUS
         return ApiResponse(response=security_groups_response, http_status_code=http_status_code)
 
     @staticmethod
-    @error_validation
+    @request_error_validation
     def delete_specific_security_group(id):
         """
         Deletes a security group by id.
@@ -360,84 +378,93 @@ class SecurityGroupsApi(object):
             id (str): security group id.
 
         Returns:
-            ApiResponse: an api response object to the client that represents whether or not the request was success.
+            ApiResponse: an api response object.
 
         Raises:
             SecurityGroupNotFoundError: in case there is not a security group with the ID.
         """
         security_group = find_documents(document={ID: id}, collection_type=DatabaseCollections.SECURITY_GROUPS)
+
         if security_group:
-            try:
-                Aws.get_security_group_object(id=id).delete()
-                if delete_documents(collection_type=DatabaseCollections.SECURITY_GROUPS, document=security_group):
-                    return ApiResponse(http_status_code=HttpCodes.NO_CONTENT)
-            except ClientError as err:
-                return ApiResponse(
-                    http_status_code=HttpCodes.NOT_FOUND, error=prepare_error_response(
-                        msg=err.__str__(), http_error_code=HttpCodes.NOT_FOUND, path=request.base_url
-                    )
-                )
+            Aws.get_security_group_object(id=id).delete()
+            if delete_documents(collection_type=DatabaseCollections.SECURITY_GROUPS, document=security_group):
+                return ApiResponse(http_status_code=HttpCodes.NO_CONTENT)
         else:
             raise SecurityGroupNotFoundError(type=SECURITY_GROUP, id=id)
 
     @staticmethod
-    @error_validation
+    @request_error_validation
     def modify_security_group_inbound_permissions(id):
         """
         Modify a security group InboundPermissions.
+
+        Examples of a request:
+        {
+            "1": {
+                "IpProtocol": "tcp",
+                "FromPort": 2375,
+                "ToPort": 2375,
+                "CidrIp": "0.0.0.0/0"
+            },
+            "2": {
+                "IpProtocol": "tcp",
+                "FromPort": 22,
+                "ToPort": 22,
+                "CidrIp": "0.0.0.0/0"
+            }
+        }
 
         Args:
             id (str): the id of the security group.
 
         Returns:
-            dict: a security group response with the modification.
+            ApiResponse: an api response object.
 
         Raises:
             SecurityGroupNotFoundError: in case there is not a security group with the ID.
         """
         inbound_permissions_update_request = request.json
+        inbound_permissions_update_response = {}
         document = {ID: id}
-
-        http_status_code = HttpCodes.OK
 
         security_group_response = find_documents(document=document, collection_type=DatabaseCollections.SECURITY_GROUPS)
 
         if security_group_response:
-            try:
-                security_group_obj = Aws.get_security_group_object(id=id)
-                security_group_obj.authorize_ingress(**inbound_permissions_update_request)
-                security_group_obj.reload()
-                ip_permissions = security_group_obj.ip_permissions
+            security_group_obj = Aws.get_security_group_object(id=id)
 
-                if update_document(
+            for key, req in inbound_permissions_update_request.items():
+                try:
+                    security_group_obj.authorize_ingress(**req)
+                    security_group_obj.reload()
+                    ip_permissions = security_group_obj.ip_permissions
+
+                    if update_document(
                         fields={"IpPermissionsInbound": ip_permissions},
                         collection_type=DatabaseCollections.SECURITY_GROUPS,
-                        operation=PUSH,
+                        operation=SET,
                         id=id
-                ):
-                    security_group_response = find_documents(
-                        document=document, collection_type=DatabaseCollections.SECURITY_GROUPS
-                    )
-                    return ApiResponse(response=security_group_response, http_status_code=http_status_code)
+                    ):
+                        security_group_response = find_documents(
+                            document=document, collection_type=DatabaseCollections.SECURITY_GROUPS
+                        )
 
-            except (ParamValidationError, ClientError, TypeError) as err:
-                http_status_code = HttpCodes.DUPLICATE if isinstance(err, ClientError) else HttpCodes.BAD_REQUEST
-                return ApiResponse(
-                    http_status_code=http_status_code,
-                    error=prepare_error_response(
-                        msg=err.__str__(),
-                        http_error_code=http_status_code,
-                        req=inbound_permissions_update_request,
-                        path=request.base_url
+                        inbound_permissions_update_response[key] = security_group_response
+                except ClientError as err:
+                    http_status_code = HttpCodes.DUPLICATE
+
+                    inbound_permissions_update_response[key] = prepare_error_response(
+                        msg=err.__str__(), http_error_code=http_status_code, req=req
                     )
-                )
+
+            return ApiResponse(response=security_group_response, http_status_code=HttpCodes.OK)
         else:
             raise SecurityGroupNotFoundError(type=SECURITY_GROUP, id=id)
 
 
-class InstancesApi(object):
+class InstancesApi(CollectionApi):
 
     @staticmethod
+    @request_error_validation
     def create_instances():
         """
         Create a dynamic amount of instances over AWS.
@@ -464,39 +491,65 @@ class InstancesApi(object):
         }
 
         Returns:
-            dict: a create instances response with, empty dict otherwise.
+            ApiResponse: an api response object.
+
+        Raises:
+            ParamValidationError: in case the parameters by the client to create instances are not valid.
         """
         create_instances_requests = request.json
         create_instances_response = {}
 
-        for key, req in create_instances_requests.items():
-            instance_obj = Aws.create_instance(kwargs=req)
+        is_valid = False
+        is_error = False
+        http_status_code = HttpCodes.OK
 
-            if instance_obj:
+        for key, req in create_instances_requests.items():
+            try:
+                instance_obj = Aws.create_instance(kwargs=req)
+
                 instance_response = prepare_instance_response(instance_obj=instance_obj, path=request.base_url)
                 DatabaseCollections.INSTANCES.insert_one(document=instance_response)
                 create_instances_response[key] = instance_response
-            else:
-                abort(409, message=f"Unable to create a new instance with the following params {req}")
 
-        return create_instances_response
+                is_valid = True
+            except ParamValidationError as err:
+                http_status_code = HttpCodes.BAD_REQUEST
+
+                create_instances_response[key] = prepare_error_response(
+                    msg=err.__str__(), http_error_code=http_status_code, req=req
+                )
+
+                is_error = True
+        if is_valid and is_error:
+            http_status_code = HttpCodes.MULTI_STATUS
+        return ApiResponse(response=create_instances_response, http_status_code=http_status_code)
 
     @staticmethod
+    @request_error_validation
     def get_all_instances():
         """
         Get all the instances available at the server.
 
         Returns:
-             dict: the instances response, empty dict otherwise.
+            ApiResponse: an api response object.
+
+        Raises:
+            InstanceNotFoundError: in case there are not instances.
         """
-        return find_documents(
+        instances_response = find_documents(
             document={},  # means bring everything in the collection
             collection_type=DatabaseCollections.INSTANCES,
             collection_name=INSTANCES,
             single_document=False
         )
 
+        if instances_response:
+            return ApiResponse(response=instances_response, http_status_code=HttpCodes.OK)
+        else:
+            raise InstanceNotFoundError(type=INSTANCES)
+
     @staticmethod
+    @request_error_validation
     def get_specific_instance(id):
         """
         Get a specific instance by ID.
@@ -505,11 +558,19 @@ class InstancesApi(object):
             id (str): instance id.
 
         Returns:
-            dict: a instance response if found, empty dict otherwise.
+            ApiResponse: an api response object.
+
+        Raises:
+            InstanceNotFoundError: in case there is not an instance with the ID.
         """
-        return find_documents(document={ID: id}, collection_type=DatabaseCollections.INSTANCES)
+        instance_response = find_documents(document={ID: id}, collection_type=DatabaseCollections.INSTANCES)
+        if instance_response:
+            return ApiResponse(response=instance_response, http_status_code=HttpCodes.OK)
+        else:
+            raise InstanceNotFoundError(type=INSTANCES, id=id)
 
     @staticmethod
+    @request_error_validation
     def delete_instance(id):
         """
         Delete a specific instance by ID.
@@ -518,25 +579,22 @@ class InstancesApi(object):
             id (str): instance id.
 
         Returns:
+            ApiResponse: an api response object.
+
+        Raises:
+            InstanceNotFoundError: in case there is not an instance with the ID.
 
         """
-        document = {ID: id}
-        instance_document = find_documents(document=document, collection_type=DatabaseCollections.INSTANCES)
-
-        docker_server_instance = Aws.get_docker_server_instance(id=id)
-
-        if docker_server_instance and instance_document:
-            docker_server_instance.terminate()
-
+        instance_document = find_documents(document={ID: id}, collection_type=DatabaseCollections.INSTANCES)
+        if instance_document:
+            Aws.get_aws_instance_object(id=id).terminate()
             if delete_documents(collection_type=DatabaseCollections.INSTANCES, document=instance_document):
-                return {}, 204  # means success
-            else:
-                return 202
+                return ApiResponse(http_status_code=HttpCodes.NO_CONTENT)
         else:
-            return 202
+            raise InstanceNotFoundError(type=INSTANCE, id=id)
 
 
-class ContainersApi(object):
+class ContainersApi(CollectionApi):
 
     @staticmethod
     def create_containers(id):
@@ -550,7 +608,7 @@ class ContainersApi(object):
             dict: a create containers response.
         """
         create_containers_requests = request.json
-        docker_server_instance = Aws.get_docker_server_instance(id=id)
+        docker_server_instance = Aws.get_docker_server_instance_object(id=id)
 
         create_containers_response = {CONTAINERS: []}
 
@@ -562,7 +620,7 @@ class ContainersApi(object):
                 )
                 if container_obj:
                     if find_documents(document={ID: id}, collection_type=DatabaseCollections.INSTANCES):
-                        container_response = create_container_response(container_obj=container_obj)
+                        container_response = prepare_container_response(container_obj=container_obj)
                         if update_document(
                                 fields={
                                     DOCKER: {
@@ -599,7 +657,6 @@ class ContainersApi(object):
             )[DOCKER][CONTAINERS]
         }
 
-
     @staticmethod
     def get_instance_container(instance_id, container_id):
         """
@@ -626,7 +683,7 @@ class ContainersApi(object):
         Get all the containers of all the instances
 
         Returns:
-            dict: all containers response if there are any, empty dict otherwise.
+            dict: all containers responses if there are any, empty dict otherwise.
         """
         instances_documents = find_documents(
             document={},
@@ -749,10 +806,9 @@ def prepare_error_response(msg, http_error_code, req=None, path=None):
                 "Message": msg,
                 "Code": http_error_code,
                 "Request": req,
-                "Path": path
+                "Url": path
             }
     }
-
 
 
 def prepare_security_group_response(security_group_obj, path):
@@ -807,7 +863,7 @@ def prepare_instance_response(instance_obj, path):
     }
 
 
-def create_container_response(container_obj):
+def prepare_container_response(container_obj):
     """
     Prepare a create container parsed response for the client.
 

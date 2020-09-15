@@ -529,66 +529,6 @@ def create_security_group(kwargs):
     return get_security_group_object(aws_api.get_client().create_security_group(**kwargs)['GroupId'])
 
 
-def modify_security_group(security_group_id, kwargs):
-    """
-    Modify the security group configuration.
-
-            Args:
-                security_group_id (str) - The security group id that should be modified.
-                kwargs(dict) - This is the API post request to modify a security group in AWS.
-
-            Examples:
-                kwargs =
-                         DryRun=True|False,
-                         IpPermissions=[
-                    {
-                        'FromPort': 123,
-                        'IpProtocol': 'string',
-                        'IpRanges': [
-                            {
-                                'CidrIp': 'string',
-                                'Description': 'string'
-                            },
-                        ],
-                        'Ipv6Ranges': [
-                            {
-                                'CidrIpv6': 'string',
-                                'Description': 'string'
-                            },
-                        ],
-                        'PrefixListIds': [
-                        {
-                            'Description': 'string',
-                            'PrefixListId': 'string'
-                        },
-                     ],
-                    'ToPort': 123,
-                    'UserIdGroupPairs': [
-                        {
-                            'Description': 'string',
-                            'GroupId': 'string',
-                            'GroupName': 'string',
-                            'PeeringStatus': 'string',
-                            'UserId': 'string',
-                            'VpcId': 'string',
-                            'VpcPeeringConnectionId': 'string'
-                        },
-                    ]
-                },
-            ],
-                        CidrIp='string',
-                        FromPort=123,
-                        IpProtocol='string',
-                        ToPort=123,
-                        SourceSecurityGroupName='string',
-                        SourceSecurityGroupOwnerId='string'
-            Raises:
-                ParamValidationError: in case kwargs params are not valid to create a new security group.
-                ClientError: in case the security group ID is not valid.
-    """
-    aws_api.get_resource().SecurityGroup(security_group_id).authorize_ingress(**kwargs)
-
-
 def create_instance(kwargs):
     """
     Args:
@@ -607,19 +547,17 @@ def create_instance(kwargs):
         The get API call is an instance object
 
     Returns:
-        DockerServerInstance: instance object if successful, None otherwise
+        DockerServerInstance: docker server instance object if successful
+    Raises:
+        ParamValidationError: in case kwargs params are not valid to create a new instance.
     """
-    try:
-        aws_instance = aws_api.get_resource().create_instances(**kwargs)[0]
-        aws_instance.wait_until_running()
-        aws_instance.reload()
-        return DockerServerInstance(instance_obj=aws_instance, ssh_flag=True, init_docker_server_flag=True)
-    except Exception as e:
-        print(e)
-        return None
+    aws_instance = aws_api.get_resource().create_instances(**kwargs)[0]
+    aws_instance.wait_until_running()
+    aws_instance.reload()
+    return DockerServerInstance(instance_obj=aws_instance, ssh_flag=True, init_docker_server_flag=True)
 
 
-def get_docker_server_instance(id, ssh_flag=False):
+def get_docker_server_instance_object(id, ssh_flag=False):
     """
     Get the docker server instance object.
 
@@ -630,16 +568,28 @@ def get_docker_server_instance(id, ssh_flag=False):
     Returns:
         DockerServerInstance: a docker server object if exits, None otherwise.
     """
-    try:
-        return DockerServerInstance(instance_obj=aws_api.get_resource().Instance(id), ssh_flag=ssh_flag)
-    except Exception as e:
-        print(e)
-        return None
+    return DockerServerInstance(instance_obj=get_aws_instance_object(id=id), ssh_flag=ssh_flag)
+
+
+def get_aws_instance_object(id):
+    """
+    Get the AWS instance object by its ID.
+
+    Args:
+        id (str): instance ID.
+
+    Returns:
+        Aws.Instance: an AWS instance object if found
+
+    Raises:
+        ClientError: in case there isn't an instance with the ID.
+    """
+    return aws_api.get_resource().Instance(id)
 
 
 def create_container(instance, image, command, kwargs):
     """
-    Create a container over a an instance ID.
+    Create a container over an instance ID.
 
     Args:
         instance (DockerServerInstance): instance docker server object.
