@@ -49,6 +49,11 @@ class InstanceNotFoundError(ResourceNotFoundError):
         super().__init__(type=type, id=id)
 
 
+class ContainerNotFoundError(ResourceNotFoundError):
+    def __init__(self, type, id=None):
+        super().__init__(type=type, id=id)
+
+
 class DuplicateResourceError(ClientError):
     def __init__(self, error_response={}, operation_name=""):
         super().__init__(error_response=error_response, operation_name=operation_name)

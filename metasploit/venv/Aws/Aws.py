@@ -598,15 +598,13 @@ def create_container(instance, image, command, kwargs):
         kwargs (dict): Keyword arguments: https://docker-py.readthedocs.io/en/stable/containers.html#container-objects
 
     Returns:
-        Container: a container object if created successfully, False otherwise.
+        Container: a container object if created successfully.
+
+    Raises:
+        ImageNotFound: in case the image was not found on the docker server.
+        ApiError: In case the docker server returns an error.
     """
-    try:
-        return instance.get_docker().get_container_collection().create(
-            image=image, command=command, **kwargs
-        )
-    except Exception as e:
-        print(e)
-        return None
+    return instance.get_docker().get_container_collection().create(image=image, command=command, **kwargs)
 
 
 def create_new_key_pair(key_name):
@@ -701,7 +699,9 @@ class Docker(object):
 aws_api = AwsAccess.get_aws_access_instance()
 
 
-
+a = {1: {1:[]}}
+if a[1]:
+    print("good")
 # sg = delete_security_group(security_group_id="dsfdsf")
 # sg = create_security_group({
 #     "1": {
