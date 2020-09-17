@@ -7,6 +7,17 @@ DEFAULT_PAIR_KEY_NAME = 'default_key_pair_name'
 DEFAULT_PRIVATE_KEY_PATH = '/home/gafik/MetasploitProject/default_key_pair_name.pem'
 DEFAULT_MAX_MIN_COUNT = 1
 
+ID = "_id"
+CONTAINERS = "Containers"
+CONTAINER = "Container"
+DOCKER = "Docker"
+PUSH = "$push"
+SET = "$set"
+INSTANCES = "Instances"
+INSTANCE = "Instance"
+SECURITY_GROUPS = "SecurityGroups"
+SECURITY_GROUP = "SecurityGroup"
+
 SSH_PORT = 22
 DOCKER_PORT = 2375
 IP_PROTOCOL = 'tcp'

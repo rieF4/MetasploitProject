@@ -1,7 +1,7 @@
 from botocore.exceptions import ClientError
 
 
-class CommandFailureException(Exception):
+class CommandFailureError(Exception):
     """
     This class represents an error exception for executing a command over an aws instance
 
@@ -30,7 +30,7 @@ class ResourceNotFoundError(Exception):
     """
 
     def __init__(self, type, id=None):
-        msg = ""
+        # msg = ""
         if id:
             msg = f"{type} with ID {id} was not found"
         else:

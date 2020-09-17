@@ -1,12 +1,7 @@
-from metasploit.venv.Aws import Aws
 from flask import Flask
-from flask import jsonify
-from pymongo import MongoClient
-from flask_restful import Api, abort, request
+from flask_restful import Api, request
 from botocore.exceptions import ClientError, ParamValidationError
-from werkzeug.exceptions import BadRequest
 from metasploit.venv.Aws.custom_exceptions import (
-    ResourceNotFoundError,
     SecurityGroupNotFoundError,
     InstanceNotFoundError,
     ContainerNotFoundError
@@ -15,52 +10,43 @@ from docker.errors import (
     ImageNotFound,
     APIError
 )
-
-db_client = MongoClient(
-    'mongodb+srv://Metasploit:FVDxbg312@metasploit.gdvxn.mongodb.net/metasploit?retryWrites=true&w=majority'
+from metasploit.venv.Aws.Database import (
+    DatabaseCollections,
+    find_documents,
+    update_document,
+    delete_documents
 )
-metasploit_db = db_client['Metasploit']
-
-ID = "_id"
-CONTAINERS = "Containers"
-CONTAINER = "Container"
-DOCKER = "Docker"
-PUSH = "$push"
-SET = "$set"
-INSTANCES = "Instances"
-INSTANCE = "Instance"
-SECURITY_GROUPS = "SecurityGroups"
-SECURITY_GROUP = "SecurityGroup"
-
-
-class DatabaseCollections:
-    INSTANCES = metasploit_db['instances']
-    INSTANCES_OBJECTS = metasploit_db['instancesObjects']
-    SECURITY_GROUPS = metasploit_db['securityGroups']
-    KEY_PAIRS = metasploit_db['keyPairs']
-
-
-class HttpCodes:
-    OK = 200
-    CREATED = 201
-    ACCEPTED = 202
-    NO_CONTENT = 204
-    MULTI_STATUS = 207
-    BAD_REQUEST = 400
-    UNAUTHORIZED = 401
-    FORBIDDEN = 403
-    NOT_FOUND = 404
-    METHOD_NOT_ALLOWED = 405
-    DUPLICATE = 409
-    INTERNAL_SERVER_ERROR = 500
-
-
-class HttpMethods:
-    GET = 'GET'
-    POST = 'POST'
-    PUT = 'PUT'
-    DELETE = 'DELETE'
-    PATCH = 'PATCH'
+from metasploit.venv.Aws.Api_Utils import (
+    prepare_error_response,
+    prepare_container_response,
+    prepare_instance_response,
+    prepare_security_group_response,
+    find_container_document,
+    HttpMethods,
+    HttpCodes,
+    ApiResponse,
+    request_error_validation
+)
+from metasploit.venv.Aws.Constants import (
+    ID,
+    CONTAINERS,
+    CONTAINER,
+    DOCKER,
+    PUSH,
+    SET,
+    INSTANCES,
+    INSTANCE,
+    SECURITY_GROUP,
+    SECURITY_GROUPS
+)
+from metasploit.venv.Aws.Aws_Api_Functions import (
+    create_security_group,
+    create_instance,
+    create_container,
+    get_docker_server_instance_object,
+    get_aws_instance_object,
+    get_security_group_object
+)
 
 
 class EndpointAction(object):
@@ -156,110 +142,6 @@ class FlaskAppWrapper(object):
                 print(e)
 
 
-def validate_request_type():
-    """
-    Validate the client request type (dict).
-
-    Returns:
-        tuple(bool, str): a tuple that indicates if the request type is ok. (True, 'Success') for a valid request type,
-        otherwise, (False, err)
-
-    Raises:
-         BadRequest:
-         TypeError:
-         AttributeError:
-    """
-    try:
-        req = request.json
-        if not isinstance(req, dict):
-            return False, "Request type is not a dictionary form."
-        return True, 'Success'
-    except (BadRequest, TypeError, AttributeError) as err:
-        return False, err.__str__()
-
-
-def request_error_validation(api_function):
-    def wrapper(*args, **kwargs):
-
-        if request.method not in [HttpMethods.GET, HttpMethods.DELETE]:
-            type_validation, msg = validate_request_type()
-
-            if not type_validation:
-                return make_error_response(msg=msg, http_error_code=HttpCodes.BAD_REQUEST)
-        try:
-            api_response = api_function(*args, **kwargs)
-        except ResourceNotFoundError as err:
-            return make_error_response(
-                msg=err.__str__(), http_error_code=HttpCodes.NOT_FOUND, req=request.json, path=request.base_url
-            )
-
-        return make_response(api_response=api_response)
-
-    return wrapper
-
-
-def make_error_response(msg, http_error_code, req=None, path=None):
-    """
-    Make error response for the client.
-
-    Args:
-        msg (str): error message to send.
-        http_error_code (int): the http error code.
-        req (dict): the request by the client.
-        path (str): The path in the api the error occurred.
-
-    Returns:
-        tuple (Json, int): (error, error_status_code) for the client.
-    """
-    return jsonify(
-        prepare_error_response(
-            msg=msg.__str__(), http_error_code=http_error_code, req=req, path=path
-        )
-    ), http_error_code
-
-
-def make_response(api_response):
-    """
-    Returns a json and http status code to the client.
-
-    Args:
-        (ApiResponse): api response object.
-
-    Returns:
-        tuple (Json, int): a (response, status_code) for the client.
-    """
-    resp = api_response.get_response()
-    http_status_code = api_response.get_http_status_code()
-
-    if resp:
-        return jsonify(resp), http_status_code
-    return jsonify(''), http_status_code
-
-
-class ApiResponse(object):
-    """
-    This is a class to represent an API response.
-
-    Attributes:
-        response (dict): a response from the database.
-        http_status_code (int): the http status code of the response.
-        error (dict): error response if needed.
-    """
-    def __init__(self, response={}, http_status_code=200, error={}):
-        self._response = response
-        self._http_status_code = http_status_code
-        self._error = error
-
-    def get_response(self):
-        return self._response
-
-    def get_http_status_code(self):
-        return self._http_status_code
-
-    def get_error(self):
-        return self._error
-
-
 class CollectionApi(object):
     """
     Base class for all the collection API classes
@@ -350,7 +232,7 @@ class SecurityGroupsApi(CollectionApi):
 
         for key, req in security_groups_requests.items():
             try:
-                security_group_obj = Aws.create_security_group(kwargs=req)
+                security_group_obj = create_security_group(kwargs=req)
 
                 security_group_database = prepare_security_group_response(
                     security_group_obj=security_group_obj, path=request.base_url
@@ -391,7 +273,7 @@ class SecurityGroupsApi(CollectionApi):
         security_group = find_documents(document={ID: id}, collection_type=DatabaseCollections.SECURITY_GROUPS)
 
         if security_group:
-            Aws.get_security_group_object(id=id).delete()
+            get_security_group_object(id=id).delete()
             if delete_documents(collection_type=DatabaseCollections.SECURITY_GROUPS, document=security_group):
                 return ApiResponse(http_status_code=HttpCodes.NO_CONTENT)
         else:
@@ -436,7 +318,7 @@ class SecurityGroupsApi(CollectionApi):
         security_group_response = find_documents(document=document, collection_type=DatabaseCollections.SECURITY_GROUPS)
 
         if security_group_response:
-            security_group_obj = Aws.get_security_group_object(id=id)
+            security_group_obj = get_security_group_object(id=id)
 
             for key, req in inbound_permissions_update_request.items():
                 try:
@@ -511,7 +393,7 @@ class InstancesApi(CollectionApi):
 
         for key, req in create_instances_requests.items():
             try:
-                instance_obj = Aws.create_instance(kwargs=req)
+                instance_obj = create_instance(kwargs=req)
 
                 instance_response = prepare_instance_response(instance_obj=instance_obj, path=request.base_url)
                 DatabaseCollections.INSTANCES.insert_one(document=instance_response)
@@ -593,7 +475,7 @@ class InstancesApi(CollectionApi):
         """
         instance_document = find_documents(document={ID: id}, collection_type=DatabaseCollections.INSTANCES)
         if instance_document:
-            Aws.get_aws_instance_object(id=id).terminate()
+            get_aws_instance_object(id=id).terminate()
             if delete_documents(collection_type=DatabaseCollections.INSTANCES, document=instance_document):
                 return ApiResponse(http_status_code=HttpCodes.NO_CONTENT)
         else:
@@ -601,6 +483,10 @@ class InstancesApi(CollectionApi):
 
 
 class ContainersApi(CollectionApi):
+
+    @staticmethod
+    def run_containers():
+        return
 
     @staticmethod
     @request_error_validation
@@ -623,14 +509,14 @@ class ContainersApi(CollectionApi):
 
         is_error = False
         is_valid = False
-        http_status_code = HttpCodes.OK
+        http_status_code = HttpCodes.CREATED
 
         if find_documents(document={ID: id}, collection_type=DatabaseCollections.INSTANCES):
-            docker_server_instance = Aws.get_docker_server_instance_object(id=id)
+            docker_server_instance = get_docker_server_instance_object(id=id)
 
             for key, req in create_containers_requests.items():
                 try:
-                    container_obj = Aws.create_container(
+                    container_obj = create_container(
                         instance=docker_server_instance,
                         image=req.pop('Image', None),
                         kwargs=req,
@@ -761,6 +647,7 @@ class ContainersApi(CollectionApi):
 
                 for container in containers:
                     all_containers_response[INSTANCES][instance_id].append(container)
+
                 if all_containers_response[INSTANCES][instance_id]:
                     found_containers = True
 
@@ -792,7 +679,7 @@ class ContainersApi(CollectionApi):
 
             if container_document:
                 try:
-                    Aws.get_docker_server_instance_object(id=instance_id).get_docker().get_container_collection().get(
+                    get_docker_server_instance_object(id=instance_id).get_docker().get_container_collection().get(
                         container_id=container_id
                     ).remove()
 
@@ -813,241 +700,13 @@ class ContainersApi(CollectionApi):
                     return ApiResponse(
                         response=prepare_error_response(
                             msg=err.__str__(), http_error_code=HttpCodes.INTERNAL_SERVER_ERROR
-                        )
+                        ),
+                        http_status_code=HttpCodes.INTERNAL_SERVER_ERROR
                     )
             else:
                 raise ContainerNotFoundError(type=CONTAINER, id=container_id)
         else:
             raise InstanceNotFoundError(type=INSTANCE, id=instance_id)
-
-
-def find_container_document(containers_documents, container_id):
-    """
-    Given an instance document, find a container document matching the container ID.
-
-    Args:
-        containers_documents (dict): a container documents form.
-        container_id (str): container ID.
-
-    Returns:
-        dict: container response matching to container ID, None otherwise.
-    """
-    for container in containers_documents:
-        if container[ID] == container_id:
-            return container[ID]
-    return None
-
-
-def find_documents(document, collection_type, collection_name="", single_document=True):
-    """
-    Find a document in the database, and return a parsed dict response of the document if it was found.
-
-    Args:
-        document (dict): The document to search for.
-        collection_type (pymongo.Collection): the collection that the request should be searched on.
-        collection_name (str): the collection name. etc: SecurityGroups, Instances, KeyPair
-        single_document (bool): indicate if the search should be on a single document.
-
-    Returns:
-        dict: the result from database if it was found, otherwise empty dict.
-    """
-    if single_document:
-        database_result = collection_type.find_one(filter=document)
-        return database_result if database_result else {}
-    else:
-        parsed_response = {collection_name: []}
-        database_result = collection_type.find(document)
-        for result in database_result:
-            parsed_response[collection_name].append(result)
-        if parsed_response[collection_name]:
-            return parsed_response
-        else:
-            return {}
-
-
-def update_document(fields, collection_type, operation, id):
-    """
-    update a document in the database.
-
-    Args:
-        fields (dict): a dictionary form of what to update.
-        collection_type (pymongo.Collection): the collection that the update should be on.
-        operation (str): the database operation that should be used. ("$set", "$push")
-        id (str): the id of the document to be updated.
-
-        fields parameter examples:
-        {
-            "IpPermissionsInbound": security_group_obj.ip_permissions
-        }
-        means update the IpInboundPermissions To a new ip permissions
-
-
-        {
-         "Docker": {
-            "Containers": container_response
-            }
-        }
-        means update the Containers over an instance
-
-    Returns:
-        True if database update was successful, False otherwise.
-    """
-    try:
-        collection_type.update_one({ID: id}, {operation: fields})
-        return True
-    except Exception as e:
-        print(e)
-        return False
-
-
-def delete_documents(collection_type, document={}, single_document=True):
-    """
-    Deletes a single or multiple documents from a chosen collection.
-
-    Args:
-        collection_type (pymongo.Collection): The collection that should be deleted from.
-        document (dict): the document from the database that should be deleted.
-        single_document (bool): indicate if the deletion should be on a single document.
-
-    Returns:
-        True if deletion from database was completed successfully, False otherwise.
-    """
-    try:
-        if single_document:
-            collection_type.delete_one(filter=document)
-        else:
-            collection_type.delete_many(filter=document)  # means delete all of them
-        return True
-    except Exception as e:
-        print(e)
-        return False
-
-
-def prepare_error_response(msg, http_error_code, req=None, path=None):
-    """
-    Prepare an error response for a resource.
-
-    Args:
-        msg (str): error message to send.
-        http_error_code (int): the http error code.
-        req (dict): the request by the client.
-        path (str): The path in the api the error occurred.
-
-    Returns:
-        dict: parsed error response for the client.
-    """
-    return {
-        "Error":
-            {
-                "Message": msg,
-                "Code": http_error_code,
-                "Request": req,
-                "Url": path
-            }
-    }
-
-
-def prepare_security_group_response(security_group_obj, path):
-    """
-    Create a security group parsed response for the client.
-
-    Args:
-        security_group_obj (SecurityGroup): security group object.
-        path (str): the api path to the newly created security group
-
-    Returns:
-        dict: a parsed security group response.
-    """
-    return {
-        "_id": security_group_obj.group_id,
-        "Description": security_group_obj.description,
-        "Name": security_group_obj.group_name,
-        "Url": path.replace("Create", security_group_obj.group_id),
-        "IpPermissionsInbound": security_group_obj.ip_permissions,  # means permissions to connect to the instance
-        "IpPermissionsOutbound": security_group_obj.ip_permissions_egress
-    }
-
-
-def prepare_instance_response(instance_obj, path):
-    """
-    Prepare a create instance parsed response for the client.
-
-    Args:
-        instance_obj (DockerServerInstance): an instance object that was created.
-        path (str): the api path to the newly created instance.
-
-    Returns:
-        dict: a parsed instance response.
-    """
-    return {
-        "_id": instance_obj.get_instance_id(),
-        "IpParameters": {
-            "PublicIpAddress": instance_obj.get_public_ip_address(),
-            "PublicDNSName": instance_obj.get_public_dns_name(),
-            "PrivateIpAddress": instance_obj.get_private_ip_address(),
-            "PrivateDNSName": instance_obj.get_private_dns_name()
-        },
-        "SecurityGroups": instance_obj.get_security_groups(),
-        "State": instance_obj.get_state(),
-        "KeyName": instance_obj.get_key_name(),
-        "Docker": {
-            "Containers": [],
-            "Images": [],
-            "Networks": []
-        },
-        "Url": path.replace("Create", instance_obj.get_instance_id())
-    }
-
-
-def prepare_container_response(container_obj):
-    """
-    Prepare a create container parsed response for the client.
-
-    Args:
-        container_obj (Container): a container object.
-
-    Returns:
-        dict: a parsed instance response.
-    """
-    return {
-        "_id": container_obj.id,
-        "image": container_obj.image,
-        "name": container_obj.name,
-        "status": container_obj.status
-    }
-
-
-# @app.route('/keyPairs/Create', methods=['POST'])
-# def create_key_pair():
-#     return
-
-
-# @app.route('/keyPairs/Get/<id>', methods=['GET'])
-# def get_specific_key_pair(id):
-#     key_pair = find_documents(
-#         request={"_id": id}, collection_type=key_pair_db_collection, collection_name="KeyPair"
-#     )
-# 
-#     return jsonify(key_pair)
-# 
-# 
-# 
-# @app.route('/keyPairs/Get', methods=['GET'])
-# def get_all_key_pairs():
-#     """
-#     Get all the key pairs from the server.
-# 
-#     Returns:
-#         dict: a json representation of the key pairs response.
-#     """
-#     key_pairs = find_documents(
-#         request={},  # means bring everything in the collection
-#         collection_type=key_pair_db_collection,
-#         collection_name="KeyPairs",
-#         single_document=False
-#     )
-# 
-#     return jsonify(key_pairs)
 
 
 if __name__ == "__main__":
