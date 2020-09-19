@@ -7,21 +7,40 @@ from metasploit.venv.Aws.custom_exceptions import (
 )
 
 
+def check_if_image_already_exists(image_document, tag_to_check):
+    """
+    Check if the image with the specified tag already exists.
+
+    Args:
+        image_document (dict): image document.
+        tag_to_check (str): tag that should be checked.
+
+    Returns:
+        bool: True if the tag was found, False otherwise
+    """
+    for image in image_document:
+        for tag in image['tags']:
+            if tag == tag_to_check:
+                return True
+    return False
+
+
 def find_container_document(containers_documents, container_id):
     """
-    Given an instance document, find a container document matching the container ID.
+    Find a container document with the specified ID.
 
     Args:
         containers_documents (dict): a container documents form.
         container_id (str): container ID.
 
     Returns:
-        dict: container response matching to container ID, None otherwise.
+        tuple (dict, int): container response matching to container ID and it's index in the list,
+        empty dict and -1 otherwise.
     """
-    for container in containers_documents:
+    for index, container in enumerate(containers_documents):
         if container[Constants.ID] == container_id:
-            return container[Constants.ID]
-    return None
+            return container[Constants.ID], index
+    return {}, -1
 
 
 def prepare_error_response(msg, http_error_code, req=None, path=None):
@@ -100,6 +119,22 @@ def prepare_instance_response(instance_obj, path):
     }
 
 
+def prepare_image_response(image_obj):
+    """
+    Prepare an image parsed response for the client.
+
+    Args:
+        image_obj (Image): an image object.
+
+    Returns:
+        dict: a parsed instance response.
+    """
+    return {
+        "_id": image_obj.id,
+        "tags": image_obj.tags
+    }
+
+
 def prepare_container_response(container_obj):
     """
     Prepare a create container parsed response for the client.
@@ -116,6 +151,7 @@ def prepare_container_response(container_obj):
         "name": container_obj.name,
         "status": container_obj.status
     }
+
 
 def validate_request_type():
     """
@@ -204,7 +240,6 @@ class ApiResponse(object):
     Attributes:
         response (dict): a response from the database.
         http_status_code (int): the http status code of the response.
-        error (dict): error response if needed.
     """
     def __init__(self, response={}, http_status_code=200):
         self._response = response

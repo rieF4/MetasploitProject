@@ -1,5 +1,5 @@
 from pymongo import MongoClient
-
+from metasploit.venv.Aws import Constants
 
 db_client = MongoClient(
     'mongodb+srv://Metasploit:FVDxbg312@metasploit.gdvxn.mongodb.net/metasploit?retryWrites=true&w=majority'
@@ -9,7 +9,6 @@ metasploit_db = db_client['Metasploit']
 
 class DatabaseCollections:
     INSTANCES = metasploit_db['instances']
-    INSTANCES_OBJECTS = metasploit_db['instancesObjects']
     SECURITY_GROUPS = metasploit_db['securityGroups']
     KEY_PAIRS = metasploit_db['keyPairs']
 
@@ -69,7 +68,7 @@ def update_document(fields, collection_type, operation, id):
         True if database update was successful, False otherwise.
     """
     try:
-        collection_type.update_one({ID: id}, {operation: fields})
+        collection_type.update_one({Constants.ID: id}, {operation: fields})
         return True
     except Exception as e:
         print(e)

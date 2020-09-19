@@ -3,13 +3,11 @@ from metasploit.venv.Aws.custom_exceptions import (
     CommandFailureError,
     InitializeNewInstanceUsingConstructorException
 )
-from metasploit.venv.Aws import Constants
 from metasploit.venv.Aws.Connections import (
     Docker,
     SSH
 )
-
-
+from metasploit.venv.Aws import Constants
 EC2 = 'ec2'
 
 
@@ -276,23 +274,3 @@ class DockerServerInstance(object):
 
 
 aws_api = AwsAccess.get_aws_access_instance()
-
-
-# a = {1: {1:[]}}
-# if a[1]:
-#     print("good")
-# sg = delete_security_group(security_group_id="dsfdsf")
-# sg = create_security_group({
-#     "1": {
-#         "Description11": "dsfdsf",
-#         "GroupName11": "sdfdsf"
-#     }
-# })
-
-# ins = create_instance(kwargs=config.CREATE_INSTANCES_DICT)
-# d = ins.get_docker()
-# d2 = DockerServerInstance(instance_obj=aws_api.get_resource().Instance(ins.get_instance_id())).get_docker()
-#
-# print("started AWS file ")
-# ins.terminate()
-

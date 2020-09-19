@@ -80,7 +80,7 @@ def create_instance(kwargs):
     return DockerServerInstance(instance_obj=aws_instance, ssh_flag=True, init_docker_server_flag=True)
 
 
-def get_docker_server_instance_object(id, ssh_flag=False):
+def get_docker_server_instance(id, ssh_flag=False):
     """
     Get the docker server instance object.
 
@@ -91,10 +91,10 @@ def get_docker_server_instance_object(id, ssh_flag=False):
     Returns:
         DockerServerInstance: a docker server object if exits, None otherwise.
     """
-    return DockerServerInstance(instance_obj=get_aws_instance_object(id=id), ssh_flag=ssh_flag)
+    return DockerServerInstance(instance_obj=get_aws_instance(id=id), ssh_flag=ssh_flag)
 
 
-def get_aws_instance_object(id):
+def get_aws_instance(id):
     """
     Get the AWS instance object by its ID.
 
@@ -110,21 +110,10 @@ def get_aws_instance_object(id):
     return aws_api.get_resource().Instance(id)
 
 
-def create_container(instance, image, command, kwargs):
-    """
-    Create a container over an instance ID.
-
-    Args:
-        instance (DockerServerInstance): instance docker server object.
-        image (str): image name that the docker will be created with.
-        command (str): the command to run on the container.
-        kwargs (dict): Keyword arguments: https://docker-py.readthedocs.io/en/stable/containers.html#container-objects
-
-    Returns:
-        Container: a container object if created successfully.
-
-    Raises:
-        ImageNotFound: in case the image was not found on the docker server.
-        ApiError: In case the docker server returns an error.
-    """
-    return instance.get_docker().get_container_collection().create(image=image, command=command, **kwargs)
+# from metasploit.venv.Aws import Constants
+# ins1 = create_instance(kwargs=Constants.CREATE_INSTANCES_DICT)
+# id = ins1.get_instance_id()
+# ins2 = get_docker_server_instance(id=id)
+# d1 = ins1.get_docker()
+# d2 = ins2.get_docker()
+# print()

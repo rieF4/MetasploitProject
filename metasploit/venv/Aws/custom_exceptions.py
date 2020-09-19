@@ -11,7 +11,7 @@ class CommandFailureError(Exception):
     """
     def __init__(self, cmd, instance_id):
         msg = f"The following command {cmd} has failed over the instance {instance_id}!"
-        super().__init__(self.msg)
+        super().__init__(msg)
 
 
 class InitializeNewInstanceUsingConstructorException(Exception):
@@ -28,7 +28,6 @@ class ResourceNotFoundError(Exception):
     """
     This class represents an exception for a resource that was not found in the DB.
     """
-
     def __init__(self, type, id=None):
         # msg = ""
         if id:
@@ -36,6 +35,21 @@ class ResourceNotFoundError(Exception):
         else:
             msg = f"{type} were not found."
         super().__init__(msg)
+
+
+class ResourceAlreadyExistsError(Exception):
+    """
+    This class represents an exception for a resource that already exists in the DB.
+    """
+    def __init__(self, resource):
+        msg = f"{resource} already exists"
+        super().__init__(msg)
+
+
+class ImageAlreadyExistsError(ResourceAlreadyExistsError):
+
+    def __init__(self, resource):
+        super().__init__(resource=resource)
 
 
 class SecurityGroupNotFoundError(ResourceNotFoundError):
@@ -50,6 +64,11 @@ class InstanceNotFoundError(ResourceNotFoundError):
 
 
 class ContainerNotFoundError(ResourceNotFoundError):
+    def __init__(self, type, id=None):
+        super().__init__(type=type, id=id)
+
+
+class ImageNotFoundError(ResourceNotFoundError):
     def __init__(self, type, id=None):
         super().__init__(type=type, id=id)
 
