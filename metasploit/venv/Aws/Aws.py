@@ -1,16 +1,32 @@
 import boto3
-from metasploit.venv.Aws.custom_exceptions import (
-    CommandFailureError,
-    InitializeNewInstanceUsingConstructorException
+from metasploit.venv.Aws.ServerExceptions import (
+    CommandFailureError
 )
 from metasploit.venv.Aws.Connections import (
     Docker,
     SSH
 )
 from metasploit.venv.Aws import Constants
+import functools
+
+
 EC2 = 'ec2'
 
 
+def singleton(cls):
+    """
+    Make a class a Singleton class (only one instance)
+    """
+    @functools.wraps(cls)
+    def wrapper_singleton(*args, **kwargs):
+        if not wrapper_singleton.instance:
+            wrapper_singleton.instance = cls(*args, **kwargs)
+        return wrapper_singleton.instance
+    wrapper_singleton.instance = None
+    return wrapper_singleton
+
+
+@singleton
 class AwsAccess:
     """
     This is a class for API calls to the AWS ec2 service per one user
@@ -24,21 +40,10 @@ class AwsAccess:
         https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ec2.html#service-resource
     """
 
-    aws_access_instance = None
-
     def __init__(self):
-        if AwsAccess.aws_access_instance is not None:
-            raise InitializeNewInstanceUsingConstructorException
         self._client = boto3.client(EC2)
         self._resource = boto3.resource(EC2)
         self._session = boto3.Session()
-        AwsAccess.aws_access_instance = self
-
-    @staticmethod
-    def get_aws_access_instance():
-        if AwsAccess.aws_access_instance is None:
-            AwsAccess()
-        return AwsAccess.aws_access_instance
 
     def get_client(self):
         return self._client
@@ -273,4 +278,4 @@ class DockerServerInstance(object):
             return self._command
 
 
-aws_api = AwsAccess.get_aws_access_instance()
+aws_api = AwsAccess()

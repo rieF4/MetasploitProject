@@ -1,7 +1,13 @@
-from botocore.exceptions import ClientError
 
 
-class CommandFailureError(Exception):
+class ApiException(Exception):
+    """
+    A base class for all api exceptions.
+    """
+    pass
+
+
+class CommandFailureError(ApiException):
     """
     This class represents an error exception for executing a command over an aws instance
 
@@ -14,17 +20,7 @@ class CommandFailureError(Exception):
         super().__init__(msg)
 
 
-class InitializeNewInstanceUsingConstructorException(Exception):
-    """
-    This class represents an error exception for creating a new instance over aws
-    """
-
-    def __init__(self):
-        msg = "Cannot init the instance using constructor, please use AwsAccess.get_aws_access_instance() method"
-        super().__init__(msg)
-
-
-class ResourceNotFoundError(Exception):
+class ResourceNotFoundError(ApiException):
     """
     This class represents an exception for a resource that was not found in the DB.
     """
@@ -37,7 +33,7 @@ class ResourceNotFoundError(Exception):
         super().__init__(msg)
 
 
-class ResourceAlreadyExistsError(Exception):
+class DuplicateDockerResourceError(ApiException):
     """
     This class represents an exception for a resource that already exists in the DB.
     """
@@ -46,7 +42,7 @@ class ResourceAlreadyExistsError(Exception):
         super().__init__(msg)
 
 
-class ImageAlreadyExistsError(ResourceAlreadyExistsError):
+class DuplicateImageError(DuplicateDockerResourceError):
 
     def __init__(self, resource):
         super().__init__(resource=resource)
@@ -71,8 +67,3 @@ class ContainerNotFoundError(ResourceNotFoundError):
 class ImageNotFoundError(ResourceNotFoundError):
     def __init__(self, type, id=None):
         super().__init__(type=type, id=id)
-
-
-class DuplicateResourceError(ClientError):
-    def __init__(self, error_response={}, operation_name=""):
-        super().__init__(error_response=error_response, operation_name=operation_name)

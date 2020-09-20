@@ -1,10 +1,62 @@
 from flask import jsonify
 from flask_restful import request
 from metasploit.venv.Aws import Constants
-from werkzeug.exceptions import BadRequest
-from metasploit.venv.Aws.custom_exceptions import (
-    ResourceNotFoundError
+from werkzeug.exceptions import (
+    BadRequest
 )
+from botocore.exceptions import ClientError, ParamValidationError
+from metasploit.venv.Aws.ServerExceptions import (
+    ResourceNotFoundError,
+    DuplicateDockerResourceError
+)
+from docker.errors import (
+    ImageNotFound,
+    APIError,
+)
+from metasploit.venv.Aws.Aws_Api_Functions import (
+    get_docker_server_instance,
+)
+
+
+def create_docker_resource(**values):
+    def decorator_create_resource(func):
+        def wrapper_create_resource(*args, **kwargs):
+            return
+        return wrapper_create_resource
+    return decorator_create_resource
+
+
+def update_container_document_attributes(instance_id):
+
+    container_documents = []
+
+    docker_server_instance = get_docker_server_instance(id=instance_id)
+    containers = docker_server_instance.get_docker().get_container_collection().list(all=True)
+
+    for container in containers:
+        container_documents.append(prepare_container_response(container_obj=container))
+
+    return container_documents
+
+
+def choose_http_error_code(error):
+    """
+    Returns the HTTP error code according to the error exception type.
+
+    Args:
+        error (Exception): an exception object.
+
+    Returns:
+        int: a http error code. (400's, 500's)
+    """
+    if isinstance(error, (ResourceNotFoundError, ImageNotFound)):
+        return HttpCodes.NOT_FOUND
+    elif isinstance(error, (ClientError, DuplicateDockerResourceError)):
+        return HttpCodes.DUPLICATE
+    elif isinstance(error, (BadRequest, TypeError, AttributeError, ParamValidationError)):
+        return HttpCodes.BAD_REQUEST
+    elif isinstance(error, APIError):
+        return HttpCodes.INTERNAL_SERVER_ERROR
 
 
 def check_if_image_already_exists(image_document, tag_to_check):
@@ -34,13 +86,12 @@ def find_container_document(containers_documents, container_id):
         container_id (str): container ID.
 
     Returns:
-        tuple (dict, int): container response matching to container ID and it's index in the list,
-        empty dict and -1 otherwise.
+        dict: a container document if found, empty dict otherwise.
     """
-    for index, container in enumerate(containers_documents):
+    for container in containers_documents:
         if container[Constants.ID] == container_id:
-            return container[Constants.ID], index
-    return {}, -1
+            return container[Constants.ID]
+    return {}
 
 
 def prepare_error_response(msg, http_error_code, req=None, path=None):
@@ -145,9 +196,11 @@ def prepare_container_response(container_obj):
     Returns:
         dict: a parsed instance response.
     """
+    container_obj.reload()
+
     return {
         "_id": container_obj.id,
-        "image": container_obj.image,
+        "image": container_obj.image.tags,
         "name": container_obj.name,
         "status": container_obj.status
     }

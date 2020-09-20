@@ -1,6 +1,7 @@
 from pymongo import MongoClient
 from metasploit.venv.Aws import Constants
 
+
 db_client = MongoClient(
     'mongodb+srv://Metasploit:FVDxbg312@metasploit.gdvxn.mongodb.net/metasploit?retryWrites=true&w=majority'
 )
@@ -96,3 +97,27 @@ def delete_documents(collection_type, document={}, single_document=True):
     except Exception as e:
         print(e)
         return False
+
+
+def insert_document(collection_type, document):
+    try:
+        collection_type.insert_one(document=document)
+        return True
+    except Exception as e:
+        print("here")
+        print(e)
+        return False
+
+
+def remove_specific_element_in_document(document, resource_id):
+    """
+    removes a single dictionary within the document.
+
+    Args:
+        document (dict): a document that elements should be removed from.
+        resource_id (str): resource ID.
+
+    Returns:
+        list: a list without the dictionary with the resource ID mentioned.
+    """
+    return [dic for dic in document if dic[Constants.ID] != resource_id]

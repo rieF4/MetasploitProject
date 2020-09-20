@@ -1,12 +1,12 @@
 from flask import Flask
 from flask_restful import Api, request
 from botocore.exceptions import ClientError, ParamValidationError
-from metasploit.venv.Aws.custom_exceptions import (
+from metasploit.venv.Aws.ServerExceptions import (
     SecurityGroupNotFoundError,
     InstanceNotFoundError,
     ContainerNotFoundError,
     ImageNotFoundError,
-    ImageAlreadyExistsError
+    DuplicateImageError
 )
 from docker.errors import (
     ImageNotFound,
@@ -16,7 +16,9 @@ from metasploit.venv.Aws.Database import (
     DatabaseCollections,
     find_documents,
     update_document,
-    delete_documents
+    delete_documents,
+    insert_document,
+    remove_specific_element_in_document
 )
 from metasploit.venv.Aws.Api_Utils import (
     prepare_error_response,
@@ -29,7 +31,8 @@ from metasploit.venv.Aws.Api_Utils import (
     HttpCodes,
     ApiResponse,
     request_error_validation,
-    check_if_image_already_exists
+    check_if_image_already_exists,
+    update_container_document_attributes,
 )
 from metasploit.venv.Aws import Constants
 
@@ -399,7 +402,7 @@ class InstancesApi(CollectionApi):
                 create_instances_response[key] = instance_response
 
                 is_valid = True
-            except (ParamValidationError, ClientError) as err:
+            except ParamValidationError as err:
                 http_status_code = HttpCodes.BAD_REQUEST
 
                 create_instances_response[key] = prepare_error_response(
@@ -431,6 +434,12 @@ class InstancesApi(CollectionApi):
             single_document=False
         )
 
+        for ins_res in instances_response[Constants.INSTANCES]:
+            if ins_res[Constants.DOCKER][Constants.CONTAINERS]:
+                ins_res[Constants.DOCKER][Constants.CONTAINERS] = update_container_document_attributes(
+                    instance_id=ins_res[Constants.ID]
+                )
+
         if instances_response:
             return ApiResponse(response=instances_response, http_status_code=HttpCodes.OK)
         else:
@@ -452,6 +461,12 @@ class InstancesApi(CollectionApi):
             InstanceNotFoundError: in case there is not an instance with the ID.
         """
         instance_response = find_documents(document={Constants.ID: id}, collection_type=DatabaseCollections.INSTANCES)
+
+        if instance_response[Constants.DOCKER][Constants.CONTAINERS]:
+            instance_response[Constants.DOCKER][Constants.CONTAINERS] = update_container_document_attributes(
+                instance_id=instance_response[Constants.ID]
+            )
+
         if instance_response:
             return ApiResponse(response=instance_response, http_status_code=HttpCodes.OK)
         else:
@@ -507,32 +522,29 @@ class ContainersApi(CollectionApi):
         is_valid = False
         http_status_code = HttpCodes.CREATED
 
-        if find_documents(document={Constants.ID: id}, collection_type=DatabaseCollections.INSTANCES):
+        instance_document = find_documents(document={Constants.ID: id}, collection_type=DatabaseCollections.INSTANCES)
+
+        if instance_document:
             docker_server_instance = get_docker_server_instance(id=id)
 
             for key, req in create_containers_requests.items():
                 try:
+                    image = req.pop('Image', None)
+                    command = req.pop('Command', None)
+
                     container_obj = create_container(
-                        instance=docker_server_instance,
-                        image=req.pop('Image', None),
-                        kwargs=req,
-                        command=req.pop('Command', None)
+                        instance=docker_server_instance, image=image, kwargs=req, command=command
                     )
 
                     container_response = prepare_container_response(container_obj=container_obj)
 
-                    if update_document(
-                            fields={
-                                Constants.DOCKER: {
-                                    Constants.CONTAINERS: container_response
-                                }
-                            },
-                            collection_type=DatabaseCollections.INSTANCES,
-                            operation=Constants.PUSH,
-                            id=id
-                    ):
-                        create_containers_response[key] = container_response
-                        is_valid = True
+                    if delete_documents(collection_type=DatabaseCollections.INSTANCES, document=instance_document):
+
+                        instance_document[Constants.DOCKER][Constants.CONTAINERS].append(container_response)
+
+                        if insert_document(collection_type=DatabaseCollections.INSTANCES, document=instance_document):
+                            create_containers_response[key] = container_response
+                            is_valid = True
 
                 except (APIError, ImageNotFound, TypeError) as err:
 
@@ -565,31 +577,32 @@ class ContainersApi(CollectionApi):
             InstanceNotFoundError: in case the instance ID is not valid.
             ContainerNotFoundError: in case there aren't any available containers.
         """
-        instance_document = find_documents(document={Constants.ID: instance_id}, collection_type=DatabaseCollections.INSTANCES)
+        instance_document = find_documents(
+            document={Constants.ID: instance_id}, collection_type=DatabaseCollections.INSTANCES
+        )
 
         if instance_document:
-            container, index = find_container_document(
-                containers_documents=instance_document[Constants.DOCKER][Constants.CONTAINERS], container_id=container_id
+            container_document = find_container_document(
+                containers_documents=instance_document[Constants.DOCKER][Constants.CONTAINERS],
+                container_id=container_id
             )
 
-            if container:
+            if container_document:
                 container = get_container(instance_id=instance_id, container_id=container_id)
                 container.start()
-                container.reload()
 
                 updated_container_document = prepare_container_response(container_obj=container)
 
-                if update_document(
-                        fields={
-                            Constants.DOCKER: {
-                                Constants.CONTAINERS[index]: updated_container_document
-                            }
-                        },
-                        collection_type=DatabaseCollections.INSTANCES,
-                        operation=Constants.SET,
-                        id=instance_id
-                ):
-                    return ApiResponse(response=updated_container_document, http_status_code=HttpCodes.OK)
+                if delete_documents(collection_type=DatabaseCollections.INSTANCES, document=instance_document):
+
+                    instance_document[Constants.DOCKER][Constants.CONTAINERS] = remove_specific_element_in_document(
+                        document=instance_document[Constants.DOCKER][Constants.CONTAINERS], resource_id=container_id
+                    )
+
+                    instance_document[Constants.DOCKER][Constants.CONTAINERS].append(updated_container_document)
+
+                    if insert_document(collection_type=DatabaseCollections.INSTANCES, document=instance_document):
+                        return ApiResponse(response=updated_container_document, http_status_code=HttpCodes.OK)
             else:
                 raise ContainerNotFoundError(type=Constants.CONTAINER, id=container_id)
         else:
@@ -615,11 +628,15 @@ class ContainersApi(CollectionApi):
 
         if instance_document:
             containers = instance_document[Constants.DOCKER][Constants.CONTAINERS]
+
             if containers:
+                containers = update_container_document_attributes(instance_id=id)
+
                 return ApiResponse(
                     response={
                         Constants.CONTAINERS: containers
-                    }, http_status_code=HttpCodes.OK
+                    },
+                    http_status_code=HttpCodes.OK
                 )
             else:
                 raise ContainerNotFoundError(type=Constants.CONTAINERS)
@@ -649,12 +666,17 @@ class ContainersApi(CollectionApi):
         )
 
         if instance_document:
-            container, _ = find_container_document(
+            container = find_container_document(
                 containers_documents=instance_document[Constants.DOCKER][Constants.CONTAINERS],
                 container_id=container_id
             )
             if container:
-                return ApiResponse(response=container, http_status_code=HttpCodes.OK)
+
+                if instance_document[Constants.DOCKER][Constants.CONTAINERS]:
+                    instance_document[Constants.DOCKER][Constants.CONTAINERS] = update_container_document_attributes(
+                        instance_id=instance_id
+                    )
+                    return ApiResponse(response=container, http_status_code=HttpCodes.OK)
             else:
                 raise ContainerNotFoundError(type=Constants.CONTAINER, id=container_id)
         else:
@@ -685,6 +707,11 @@ class ContainersApi(CollectionApi):
             all_containers_response = {Constants.INSTANCES: {}}
 
             for instance in instances_documents[Constants.INSTANCES]:
+
+                if instance[Constants.DOCKER][Constants.CONTAINERS]:
+                    instance[Constants.DOCKER][Constants.CONTAINERS] = update_container_document_attributes(
+                        instance_id=instance[Constants.ID]
+                    )
 
                 instance_id = instance[Constants.ID]
                 all_containers_response[Constants.INSTANCES][instance_id] = []
@@ -717,29 +744,25 @@ class ContainersApi(CollectionApi):
             ContainerNotFoundError: in case there aren't any available containers.
             ApiError: in case the docker server returns an error.
         """
-        instance_document = find_documents(document={Constants.ID: instance_id}, collection_type=DatabaseCollections.INSTANCES)
+        instance_document = find_documents(
+            document={Constants.ID: instance_id}, collection_type=DatabaseCollections.INSTANCES
+        )
 
         if instance_document:
             containers = instance_document[Constants.DOCKER][Constants.CONTAINER]
-            container_document, _ = find_container_document(containers_documents=containers, container_id=container_id)
+            container_document = find_container_document(containers_documents=containers, container_id=container_id)
 
             if container_document:
                 try:
                     get_container(instance_id=instance_id, container_id=container_id).remove()
 
-                    containers.remove(container_document)
+                    if delete_documents(collection_type=DatabaseCollections.INSTANCES, document=instance_document):
+                        instance_document[Constants.DOCKER][Constants.CONTAINERS] = remove_specific_element_in_document(
+                            document=instance_document[Constants.DOCKER][Constants.CONTAINERS], resource_id=container_id
+                        )
+                        if insert_document(collection_type=DatabaseCollections.INSTANCES, document=instance_document):
+                            return ApiResponse(http_status_code=HttpCodes.NO_CONTENT)
 
-                    if update_document(
-                        fields={
-                            Constants.DOCKER: {
-                                Constants.CONTAINERS: containers
-                            }
-                        },
-                        collection_type=DatabaseCollections.INSTANCES,
-                        operation=Constants.SET,
-                        id=instance_id
-                    ):
-                        return ApiResponse(http_status_code=HttpCodes.NO_CONTENT)
                 except APIError as err:
                     return ApiResponse(
                         response=prepare_error_response(
@@ -803,7 +826,7 @@ class DockerImagesApi(CollectionApi):
                         image_document=instance_document[Constants.DOCKER][Constants.IMAGES],
                         tag_to_check=tag_to_check
                     ):
-                        raise ImageAlreadyExistsError(resource=tag_to_check)
+                        raise DuplicateImageError(resource=tag_to_check)
 
                     image = pull_image(instance=instance_docker_server, repository=repository, tag=tag, **req)
 
