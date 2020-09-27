@@ -59,7 +59,7 @@
     #         True if successful, False otherwise
     #     """
     #     keys_pairs_names = self.get_pair_keys_names()
-    #     for value in kwargs.values():
+    #     for value in kwargs.values1():
     #         if value not in keys_pairs_names:
     #             return False
     #     self._client.delete_key_pair(**kwargs)

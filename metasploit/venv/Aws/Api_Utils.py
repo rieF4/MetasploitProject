@@ -1,3 +1,4 @@
+import functools
 from flask import jsonify
 from flask_restful import request
 from metasploit.venv.Aws import Constants
@@ -7,7 +8,9 @@ from werkzeug.exceptions import (
 from botocore.exceptions import ClientError, ParamValidationError
 from metasploit.venv.Aws.ServerExceptions import (
     ResourceNotFoundError,
-    DuplicateDockerResourceError
+    DuplicateDockerResourceError,
+    DuplicateImageError,
+    BadJsonInput
 )
 from docker.errors import (
     ImageNotFound,
@@ -16,14 +19,6 @@ from docker.errors import (
 from metasploit.venv.Aws.Aws_Api_Functions import (
     get_docker_server_instance,
 )
-
-
-def create_docker_resource(**values):
-    def decorator_create_resource(func):
-        def wrapper_create_resource(*args, **kwargs):
-            return
-        return wrapper_create_resource
-    return decorator_create_resource
 
 
 def update_container_document_attributes(instance_id):
@@ -51,9 +46,9 @@ def choose_http_error_code(error):
     """
     if isinstance(error, (ResourceNotFoundError, ImageNotFound)):
         return HttpCodes.NOT_FOUND
-    elif isinstance(error, (ClientError, DuplicateDockerResourceError)):
+    elif isinstance(error, (ClientError, DuplicateDockerResourceError, DuplicateImageError)):
         return HttpCodes.DUPLICATE
-    elif isinstance(error, (BadRequest, TypeError, AttributeError, ParamValidationError)):
+    elif isinstance(error, (BadRequest, TypeError, AttributeError, ParamValidationError, BadJsonInput)):
         return HttpCodes.BAD_REQUEST
     elif isinstance(error, APIError):
         return HttpCodes.INTERNAL_SERVER_ERROR
@@ -228,21 +223,84 @@ def validate_request_type():
         return False, err.__str__()
 
 
-def request_error_validation(api_function):
-    def wrapper(*args, **kwargs):
+def validate_json_request(*expected_args):
+    """
+    Validates the json request for an api function that needs a request as input.
 
-        if request.method not in [HttpMethods.GET, HttpMethods.DELETE]:
+    Args:
+        expected_args (list): list of arguments that should be checked if there are in the json request.
+    """
+    def decorator_validate_json(api_func):
+        """
+        decorator for an api function.
+
+        Args:
+            api_func (Function) an api function.
+        """
+        @functools.wraps(api_func)
+        def wrapper_validate_json(*args, **kwargs):
+            """
+            Wrapper decorator to validate json input to the api.
+
+            Args:
+                args (list): function arguments.
+                kwargs (dict): function arguments.
+
+            Returns:
+                ApiResponse: an api response object.
+
+            Raises:
+                BadJsonInput: in case the parameters for the json request are not valid.
+                ResourceNotFoundError: in case the requested resource was not found.
+            """
             type_validation, msg = validate_request_type()
-
             if not type_validation:
-                return make_error_response(msg=msg, http_error_code=HttpCodes.BAD_REQUEST)
-        try:
-            api_response = api_function(*args, **kwargs)
-        except ResourceNotFoundError as err:
-            return make_error_response(
-                msg=err.__str__(), http_error_code=HttpCodes.NOT_FOUND, req=request.json, path=request.base_url
+                return make_error_response(msg=msg, http_error_code=HttpCodes.BAD_REQUEST, req=request.json)
+
+            api_requests = request.json
+            bad_inputs, is_valid_argument = validate_api_request_arguments(
+                api_requests=api_requests, expected_args=expected_args
             )
 
+            if not is_valid_argument:
+                raise BadJsonInput(bad_inputs=bad_inputs)
+
+            api_response = api_func(*args, **kwargs)
+            return make_response(api_response=api_response)
+
+        return wrapper_validate_json
+    return decorator_validate_json
+
+
+def validate_api_request_arguments(api_requests, expected_args):
+    """
+    Validates that the api request from the client has valid arguments for the api function that was used.
+
+    Args:
+        api_requests (dict): a dictionary that composes the api requests from the client.
+        expected_args list(str): a list containing all the arguments that should be checked.
+
+    Returns:
+        tuple (dict, bool): a dictionary with arguments that aren't valid if exists and False,
+        otherwise, otherwise dict with empty lists as values and True.
+    """
+    bad_inputs = {}
+    is_valid_argument = True
+
+    for key, api_req in api_requests.items():
+        bad_inputs[key] = []
+        for expected_arg in expected_args:
+            if expected_arg not in api_req:
+                is_valid_argument = False
+                bad_inputs[key].append(expected_arg)
+
+    return bad_inputs, is_valid_argument
+
+
+def make_response_decorator(api_function):
+    def wrapper(*args, **kwargs):
+
+        api_response = api_function(*args, **kwargs)
         return make_response(api_response=api_response)
 
     return wrapper
@@ -326,3 +384,39 @@ class HttpMethods:
     PUT = 'PUT'
     DELETE = 'DELETE'
     PATCH = 'PATCH'
+
+
+class EndpointAction(object):
+    """
+    Defines an Endpoint for a specific function for any client.
+
+    Attributes:
+        function (Function): the function that the endpoint will be forwarded to.
+    """
+
+    def __init__(self, function):
+        """
+        Create the endpoint by specifying which action we want the endpoint to perform, at each call.
+        function (Function): The function to execute on endpoint call.
+        """
+        self.function = function
+
+    def __call__(self, *args, **kwargs):
+        """
+        Standard method that effectively perform the stored function of its endpoint.
+
+        Args:
+            args (list): Arguments to give to the stored function.
+            kwargs (dict): Keyword arguments to the stored functions.
+
+        Returns:
+           tuple (Json, int): an API response to the client.
+        """
+        # Perform the function
+        try:
+            return self.function(*args, **kwargs)
+        except (ResourceNotFoundError, BadJsonInput) as err:
+            http_error = choose_http_error_code(error=err)
+            return make_error_response(
+                msg=err.__str__(), http_error_code=http_error, req=request.json, path=request.base_url
+            )

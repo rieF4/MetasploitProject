@@ -104,7 +104,6 @@ def insert_document(collection_type, document):
         collection_type.insert_one(document=document)
         return True
     except Exception as e:
-        print("here")
         print(e)
         return False
 

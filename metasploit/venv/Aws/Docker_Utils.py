@@ -3,12 +3,12 @@ from metasploit.venv.Aws.Aws_Api_Functions import (
 )
 
 
-def create_container(instance, image, command, kwargs):
+def create_container(instance_id, image, command, kwargs):
     """
     Creates a container over an instance ID. Similar to Docker create shell command.
 
     Args:
-        instance (DockerServerInstance): instance docker server object.
+        instance_id (str): instance ID.
         image (str): image name that the docker will be created with.
         command (str): the command to run on the container.
         kwargs (dict): Keyword arguments: https://docker-py.readthedocs.io/en/stable/containers.html#container-objects
@@ -20,7 +20,9 @@ def create_container(instance, image, command, kwargs):
         ImageNotFound: in case the image was not found on the docker server.
         ApiError: In case the docker server returns an error.
     """
-    return instance.get_docker().get_container_collection().create(image=image, command=command, **kwargs)
+    return get_docker_server_instance(id=instance_id).get_docker().get_container_collection().create(
+        image=image, command=command, **kwargs
+    )
 
 
 def get_container(instance_id, container_id):
@@ -42,13 +44,13 @@ def get_container(instance_id, container_id):
     )
 
 
-def pull_image(instance, repository, tag=None, **kwargs):
+def pull_image(instance_id, repository, tag=None, **kwargs):
     """
     Pull an image of the given name and return it.
     Similar to the docker pull command. If no tag is specified, all tags from that repository will be pulled.
 
     Args:
-        instance (DockerServerInstance): a docker server instance object.
+        instance_id (str): instance ID.
         repository (str) – The repository to pull.
         tag (str) – The tag to pull.
 
@@ -63,4 +65,28 @@ def pull_image(instance, repository, tag=None, **kwargs):
     Raises:
         ApiError: If the server returns an error.
     """
-    return instance.get_docker().get_image_collection().pull(repository=repository, tag=tag, **kwargs)
+    return get_docker_server_instance(id=instance_id).get_docker().get_image_collection().pull(
+        repository=repository, tag=tag, **kwargs
+    )
+
+
+def build_image(instance_id, **kwargs):
+    """
+    Builds a new image based on a docker file.
+
+    Args:
+        instance_id (str): instance ID.
+
+    Keyword args:
+        https://docker-py.readthedocs.io/en/stable/images.html#
+
+    Returns:
+        tuple (Image, Generator): The first item is the Image object for
+        the image that was build. The second item is a generator of the build logs as JSON-decoded objects.
+
+    Raises:
+        docker.errors.BuildError – If there is an error during the build.
+        docker.errors.APIError – If the server returns any other error.
+        TypeError – If neither path nor fileobj is specified.
+    """
+    return get_docker_server_instance(id=instance_id).get_docker().get_image_collection().build(**kwargs)

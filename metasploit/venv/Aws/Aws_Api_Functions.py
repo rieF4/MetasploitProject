@@ -89,7 +89,7 @@ def get_docker_server_instance(id, ssh_flag=False):
         ssh_flag (bool): True if ssh connection needs to be deployed, False otherwise.
 
     Returns:
-        DockerServerInstance: a docker server object if exits, None otherwise.
+        DockerServerInstance: a docker server instance object if exits, None otherwise.
     """
     return DockerServerInstance(instance_obj=get_aws_instance(id=id), ssh_flag=ssh_flag)
 

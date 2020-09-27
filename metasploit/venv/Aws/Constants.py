@@ -45,6 +45,8 @@ MODIFY_SECURITY_GROUP_DICT = {
     'CidrIp': CIDR_IP
 }
 
+VULNERABILITY_TYPES = ["sql_injection, dos, port_scanning"]
+
 USER_NAME = 'ec2-user'
 RUNNING_STATE = 'running'
 STOPPED_STATE = 'stopped'

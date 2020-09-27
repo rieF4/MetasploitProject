@@ -279,3 +279,15 @@ class DockerServerInstance(object):
 
 
 aws_api = AwsAccess()
+
+# from pymetasploit3.msfrpc import MsfRpcClient
+# client = MsfRpcClient(password='123456', ssl=True, server='ec2-3-17-13-54.us-east-2.compute.amazonaws.com')
+# print()
+d = {
+    "1": {
+        "2": 3,
+        "4": 5
+    }
+}
+
+print("4" in d)
