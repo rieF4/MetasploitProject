@@ -1,16 +1,14 @@
-from flask import Flask
+from flask import Flask, jsonify
 from flask_restful import Api, request
-from botocore.exceptions import ClientError, ParamValidationError
+from botocore.exceptions import ClientError
 from metasploit.venv.Aws.ServerExceptions import (
     SecurityGroupNotFoundError,
     InstanceNotFoundError,
     ContainerNotFoundError,
     ImageNotFoundError,
-    DuplicateImageError,
     VulnerabilityNotSupported,
 )
 from docker.errors import (
-    ImageNotFound,
     APIError
 )
 from metasploit.venv.Aws.Database import (
@@ -24,41 +22,43 @@ from metasploit.venv.Aws.Database import (
 from metasploit.venv.Aws.Api_Utils import (
     prepare_error_response,
     prepare_container_response,
-    prepare_instance_response,
-    prepare_security_group_response,
-    prepare_image_response,
     find_container_document,
     HttpMethods,
     HttpCodes,
     ApiResponse,
     make_response_decorator,
-    check_if_image_already_exists,
     update_container_document_attributes,
     EndpointAction,
     validate_json_request,
-    choose_http_error_code
 )
 from metasploit.venv.Aws import Constants
 
 from metasploit.venv.Aws.Aws_Api_Functions import (
-    create_security_group,
-    create_instance,
-    get_docker_server_instance,
     get_aws_instance,
     get_security_group_object,
 )
 
 from metasploit.venv.Aws.Docker_Utils import (
-    create_container,
     get_container,
-    pull_image
 )
 from metasploit.venv.Aws.api_functions import (
     pull_instance_image,
     create_instance_in_api,
-    create_resource,
+    create_update_resource,
     create_security_group_in_api,
-    create_container_in_api
+    create_container_in_api,
+    get_security_groups_from_database,
+    get_specific_security_group_from_database,
+    delete_security_group,
+    get_all_instances_from_database,
+    get_specific_instance_from_database,
+    delete_instance,
+    get_all_instance_containers_from_database,
+    get_instance_container_from_database,
+    get_all_instances_containers_from_database,
+    delete_container,
+    get_all_instance_images_from_database,
+    update_security_group_inbound_permissions_in_api
 )
 
 
@@ -74,7 +74,7 @@ class FlaskAppWrapper(object):
     def __init__(self):
         self._api = Api(app=FlaskAppWrapper.app)
 
-    @app.errorhandler(404)
+    @app.errorhandler(HttpCodes.NOT_FOUND)
     def invalid_urls_error(self):
         """
         Catches a client request that is not a valid API URL.
@@ -82,14 +82,21 @@ class FlaskAppWrapper(object):
         Returns:
             tuple (Json, int): an error response that shows all available URL's for the client to use.
         """
-        from flask import jsonify
-
         url_error = {
             "Error": f"The given url {request.base_url} is invalid ",
             "AvailableUrls": "In progress"
         }
 
         return jsonify(url_error), 404
+
+    @app.errorhandler(HttpCodes.BAD_REQUEST)
+    def method_not_allowed(self):
+        method_not_allowed_err = {
+            "Error": f"Method {request.method} is not allowed in URL {request.base_url}",
+            "AvailableMethods": "In progress"
+        }
+
+        return jsonify(method_not_allowed_err), 400
 
     def get_app(self):
         """
@@ -121,14 +128,14 @@ class FlaskAppWrapper(object):
              add_url_rules_params = [
             (
                 '/SecurityGroupsApi/Get',
-                'SecurityGroup.get_security_groups',
-                SecurityGroup.get_security_groups,
+                'SecurityGroup.get_security_groups_endpoint',
+                SecurityGroup.get_security_groups_endpoint,
                 [HttpMethods.GET]
             ),
             (
                 '/Instances/Create',
-                'Instances.create_instances',
-                Instances.create_instances,
+                'Instances.create_instances_endpoint',
+                Instances.create_instances_endpoint,
                 [HttpMethods.POST]
             )
         ]
@@ -153,9 +160,9 @@ class SecurityGroupsApi(CollectionApi):
 
     @staticmethod
     @make_response_decorator
-    def get_security_groups():
+    def get_security_groups_endpoint():
         """
-        Get all the security groups available in the database.
+        Security group endpoint that gets all the security groups available in the DB.
 
         Returns:
             ApiResponse: an api response object.
@@ -163,23 +170,13 @@ class SecurityGroupsApi(CollectionApi):
          Raises:
             SecurityGroupNotFoundError: in case there is not a security groups.
         """
-        security_groups = find_documents(
-            document={},  # means bring everything in the collection
-            collection_type=DatabaseCollections.SECURITY_GROUPS,
-            collection_name=Constants.SECURITY_GROUPS,
-            single_document=False
-        )
-
-        if security_groups:
-            return ApiResponse(response=security_groups, http_status_code=HttpCodes.OK)
-        else:
-            raise SecurityGroupNotFoundError(type=Constants.SECURITY_GROUPS)
+        return get_security_groups_from_database()
 
     @staticmethod
     @make_response_decorator
-    def get_specific_security_group(id):
+    def get_specific_security_group_endpoint(id):
         """
-        Get specific security group by ID.
+        Security group endpoint to get a specific security group from the DB by its ID.
 
         Args:
             id (str): security group ID.
@@ -190,18 +187,11 @@ class SecurityGroupsApi(CollectionApi):
         Raises:
             SecurityGroupNotFoundError: in case there is not a security group with the ID.
         """
-        security_group = find_documents(
-            document={Constants.ID: id}, collection_type=DatabaseCollections.SECURITY_GROUPS
-        )
-
-        if security_group:
-            return ApiResponse(response=security_group, http_status_code=HttpCodes.OK)
-        else:
-            raise SecurityGroupNotFoundError(type=Constants.SECURITY_GROUP, id=id)
+        return get_specific_security_group_from_database(security_group_id=id)
 
     @staticmethod
     @validate_json_request("GroupName", "Description")
-    def create_security_groups():
+    def create_security_groups_endpoint():
         """
         Create dynamic amount of security groups.
 
@@ -225,16 +215,16 @@ class SecurityGroupsApi(CollectionApi):
             ParamValidationError: in case the parameters by the client to create security groups are not valid.
             ClientError: in case there is a duplicate security group that is already exist.
         """
-        return create_resource(create_function=create_security_group_in_api)
+        return create_update_resource(function=create_security_group_in_api)
 
     @staticmethod
     @make_response_decorator
-    def delete_specific_security_group(id):
+    def delete_specific_security_group_endpoint(id):
         """
-        Deletes a security group by id.
+        Security group endpoint in order to delete a specific security group from the API.
 
         Args:
-            id (str): security group id.
+            id (str): security group ID.
 
         Returns:
             ApiResponse: an api response object.
@@ -242,18 +232,11 @@ class SecurityGroupsApi(CollectionApi):
         Raises:
             SecurityGroupNotFoundError: in case there is not a security group with the ID.
         """
-        security_group = find_documents(document={Constants.ID: id}, collection_type=DatabaseCollections.SECURITY_GROUPS)
-
-        if security_group:
-            get_security_group_object(id=id).delete()
-            if delete_documents(collection_type=DatabaseCollections.SECURITY_GROUPS, document=security_group):
-                return ApiResponse(http_status_code=HttpCodes.NO_CONTENT)
-        else:
-            raise SecurityGroupNotFoundError(type=Constants.SECURITY_GROUP, id=id)
+        return delete_security_group(security_group_id=id)
 
     @staticmethod
     @validate_json_request("IpProtocol", "FromPort", "ToPort", "CidrIp")
-    def modify_security_group_inbound_permissions(id):
+    def modify_security_group_inbound_permissions_endpoint(id):
         """
         Modify a security group InboundPermissions.
 
@@ -274,7 +257,7 @@ class SecurityGroupsApi(CollectionApi):
         }
 
         Args:
-            id (str): the id of the security group.
+            id (str): security group ID.
 
         Returns:
             ApiResponse: an api response object.
@@ -283,49 +266,19 @@ class SecurityGroupsApi(CollectionApi):
             SecurityGroupNotFoundError: in case there is not a security group with the ID.
             ClientError: in case there is the requested inbound permissions already exist.
         """
-        inbound_permissions_update_request = request.json
-        inbound_permissions_update_response = {}
-        document = {Constants.ID: id}
-
-        security_group_response = find_documents(document=document, collection_type=DatabaseCollections.SECURITY_GROUPS)
-
-        if security_group_response:
-            security_group_obj = get_security_group_object(id=id)
-
-            for key, req in inbound_permissions_update_request.items():
-                try:
-                    security_group_obj.authorize_ingress(**req)
-                    security_group_obj.reload()
-                    ip_permissions = security_group_obj.ip_permissions
-
-                    if update_document(
-                        fields={"IpPermissionsInbound": ip_permissions},
-                        collection_type=DatabaseCollections.SECURITY_GROUPS,
-                        operation=Constants.SET,
-                        id=id
-                    ):
-                        security_group_response = find_documents(
-                            document=document, collection_type=DatabaseCollections.SECURITY_GROUPS
-                        )
-
-                        inbound_permissions_update_response[key] = security_group_response
-                except ClientError as err:
-                    http_status_code = HttpCodes.DUPLICATE
-
-                    inbound_permissions_update_response[key] = prepare_error_response(
-                        msg=err.__str__(), http_error_code=http_status_code, req=req
-                    )
-
-            return ApiResponse(response=security_group_response, http_status_code=HttpCodes.OK)
-        else:
-            raise SecurityGroupNotFoundError(type=Constants.SECURITY_GROUP, id=id)
+        return create_update_resource(
+            function=update_security_group_inbound_permissions_in_api,
+            collection_type=DatabaseCollections.SECURITY_GROUPS,
+            type=Constants.SECURITY_GROUP,
+            resource_id=id
+        )
 
 
 class InstancesApi(CollectionApi):
 
     @staticmethod
     @validate_json_request("ImageId", "InstanceType", "KeyName", "SecurityGroupIds", "MaxCount", "MinCount")
-    def create_instances():
+    def create_instances_endpoint():
         """
         Create a dynamic amount of instances over AWS.
 
@@ -356,13 +309,13 @@ class InstancesApi(CollectionApi):
         Raises:
             ParamValidationError: in case the parameters by the client to create instances are not valid.
         """
-        return create_resource(create_function=create_instance_in_api)
+        return create_update_resource(function=create_instance_in_api)
 
     @staticmethod
     @make_response_decorator
-    def get_all_instances():
+    def get_all_instances_endpoint():
         """
-        Get all the instances available at the server.
+        Instance endpoint the get all the available instances from the DB.
 
         Returns:
             ApiResponse: an api response object.
@@ -370,30 +323,13 @@ class InstancesApi(CollectionApi):
         Raises:
             InstanceNotFoundError: in case there are not instances.
         """
-        instances_response = find_documents(
-            document={},  # means bring everything in the collection
-            collection_type=DatabaseCollections.INSTANCES,
-            collection_name=Constants.INSTANCES,
-            single_document=False
-        )
-
-        if instances_response:
-            for ins_res in instances_response[Constants.INSTANCES]:
-                if ins_res[Constants.DOCKER][Constants.CONTAINERS]:
-                    ins_res[Constants.DOCKER][Constants.CONTAINERS] = update_container_document_attributes(
-                        instance_id=ins_res[Constants.ID]
-                    )
-
-        if instances_response:
-            return ApiResponse(response=instances_response, http_status_code=HttpCodes.OK)
-        else:
-            raise InstanceNotFoundError(type=Constants.INSTANCES)
+        return get_all_instances_from_database()
 
     @staticmethod
     @make_response_decorator
-    def get_specific_instance(id):
+    def get_specific_instance_endpoint(id):
         """
-        Get a specific instance by ID.
+        Instance endpoint to get a specific instance from the DB.
 
         Args:
             id (str): instance id.
@@ -404,22 +340,13 @@ class InstancesApi(CollectionApi):
         Raises:
             InstanceNotFoundError: in case there is not an instance with the ID.
         """
-        instance_response = find_documents(document={Constants.ID: id}, collection_type=DatabaseCollections.INSTANCES)
-
-        if instance_response:
-            if instance_response[Constants.DOCKER][Constants.CONTAINERS]:
-                instance_response[Constants.DOCKER][Constants.CONTAINERS] = update_container_document_attributes(
-                    instance_id=instance_response[Constants.ID]
-                )
-            return ApiResponse(response=instance_response, http_status_code=HttpCodes.OK)
-        else:
-            raise InstanceNotFoundError(type=Constants.INSTANCE, id=id)
+        return get_specific_instance_from_database(instance_id=id)
 
     @staticmethod
     @make_response_decorator
-    def delete_instance(id):
+    def delete_instance_endpoint(id):
         """
-        Delete a specific instance by ID.
+        Instance endpoint to delete a specific instance from the API.
 
         Args:
             id (str): instance id.
@@ -430,20 +357,14 @@ class InstancesApi(CollectionApi):
         Raises:
             InstanceNotFoundError: in case there is not an instance with the ID.
         """
-        instance_document = find_documents(document={Constants.ID: id}, collection_type=DatabaseCollections.INSTANCES)
-        if instance_document:
-            get_aws_instance(id=id).terminate()
-            if delete_documents(collection_type=DatabaseCollections.INSTANCES, document=instance_document):
-                return ApiResponse(http_status_code=HttpCodes.NO_CONTENT)
-        else:
-            raise InstanceNotFoundError(type=Constants.INSTANCE, id=id)
+        return delete_instance(instance_id=id)
 
 
 class ContainersApi(CollectionApi):
 
     @staticmethod
     @validate_json_request("Image")
-    def create_containers(id):
+    def create_containers_endpoint(id):
         """
         Create containers by instance ID. Containers will be created over the instance with the specified ID.
 
@@ -466,7 +387,12 @@ class ContainersApi(CollectionApi):
             ApiError: in case the docker server returns an error.
             TypeError: in case the request doesn't have the required arguments.
         """
-        return create_resource(create_function=create_container_in_api, type=Constants.INSTANCE, instance_id=id)
+        return create_update_resource(
+            function=create_container_in_api,
+            collection_type=DatabaseCollections.INSTANCES,
+            type=Constants.INSTANCE,
+            resource_id=id
+        )
 
     @staticmethod
     @make_response_decorator
@@ -518,9 +444,9 @@ class ContainersApi(CollectionApi):
 
     @staticmethod
     @make_response_decorator
-    def get_all_instance_containers(id):
+    def get_all_instance_containers_endpoint(id):
         """
-        Get all the containers of a specific instance.
+        Container endpoint to get all the containers of a specific instance from the database.
 
         Args:
             id (str): instance ID.
@@ -532,30 +458,13 @@ class ContainersApi(CollectionApi):
             InstanceNotFoundError: in case the instance ID is not valid.
             ContainerNotFoundError: in case there aren't any available containers.
         """
-        instance_document = find_documents(document={Constants.ID: id}, collection_type=DatabaseCollections.INSTANCES)
-
-        if instance_document:
-            containers = instance_document[Constants.DOCKER][Constants.CONTAINERS]
-
-            if containers:
-                containers = update_container_document_attributes(instance_id=id)
-
-                return ApiResponse(
-                    response={
-                        Constants.CONTAINERS: containers
-                    },
-                    http_status_code=HttpCodes.OK
-                )
-            else:
-                raise ContainerNotFoundError(type=Constants.CONTAINERS)
-        else:
-            raise InstanceNotFoundError(type=Constants.INSTANCE, id=id)
+        return get_all_instance_containers_from_database(instance_id=id)
 
     @staticmethod
     @make_response_decorator
-    def get_instance_container(instance_id, container_id):
+    def get_instance_container_endpoint(instance_id, container_id):
         """
-        Get a container by instance and container IDs
+        Container endpoint to get a container by instance and container IDs from the DB.
 
         Args:
             instance_id (str): instance ID.
@@ -568,37 +477,13 @@ class ContainersApi(CollectionApi):
             InstanceNotFoundError: in case the instance ID is not valid.
             ContainerNotFoundError: in case there aren't any available containers.
         """
-
-        instance_document = find_documents(
-            document={Constants.ID: instance_id}, collection_type=DatabaseCollections.INSTANCES
-        )
-
-        if instance_document:
-            container = find_container_document(
-                containers_documents=instance_document[Constants.DOCKER][Constants.CONTAINERS],
-                container_id=container_id
-            )
-            if container:
-
-                if instance_document[Constants.DOCKER][Constants.CONTAINERS]:
-                    instance_document[Constants.DOCKER][Constants.CONTAINERS] = update_container_document_attributes(
-                        instance_id=instance_id
-                    )
-
-                    return ApiResponse(
-                        response=instance_document[Constants.DOCKER][Constants.CONTAINERS],
-                        http_status_code=HttpCodes.OK
-                    )
-            else:
-                raise ContainerNotFoundError(type=Constants.CONTAINER, id=container_id)
-        else:
-            raise InstanceNotFoundError(type=Constants.INSTANCE, id=instance_id)
+        return get_instance_container_from_database(instance_id=instance_id, container_id=container_id)
 
     @staticmethod
     @make_response_decorator
-    def get_all_instances_containers():
+    def get_all_instances_containers_endpoint():
         """
-        Get all the containers of all the instances
+        Container endpoint to get all the containers of all the instances from the DB.
 
         Returns:
             ApiResponse: an api response object.
@@ -607,46 +492,13 @@ class ContainersApi(CollectionApi):
             InstanceNotFoundError: in case the instance ID is not valid.
             ContainerNotFoundError: in case there aren't any available containers.
         """
-        instances_documents = find_documents(
-            document={},
-            collection_type=DatabaseCollections.INSTANCES,
-            collection_name=Constants.INSTANCES,
-            single_document=False
-        )
-
-        if instances_documents:
-            found_containers = False
-            all_containers_response = {Constants.INSTANCES: {}}
-
-            for instance in instances_documents[Constants.INSTANCES]:
-
-                if instance[Constants.DOCKER][Constants.CONTAINERS]:
-                    instance[Constants.DOCKER][Constants.CONTAINERS] = update_container_document_attributes(
-                        instance_id=instance[Constants.ID]
-                    )
-
-                instance_id = instance[Constants.ID]
-                all_containers_response[Constants.INSTANCES][instance_id] = []
-                containers = instance[Constants.DOCKER][Constants.CONTAINERS]
-
-                for container in containers:
-                    all_containers_response[Constants.INSTANCES][instance_id].append(container)
-
-                if all_containers_response[Constants.INSTANCES][instance_id]:
-                    found_containers = True
-
-            if found_containers:
-                return ApiResponse(response=all_containers_response, http_status_code=HttpCodes.OK)
-            else:
-                raise ContainerNotFoundError(type=Constants.CONTAINERS)
-        else:
-            raise InstanceNotFoundError(type=Constants.INSTANCES)
+        return get_all_instances_containers_from_database()
 
     @staticmethod
     @make_response_decorator
-    def delete_container(instance_id, container_id):
+    def delete_container_endpoint(instance_id, container_id):
         """
-        Deletes the container over an instance.
+        Container endpoint to deletes the container from an instance and remove it from DB.
 
         Returns:
             ApiResponse: an api response object.
@@ -656,36 +508,7 @@ class ContainersApi(CollectionApi):
             ContainerNotFoundError: in case there aren't any available containers.
             ApiError: in case the docker server returns an error.
         """
-        instance_document = find_documents(
-            document={Constants.ID: instance_id}, collection_type=DatabaseCollections.INSTANCES
-        )
-
-        if instance_document:
-            containers = instance_document[Constants.DOCKER][Constants.CONTAINERS]
-            container_document = find_container_document(containers_documents=containers, container_id=container_id)
-
-            if container_document:
-                try:
-                    get_container(instance_id=instance_id, container_id=container_id).remove()
-
-                    if delete_documents(collection_type=DatabaseCollections.INSTANCES, document=instance_document):
-                        instance_document[Constants.DOCKER][Constants.CONTAINERS] = remove_specific_element_in_document(
-                            document=instance_document[Constants.DOCKER][Constants.CONTAINERS], resource_id=container_id
-                        )
-                        if insert_document(collection_type=DatabaseCollections.INSTANCES, document=instance_document):
-                            return ApiResponse(http_status_code=HttpCodes.NO_CONTENT)
-
-                except APIError as err:
-                    return ApiResponse(
-                        response=prepare_error_response(
-                            msg=err.__str__(), http_error_code=HttpCodes.INTERNAL_SERVER_ERROR
-                        ),
-                        http_status_code=HttpCodes.INTERNAL_SERVER_ERROR
-                    )
-            else:
-                raise ContainerNotFoundError(type=Constants.CONTAINER, id=container_id)
-        else:
-            raise InstanceNotFoundError(type=Constants.INSTANCE, id=instance_id)
+        return delete_container(instance_id=instance_id, container_id=container_id)
 
 
 class DockerImagesApi(CollectionApi):
@@ -727,7 +550,7 @@ class DockerImagesApi(CollectionApi):
 
     @staticmethod
     @validate_json_request("Repository")
-    def pull_instance_images(id):
+    def pull_instance_images_endpoint(id):
         """
         Pull docker images to an instance.
 
@@ -751,16 +574,21 @@ class DockerImagesApi(CollectionApi):
             InstanceNotFoundError: in case it's invalid instance ID.
             ApiError: in case docker server returns an error.
         """
-        return create_resource(create_function=pull_instance_image, type=Constants.INSTANCE, instance_id=id)
+        return create_update_resource(
+            function=pull_instance_image,
+            collection_type=DatabaseCollections.INSTANCES,
+            type=Constants.INSTANCE,
+            resource_id=id
+        )
 
     @staticmethod
     @make_response_decorator
-    def get_instance_images(id):
+    def get_instance_images_endpoint(instance_id):
         """
-        Get all instance docker images by its ID
+        Get all instance docker images by instance ID.
 
         Args:
-            id (str): instance ID.
+            instance_id (str): instance ID.
 
         Returns:
             ApiResponse: an api response object.
@@ -769,16 +597,7 @@ class DockerImagesApi(CollectionApi):
             ImageNotFoundError: in case there aren't any images available.
             InstanceNotFoundError: in case the instance was not found.
         """
-        instance_document = find_documents(document={Constants.ID: id}, collection_type=DatabaseCollections.INSTANCES)
-
-        if instance_document:
-            images = instance_document[Constants.DOCKER][Constants.IMAGES]
-            if images:
-                return ApiResponse(response=images, http_status_code=HttpCodes.OK)
-            else:
-                raise ImageNotFoundError(type=Constants.IMAGES)
-        else:
-            return InstanceNotFoundError(type=Constants.INSTANCE, id=id)
+        return get_all_instance_images_from_database(instance_id=instance_id)
 
 
 if __name__ == "__main__":
@@ -786,86 +605,86 @@ if __name__ == "__main__":
     flask_wrapper.add_endpoints(
         (
             '/SecurityGroups/Get',
-            'SecurityGroupsApi.get_security_groups',
-            SecurityGroupsApi.get_security_groups,
+            'SecurityGroupsApi.get_security_groups_endpoint',
+            SecurityGroupsApi.get_security_groups_endpoint,
             [HttpMethods.GET]
         ),
         (
             '/SecurityGroups/Get/<id>',
-            'SecurityGroupsApi.get_specific_security_group',
-            SecurityGroupsApi.get_specific_security_group,
+            'SecurityGroupsApi.get_specific_security_group_endpoint',
+            SecurityGroupsApi.get_specific_security_group_endpoint,
             [HttpMethods.GET]
         ),
         (
             '/SecurityGroups/Create',
-            'SecurityGroupsApi.create_security_groups',
-            SecurityGroupsApi.create_security_groups,
+            'SecurityGroupsApi.create_security_groups_endpoint',
+            SecurityGroupsApi.create_security_groups_endpoint,
             [HttpMethods.POST]
         ),
         (
             '/SecurityGroups/Delete/<id>',
-            'SecurityGroupsApi.delete_specific_security_group',
-            SecurityGroupsApi.delete_specific_security_group,
+            'SecurityGroupsApi.delete_specific_security_group_endpoint',
+            SecurityGroupsApi.delete_specific_security_group_endpoint,
             [HttpMethods.DELETE]
         ),
         (
             '/SecurityGroups/<id>/UpdateInboundPermissions',
-            'SecurityGroupsApi.modify_security_group_inbound_permissions',
-            SecurityGroupsApi.modify_security_group_inbound_permissions,
+            'SecurityGroupsApi.modify_security_group_inbound_permissions_endpoint',
+            SecurityGroupsApi.modify_security_group_inbound_permissions_endpoint,
             [HttpMethods.PATCH]
         ),
         (
             '/DockerServerInstances/Create',
-            'InstancesApi.create_instances',
-            InstancesApi.create_instances,
+            'InstancesApi.create_instances_endpoint',
+            InstancesApi.create_instances_endpoint,
             [HttpMethods.POST]
         ),
         (
             '/DockerServerInstances/Get',
-            'InstancesApi.get_all_instances',
-            InstancesApi.get_all_instances,
+            'InstancesApi.get_all_instances_endpoint',
+            InstancesApi.get_all_instances_endpoint,
             [HttpMethods.GET]
         ),
         (
             '/DockerServerInstances/Get/<id>',
-            'InstancesApi.get_specific_instance',
-            InstancesApi.get_specific_instance,
+            'InstancesApi.get_specific_instance_endpoint',
+            InstancesApi.get_specific_instance_endpoint,
             [HttpMethods.GET]
         ),
         (
             '/DockerServerInstances/Delete/<id>',
-            'InstancesApi.delete_instance',
-            InstancesApi.delete_instance,
+            'InstancesApi.delete_instance_endpoint',
+            InstancesApi.delete_instance_endpoint,
             [HttpMethods.DELETE]
         ),
         (
             '/DockerServerInstances/<id>/CreateContainers',
-            'ContainersApi.create_containers',
-            ContainersApi.create_containers,
+            'ContainersApi.create_containers_endpoint',
+            ContainersApi.create_containers_endpoint,
             [HttpMethods.POST]
         ),
         (
             '/DockerServerInstances/<id>/Containers/Get',
-            'ContainersApi.get_all_instance_containers',
-            ContainersApi.get_all_instance_containers,
+            'ContainersApi.get_all_instance_containers_endpoint',
+            ContainersApi.get_all_instance_containers_endpoint,
             [HttpMethods.GET]
         ),
         (
             '/DockerServerInstances/<instance_id>/Containers/Get/<container_id>',
-            'ContainersApi.get_instance_container',
-            ContainersApi.get_instance_container,
+            'ContainersApi.get_instance_container_endpoint',
+            ContainersApi.get_instance_container_endpoint,
             [HttpMethods.GET]
         ),
         (
             '/DockerServerInstances/Containers/Get',
-            'ContainersApi.get_all_instances_containers',
-            ContainersApi.get_all_instances_containers,
+            'ContainersApi.get_all_instances_containers_endpoint',
+            ContainersApi.get_all_instances_containers_endpoint,
             [HttpMethods.GET]
         ),
         (
             '/DockerServerInstances/<instance_id>/Containers/Delete/<container_id>',
-            'ContainersApi.delete_container',
-            ContainersApi.delete_container,
+            'ContainersApi.delete_container_endpoint',
+            ContainersApi.delete_container_endpoint,
             [HttpMethods.DELETE]
         ),
         (
@@ -876,9 +695,15 @@ if __name__ == "__main__":
         ),
         (
             '/DockerServerInstances/<id>/Images/Pull',
-            'DockerImagesApi.pull_instance_images',
-            DockerImagesApi.pull_instance_images,
+            'DockerImagesApi.pull_instance_images_endpoint',
+            DockerImagesApi.pull_instance_images_endpoint,
             [HttpMethods.POST]
+        ),
+        (
+            '/DockerServerInstances/<instance_id>/Images/Get',
+            'DockerImagesApi.get_instance_images_endpoint',
+            DockerImagesApi.get_instance_images_endpoint,
+            [HttpMethods.GET]
         )
     )
     flask_wrapper.run()

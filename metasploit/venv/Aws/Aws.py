@@ -27,7 +27,7 @@ def singleton(cls):
 
 
 @singleton
-class AwsAccess:
+class AwsAccess(object):
     """
     This is a class for API calls to the AWS ec2 service per one user
 
@@ -281,13 +281,5 @@ class DockerServerInstance(object):
 aws_api = AwsAccess()
 
 # from pymetasploit3.msfrpc import MsfRpcClient
-# client = MsfRpcClient(password='123456', ssl=True, server='ec2-3-17-13-54.us-east-2.compute.amazonaws.com')
+# client = MsfRpcClient(password='UMtn6u1z', ssl=True, server='ec2-3-16-181-45.us-east-2.compute.amazonaws.com', port=55552)
 # print()
-d = {
-    "1": {
-        "2": 3,
-        "4": 5
-    }
-}
-
-print("4" in d)

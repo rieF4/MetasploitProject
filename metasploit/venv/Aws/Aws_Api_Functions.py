@@ -110,10 +110,18 @@ def get_aws_instance(id):
     return aws_api.get_resource().Instance(id)
 
 
-# from metasploit.venv.Aws import Constants
-# ins1 = create_instance(kwargs=Constants.CREATE_INSTANCES_DICT)
-# id = ins1.get_instance_id()
-# ins2 = get_docker_server_instance(id=id)
-# d1 = ins1.get_docker()
-# d2 = ins2.get_docker()
-# print()
+def update_security_group_inbound_permissions(security_group_id, req):
+    """
+    Updates the security group inbound in AWS.
+
+    Args:
+        security_group_id (id): security group ID.
+        req (dict): the client api request.
+
+    Returns:
+        dict: updated security group permissions.
+    """
+    security_group_obj = get_security_group_object(id=security_group_id)
+    security_group_obj.authorize_ingress(**req)
+    security_group_obj.reload()
+    return security_group_obj.ip_permissions
