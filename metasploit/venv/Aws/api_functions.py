@@ -4,7 +4,6 @@ from metasploit.venv.Aws.Database import (
     delete_documents,
     find_documents,
     insert_document,
-    remove_specific_element_in_document,
     update_document
 )
 
@@ -25,7 +24,8 @@ from metasploit.venv.Aws.Api_Utils import (
 from metasploit.venv.Aws.Docker_Utils import (
     pull_image,
     create_container,
-    get_container
+    get_container,
+    execute_command_in_container
 )
 from metasploit.venv.Aws.Aws_Api_Functions import (
     create_instance,
@@ -39,48 +39,42 @@ from metasploit.venv.Aws.ServerExceptions import (
     InstanceNotFoundError,
     SecurityGroupNotFoundError,
     ContainerNotFoundError,
-    ImageNotFoundError,
-    ResourceNotFoundError
+    ImageNotFoundError
 )
 from docker.errors import (
     APIError
 )
 
 
-def create_update_resource(function, collection_type=None, type="", **create_func_kwargs):
+def create_update_resource(function, code=HttpCodes.CREATED, **create_update_kwargs):
     """
-    Creates a resource in the api.
+    Creates or updates a resource in the api.
 
     Args:
         function (Function): api function that should be executed.
-        collection_type (pymongo.Collection): the collection that the request should be searched on.
-        type (str): the resource type. etc: SecurityGroup(s), Instance(s), Container(s)
+        code (HttpCodes): an http status code that should be returned to client in case of success.
 
         Keyword arguments:
-            resource_id (str): resource ID.
+            security_group_id (str): security group ID.
+            instance_id (str): Instance ID.
+            container_id (str): container ID.
 
     Returns:
         ApiResponse: api response object.
 
     """
-    create_request = request.json
+    create_update_request = request.json
     response = {}
 
-    resource_id = create_func_kwargs.get("resource_id", "")
+    create_update_kwargs = build_create_update_function_args(**create_update_kwargs)
 
-    if resource_id:
-        found_document = find_documents(document={Constants.ID: resource_id}, collection_type=collection_type)
-        if not found_document:
-            raise ResourceNotFoundError(type=type, id=resource_id)
-        create_func_kwargs["document"] = found_document
-
-    http_status_code = HttpCodes.CREATED
+    http_status_code = code
     is_valid = False
     is_error = False
 
-    for key, req in create_request.items():
+    for key, req in create_update_request.items():
         try:
-            response[key] = function(req=req, **create_func_kwargs)
+            response[key] = function(req=req, **create_update_kwargs)
             is_valid = True
         except Exception as err:
             http_status_code = choose_http_error_code(error=err)
@@ -95,23 +89,67 @@ def create_update_resource(function, collection_type=None, type="", **create_fun
     return ApiResponse(response=response, http_status_code=http_status_code)
 
 
-def pull_instance_image(req, **pull_image_req_kwargs):
+def build_create_update_function_args(**create_update_kwargs):
+    """
+    Builds the arguments needed for each api method that is executed.
+
+    Keyword Arguments:
+        security_group_id (str): security group ID.
+        instance_id (str): Instance ID.
+        container_id (str): container ID.
+
+    Returns:
+        dict: arguments that are needed according to the client request.
+
+    Raises:
+        InstanceNotFoundError: in case instance ID is invalid.
+        ContainerNotFoundError: in case container ID is invalid.
+    """
+    instance_id = create_update_kwargs.get("instance_id", "")
+
+    if instance_id:
+        instance_document = find_documents(
+            document={Constants.ID: instance_id}, collection_type=DatabaseCollections.INSTANCES
+        )
+        if not instance_document:
+            raise InstanceNotFoundError(type=Constants.INSTANCE, id=instance_id)
+        create_update_kwargs["instance_document"] = instance_document
+
+        container_id = create_update_kwargs.get("container_id", "")
+        if container_id:
+            container_document = find_container_document(
+                containers_documents=instance_document[Constants.DOCKER][Constants.CONTAINERS],
+                container_id=container_id
+            )
+            if container_document:
+                create_update_kwargs["container_document"] = container_document
+            else:
+                raise ContainerNotFoundError(type=Constants.CONTAINER, id=container_id)
+
+    security_group_id = create_update_kwargs.get("security_group_id", "")
+
+    if security_group_id:
+        security_group_document = find_documents(
+            document={Constants.ID: security_group_id}, collection_type=DatabaseCollections.SECURITY_GROUPS
+        )
+        create_update_kwargs["security_group_document"] = security_group_document
+
+    return create_update_kwargs
+
+
+def pull_instance_image(req, instance_document, instance_id):
     """
     Creates a new image over the docker server and adds a new image document to the DB.
 
     Args:
         req (dict): the client request.
-
-        Keyword arguments:
-            instance_document (dict): instance document from the DB.
-            instance_id (str): instance ID.
+        instance_document (dict): Instance document.
+        instance_id (str): instance ID
 
     Returns:
         dict: image response if success.
 
     """
-    instance_document = pull_image_req_kwargs.get("document")
-    instance_id = pull_image_req_kwargs.get("resource_id")
     repository = req.pop("Repository")
     tag = "latest"
     tag_to_check = f"{repository}:{tag}"
@@ -168,23 +206,19 @@ def create_security_group_in_api(req):
     return security_group_database
 
 
-def create_container_in_api(req, **create_container_kwargs):
+def create_container_in_api(req, instance_document, instance_id):
     """
     Creates a new container in Docker server and adds new container document to the DB.
 
     Args:
         req (dict): the client request.
-
-        Keyword arguments:
-            instance_document (dict): instance document from the DB.
-            instance_id (str): instance ID.
+        instance_document (dict): Instance document.
+        instance_id (str): instance ID.
 
     Returns:
         dict: container response if success.
 
     """
-    instance_document = create_container_kwargs.get("document")
-    instance_id = create_container_kwargs.get("resource_id")
     image = req.pop('Image')
     command = req.pop('Command', None)
 
@@ -199,6 +233,7 @@ def create_container_in_api(req, **create_container_kwargs):
         instance_document[Constants.DOCKER][Constants.CONTAINERS].append(container_response)
 
         if insert_document(collection_type=DatabaseCollections.INSTANCES, document=instance_document):
+            print(container_response)
             return container_response
 
 
@@ -484,6 +519,10 @@ def delete_container(instance_id, container_id):
     """
     Deletes the container over an instance and removes it from the DB.
 
+    Args:
+        instance_id (str): instance ID.
+        container_id (str): container ID.
+
     Returns:
         ApiResponse: an api response object.
 
@@ -505,9 +544,10 @@ def delete_container(instance_id, container_id):
                 get_container(instance_id=instance_id, container_id=container_id).remove()
 
                 if delete_documents(collection_type=DatabaseCollections.INSTANCES, document=instance_document):
-                    instance_document[Constants.DOCKER][Constants.CONTAINERS] = remove_specific_element_in_document(
-                        document=instance_document[Constants.DOCKER][Constants.CONTAINERS], resource_id=container_id
-                    )
+
+                    containers = update_container_document_attributes(instance_id=instance_id)
+                    instance_document[Constants.DOCKER][Constants.CONTAINERS] = containers
+
                     if insert_document(collection_type=DatabaseCollections.INSTANCES, document=instance_document):
                         return ApiResponse(http_status_code=HttpCodes.NO_CONTENT)
 
@@ -561,8 +601,11 @@ def update_security_group_inbound_permissions_in_api(req, **update_sc_permission
 
         Keyword Arguments:
             resource_id (str): security group ID.
+
+    Returns:
+        ApiResponse: an api response object.
     """
-    security_group_id = update_sc_permissions_kwargs.get("resource_id")
+    security_group_id = update_sc_permissions_kwargs.get("security_group_id")
     ip_permissions = update_security_group_inbound_permissions(req=req, security_group_id=security_group_id)
 
     if update_document(
@@ -576,3 +619,79 @@ def update_security_group_inbound_permissions_in_api(req, **update_sc_permission
         )
 
         return security_group_response
+
+
+def start_container(instance_id, container_id):
+    """
+    Starts a container over an instance.
+
+    Args:
+        instance_id (str): instance ID.
+        container_id (str): container ID.
+
+    Returns:
+        ApiResponse: an api response object.
+
+    Raises:
+        InstanceNotFoundError: in case the instance ID is not valid.
+        ContainerNotFoundError: in case the container ID is not valid.
+    """
+    instance_document = find_documents(
+        document={Constants.ID: instance_id}, collection_type=DatabaseCollections.INSTANCES
+    )
+
+    if instance_document:
+        container_document = find_container_document(
+            containers_documents=instance_document[Constants.DOCKER][Constants.CONTAINERS],
+            container_id=container_id
+        )
+
+        if container_document:
+            container = get_container(instance_id=instance_id, container_id=container_id)
+            container.start()
+
+            updated_container_document = prepare_container_response(container_obj=container)
+
+            if delete_documents(collection_type=DatabaseCollections.INSTANCES, document=instance_document):
+
+                instance_document[Constants.DOCKER][Constants.CONTAINERS] = update_container_document_attributes(
+                    instance_id=instance_id
+                )
+
+                if insert_document(collection_type=DatabaseCollections.INSTANCES, document=instance_document):
+                    return ApiResponse(response=updated_container_document, http_status_code=HttpCodes.OK)
+        else:
+            raise ContainerNotFoundError(type=Constants.CONTAINER, id=container_id)
+    else:
+        raise InstanceNotFoundError(type=Constants.INSTANCE, id=instance_id)
+
+
+def execute_command_in_container_through_api(req, instance_id, container_id, instance_document, container_document):
+    """
+    Executes a command in a container by rest API.
+
+    Args:
+        req (dict): api request from the client.
+        instance_id (str): instance ID.
+        container_id (str): container ID.
+
+    Returns:
+        ApiResponse: an api response object.
+
+    Raises:
+        APIError: if the server returns an error.
+    """
+
+    command = req.pop("Command")
+
+    exit_code, output = execute_command_in_container(
+        instance_id=instance_id, container_id=container_id, command=command, **req
+    )
+
+    # container_document
+
+    return {
+        "Command": command,
+        "Status": "Success" if not exit_code else "Failed",
+        "Output": output.decode("utf-8")
+    }

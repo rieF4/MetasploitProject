@@ -1,5 +1,13 @@
 import docker
 import paramiko
+from pymetasploit3.msfrpc import MsfRpcClient
+
+
+class Connection(object):
+    """
+    Base class for a connection in the api.
+    """
+    pass
 
 
 class Docker(object):
@@ -74,7 +82,7 @@ class Docker(object):
         return self.docker_client.configs
 
 
-class SSH:
+class SSH(object):
     """
     This is a class to connect with ssh to a remote machine.
 
@@ -130,3 +138,34 @@ class SSH:
             str: the private key for the server.
         """
         return self._private_key
+
+
+class Metasploit(object):
+    """
+    Class that represents a connetion to msfrpc daemon of metasploit.
+
+    Attributes:
+        _metasploit_client (MsfRpcClient): msfrpc client object.
+    """
+    def __init__(self, server, password=123456, port=55553):
+        """
+        Initialize a connection to msfrpc daemon of metasploit.
+
+        Args:
+            server (str): server IP.
+            password (str): password that msfrpc daemon was deployed with.
+            port (int): the port that msfrpc listens to.
+        """
+        self._metasploit_client = MsfRpcClient(password=password, server=server, port=port)
+
+    def get_metasploit_client(self):
+        return self._metasploit_client
+
+    def get_exploits(self):
+        """
+        Get all the available exploits in metasploit.
+
+        Returns:
+           list(str): a list of strings representing all the available exploits on metasploit
+        """
+        return self._metasploit_client.modules.exploits

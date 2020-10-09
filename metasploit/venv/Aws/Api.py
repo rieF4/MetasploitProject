@@ -1,46 +1,18 @@
 from flask import Flask, jsonify
 from flask_restful import Api, request
-from botocore.exceptions import ClientError
-from metasploit.venv.Aws.ServerExceptions import (
-    SecurityGroupNotFoundError,
-    InstanceNotFoundError,
-    ContainerNotFoundError,
-    ImageNotFoundError,
-    VulnerabilityNotSupported,
-)
-from docker.errors import (
-    APIError
-)
+
 from metasploit.venv.Aws.Database import (
     DatabaseCollections,
-    find_documents,
-    update_document,
-    delete_documents,
-    insert_document,
-    remove_specific_element_in_document
 )
 from metasploit.venv.Aws.Api_Utils import (
-    prepare_error_response,
-    prepare_container_response,
-    find_container_document,
     HttpMethods,
     HttpCodes,
     ApiResponse,
     make_response_decorator,
-    update_container_document_attributes,
     EndpointAction,
     validate_json_request,
 )
 from metasploit.venv.Aws import Constants
-
-from metasploit.venv.Aws.Aws_Api_Functions import (
-    get_aws_instance,
-    get_security_group_object,
-)
-
-from metasploit.venv.Aws.Docker_Utils import (
-    get_container,
-)
 from metasploit.venv.Aws.api_functions import (
     pull_instance_image,
     create_instance_in_api,
@@ -58,7 +30,9 @@ from metasploit.venv.Aws.api_functions import (
     get_all_instances_containers_from_database,
     delete_container,
     get_all_instance_images_from_database,
-    update_security_group_inbound_permissions_in_api
+    update_security_group_inbound_permissions_in_api,
+    start_container,
+    execute_command_in_container_through_api
 )
 
 
@@ -268,9 +242,8 @@ class SecurityGroupsApi(CollectionApi):
         """
         return create_update_resource(
             function=update_security_group_inbound_permissions_in_api,
-            collection_type=DatabaseCollections.SECURITY_GROUPS,
-            type=Constants.SECURITY_GROUP,
-            resource_id=id
+            code=HttpCodes.OK,
+            security_group_id=id
         )
 
 
@@ -387,16 +360,11 @@ class ContainersApi(CollectionApi):
             ApiError: in case the docker server returns an error.
             TypeError: in case the request doesn't have the required arguments.
         """
-        return create_update_resource(
-            function=create_container_in_api,
-            collection_type=DatabaseCollections.INSTANCES,
-            type=Constants.INSTANCE,
-            resource_id=id
-        )
+        return create_update_resource(function=create_container_in_api, instance_id=id)
 
     @staticmethod
     @make_response_decorator
-    def start_container(instance_id, container_id):
+    def start_container_endpoint(instance_id, container_id):
         """
         Start a container in the instance.
 
@@ -411,36 +379,7 @@ class ContainersApi(CollectionApi):
             InstanceNotFoundError: in case the instance ID is not valid.
             ContainerNotFoundError: in case there aren't any available containers.
         """
-        instance_document = find_documents(
-            document={Constants.ID: instance_id}, collection_type=DatabaseCollections.INSTANCES
-        )
-
-        if instance_document:
-            container_document = find_container_document(
-                containers_documents=instance_document[Constants.DOCKER][Constants.CONTAINERS],
-                container_id=container_id
-            )
-
-            if container_document:
-                container = get_container(instance_id=instance_id, container_id=container_id)
-                container.start()
-
-                updated_container_document = prepare_container_response(container_obj=container)
-
-                if delete_documents(collection_type=DatabaseCollections.INSTANCES, document=instance_document):
-
-                    instance_document[Constants.DOCKER][Constants.CONTAINERS] = remove_specific_element_in_document(
-                        document=instance_document[Constants.DOCKER][Constants.CONTAINERS], resource_id=container_id
-                    )
-
-                    instance_document[Constants.DOCKER][Constants.CONTAINERS].append(updated_container_document)
-
-                    if insert_document(collection_type=DatabaseCollections.INSTANCES, document=instance_document):
-                        return ApiResponse(response=updated_container_document, http_status_code=HttpCodes.OK)
-            else:
-                raise ContainerNotFoundError(type=Constants.CONTAINER, id=container_id)
-        else:
-            raise InstanceNotFoundError(type=Constants.INSTANCE, id=instance_id)
+        return start_container(instance_id=instance_id, container_id=container_id)
 
     @staticmethod
     @make_response_decorator
@@ -500,6 +439,10 @@ class ContainersApi(CollectionApi):
         """
         Container endpoint to deletes the container from an instance and remove it from DB.
 
+        Args:
+            instance_id (str): instance ID.
+            container_id (str): container ID.
+
         Returns:
             ApiResponse: an api response object.
 
@@ -510,43 +453,28 @@ class ContainersApi(CollectionApi):
         """
         return delete_container(instance_id=instance_id, container_id=container_id)
 
-
-class DockerImagesApi(CollectionApi):
-
     @staticmethod
-    def build_metasploit_images(id):
+    @validate_json_request("Command")
+    def execute_command_endpoint(instance_id, container_id):
         """
-        Builds new Metasploit images using docker that's based on the vulnerability type.
+        Executes a command in the container endpoint, similar to "Docker exec" command.
 
         Args:
-            id (str): instance ID.
-
-        build image request example = {
-            "server": "server_ip / server_fqdn / server_dnsname"
-            "vulnerability_type": ["sql_injection" and/or "dos" and/or "port_scanning"]
-        }
+            instance_id (str): instance ID.
+            container_id (str): container ID.
 
         Returns:
             ApiResponse: an api response object.
         """
-        build_image_req = request.json
+        return create_update_resource(
+            function=execute_command_in_container_through_api,
+            code=HttpCodes.OK,
+            instance_id=instance_id,
+            container_id=container_id
+        )
 
-        server = build_image_req.get("server")
-        vulnerabilities = build_image_req.get("vulnerability_type", [])
 
-        instance_document = find_documents(document={Constants.ID: id}, collection_type=DatabaseCollections.INSTANCES)
-
-        if not server or not vulnerabilities:
-            raise TypeError
-
-        if instance_document:
-            http_status_code = HttpCodes.CREATED
-
-            for vul in vulnerabilities:
-                if vul not in Constants.VULNERABILITY_TYPES:
-                    raise VulnerabilityNotSupported(vulnerability_type=vul)
-        else:
-            raise InstanceNotFoundError(type=Constants.INSTANCE, id=id)
+class DockerImagesApi(CollectionApi):
 
     @staticmethod
     @validate_json_request("Repository")
@@ -574,12 +502,7 @@ class DockerImagesApi(CollectionApi):
             InstanceNotFoundError: in case it's invalid instance ID.
             ApiError: in case docker server returns an error.
         """
-        return create_update_resource(
-            function=pull_instance_image,
-            collection_type=DatabaseCollections.INSTANCES,
-            type=Constants.INSTANCE,
-            resource_id=id
-        )
+        return create_update_resource(function=pull_instance_image, instance_id=id)
 
     @staticmethod
     @make_response_decorator
@@ -689,8 +612,8 @@ if __name__ == "__main__":
         ),
         (
             '/DockerServerInstances/<instance_id>/Containers/Start/<container_id>',
-            'ContainersApi.start_container',
-            ContainersApi.start_container,
+            'ContainersApi.start_container_endpoint',
+            ContainersApi.start_container_endpoint,
             [HttpMethods.PATCH],
         ),
         (
@@ -704,6 +627,12 @@ if __name__ == "__main__":
             'DockerImagesApi.get_instance_images_endpoint',
             DockerImagesApi.get_instance_images_endpoint,
             [HttpMethods.GET]
+        ),
+        (
+            '/DockerServerInstances/<instance_id>/Containers/ExecuteCommand/<container_id>',
+            'ContainersApi.execute_command_endpoint',
+            ContainersApi.execute_command_endpoint,
+            [HttpMethods.PATCH]
         )
     )
     flask_wrapper.run()

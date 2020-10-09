@@ -77,6 +77,7 @@ def create_instance(kwargs):
     aws_instance = aws_api.get_resource().create_instances(**kwargs)[0]
     aws_instance.wait_until_running()
     aws_instance.reload()
+    print("creating docker server instance")
     return DockerServerInstance(instance_obj=aws_instance, ssh_flag=True, init_docker_server_flag=True)
 
 

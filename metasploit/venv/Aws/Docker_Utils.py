@@ -90,3 +90,42 @@ def build_image(instance_id, **kwargs):
         TypeError – If neither path nor fileobj is specified.
     """
     return get_docker_server_instance(id=instance_id).get_docker().get_image_collection().build(**kwargs)
+
+
+def execute_command_in_container(instance_id, container_id, command, **kwargs):
+    """
+    Executes a command in a container by rest API.
+
+    Args:
+        instance_id (str): instance ID.
+        container_id (str): container ID.
+        command (str): command that should be executed, for example: ./msfrpcd -P 123456 -S
+
+        Keyword Arguments:
+            stdout (bool) – Attach to stdout. Default: True
+            stderr (bool) – Attach to stderr. Default: True
+            stdin (bool) – Attach to stdin. Default: False
+            tty (bool) – Allocate a pseudo-TTY. Default: False
+            privileged (bool) – Run as privileged.
+            user (str) – User to execute command as. Default: root
+            detach (bool) – If true, detach from the exec command. Default: False
+            stream (bool) – Stream response data. Default: False
+            socket (bool) – Return the connection socket to allow custom read/write operations. Default: False
+            environment (dict or list) – A dictionary or a list of strings in the following format ["PASSWORD=xxx"] or
+                                        {"PASSWORD": "xxx"}.
+            workdir (str) – Path to working directory for this exec session
+            demux (bool) – Return stdout and stderr separately
+
+    Returns:
+        A tuple of (exit_code, output)
+            exit_code: (int): Exit code for the executed command or None if either stream or socket is True.
+            output: (generator, bytes, or tuple):
+                If stream=True, a generator yielding response chunks.
+                If socket=True, a socket object for the connection.
+                If demux=True, a tuple of two bytes: stdout and stderr.
+                A bytestring containing response data otherwise.
+
+    Raises:
+        APIError: if the server returns an error.
+    """
+    return get_container(instance_id=instance_id, container_id=container_id).exec_run(cmd=command, **kwargs)

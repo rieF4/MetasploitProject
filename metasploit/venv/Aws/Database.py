@@ -106,17 +106,3 @@ def insert_document(collection_type, document):
     except Exception as e:
         print(e)
         return False
-
-
-def remove_specific_element_in_document(document, resource_id):
-    """
-    removes a single dictionary within the document.
-
-    Args:
-        document (dict): a document that elements should be removed from.
-        resource_id (str): resource ID.
-
-    Returns:
-        list: a list without the dictionary with the resource ID mentioned.
-    """
-    return [dic for dic in document if dic[Constants.ID] != resource_id]

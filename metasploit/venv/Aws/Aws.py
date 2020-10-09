@@ -280,6 +280,32 @@ class DockerServerInstance(object):
 
 aws_api = AwsAccess()
 
+
+
 # from pymetasploit3.msfrpc import MsfRpcClient
-# client = MsfRpcClient(password='UMtn6u1z', ssl=True, server='ec2-3-16-181-45.us-east-2.compute.amazonaws.com', port=55552)
+# from pymetasploit3.msfconsole import MsfRpcConsole
+# # import nmap
+# # #
+# # # global global_positive_out
+# # # global_positive_out = list()
+# # # global global_console_status
+# # # global_console_status = False
+# # #
+# # #
+# # #
+# # #
+# # # def read_console(console_data):
+# # #     global global_console_status
+# # #     global_console_status = console_data['busy']
+# # #     print(global_console_status)
+# # #     if '[+]' in console_data['data']:
+# # #         sigdata = console_data['data'].rstrip().split('\n')
+# # #         for line in sigdata:
+# # #             if '[+]' in line:
+# # #                 global_positive_out.append(line)
+# # #     print(console_data['data'])
+# # #
+# # #
+# mp_client = MsfRpcClient(password='123456', server='52.14.144.32', port=55553)
+# # # #console = MsfRpcConsole(mp_client, cb=read_console)
 # print()

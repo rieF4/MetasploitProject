@@ -22,6 +22,15 @@ from metasploit.venv.Aws.Aws_Api_Functions import (
 
 
 def update_container_document_attributes(instance_id):
+    """
+    Updates the container(s) documents that belongs to the instance.
+
+    Args:
+        instance_id (str): instance ID.
+
+    Returns:
+        list(dict): a list of dictionaries that composes the container updated documents.
+    """
 
     container_documents = []
 
@@ -197,7 +206,7 @@ def prepare_container_response(container_obj):
         "_id": container_obj.id,
         "image": container_obj.image.tags,
         "name": container_obj.name,
-        "status": container_obj.status
+        "status": container_obj.status,
     }
 
 
@@ -278,7 +287,7 @@ def validate_api_request_arguments(api_requests, expected_args):
 
     Args:
         api_requests (dict): a dictionary that composes the api requests from the client.
-        expected_args list(str): a list containing all the arguments that should be checked.
+        expected_args (list(str)): a list containing all the arguments that should be checked.
 
     Returns:
         tuple (dict, bool): a dictionary with arguments that aren't valid if exists and False,
@@ -331,7 +340,7 @@ def make_response(api_response):
     Returns a json and http status code to the client.
 
     Args:
-        (ApiResponse): api response object.
+        api_response (ApiResponse): api response object.
 
     Returns:
         tuple (Json, int): a (response, status_code) for the client.
