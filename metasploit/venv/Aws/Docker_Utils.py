@@ -65,7 +65,8 @@ def run_container_with_msfrpcd_metasploit(instance_id, port):
         "stdin_open": True,
         "tty": True,
         "ports": {port: port},
-        "detach": True
+        "detach": True,
+        "network": True
     }
 
     container = run_container(instance_id=instance_id, image="phocean/msf", kwargs=kwargs)
@@ -184,6 +185,23 @@ def execute_command_in_container(instance_id, container_id, command, **kwargs):
         APIError: if the server returns an error.
     """
     return get_container(instance_id=instance_id, container_id=container_id).exec_run(cmd=command, **kwargs)
+
+
+def create_network(instance_id, name, kwargs):
+    """
+    Creates docker network for the containers over an instance. Similar to the ``docker network create``.
+
+    Args:
+        instance_id (str): instance ID.
+        name (str): the name of the network that will be created.
+
+        Keyword arguments:
+            see create params - https://docker-py.readthedocs.io/en/stable/networks.html
+
+    Returns:
+        str: a network ID
+    """
+    return get_docker_server_instance(id=instance_id).get_docker().get_network_collection().create(name=name, **kwargs)
 
 
 # from metasploit.venv.Aws import Constants

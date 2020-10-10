@@ -18,6 +18,7 @@ INSTANCE = "Instance"
 SECURITY_GROUPS = "SecurityGroups"
 SECURITY_GROUP = "SecurityGroup"
 IMAGES = "Images"
+NETWORKS = "Networks"
 
 SSH_PORT = 22
 DOCKER_PORT = 2375

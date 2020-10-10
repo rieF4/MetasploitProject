@@ -86,11 +86,16 @@ class BadJsonInput(ApiException):
 
 
 class DatabaseOperationError(ApiException):
-    def __init__(self, operation_name, resource_id, type):
-        msg = f"{type} with {resource_id} was not successfully {operation_name} DB"
+    def __init__(self, document, error_msg):
+        msg = f"{error_msg}, document: {document}"
         super().__init__(msg)
 
 
 class DeleteDatabaseError(DatabaseOperationError):
-    def __init__(self, operation_name, resource_id, type):
-        super().__init__(operation_name=operation_name, resource_id=resource_id, type=type)
+    def __init__(self, document, error_msg):
+        super().__init__(document=document, error_msg=error_msg)
+
+
+class InsertDatabaseError(DatabaseOperationError):
+    def __init__(self, document, error_msg):
+        super().__init__(document=document, error_msg=error_msg)

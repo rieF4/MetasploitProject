@@ -240,6 +240,19 @@ def prepare_container_response(container_obj):
     }
 
 
+def prepare_network_response(network_obj):
+    """
+    Prepare a network parsed response for the client
+    """
+    network_obj.reload()
+
+    return {
+        "_id": network_obj.id,
+        "name": network_obj.name,
+        "containers": [container.id for container in network_obj.containers]
+    }
+
+
 def validate_request_type():
     """
     Validate the client request type (dict).

@@ -1,6 +1,11 @@
 from pymongo import MongoClient
 from metasploit.venv.Aws import Constants
-
+from metasploit.venv.Aws.ServerExceptions import (
+    ResourceNotFoundError,
+    DeleteDatabaseError,
+    InsertDatabaseError,
+    DatabaseOperationError,
+)
 
 db_client = MongoClient(
     'mongodb+srv://Metasploit:FVDxbg312@metasploit.gdvxn.mongodb.net/metasploit?retryWrites=true&w=majority'
@@ -11,7 +16,82 @@ metasploit_db = db_client['Metasploit']
 class DatabaseCollections:
     INSTANCES = metasploit_db['instances']
     SECURITY_GROUPS = metasploit_db['securityGroups']
-    KEY_PAIRS = metasploit_db['keyPairs']
+
+
+class DataBaseManager(object):
+    """
+    Class to manage all database operations.
+
+    Attributes:
+        collection_type (pymongo.Collection): the collection to use in the DB.
+        document (dict): the document to use all DB operations.
+    """
+    def __init__(self, document={}, collection_type=DatabaseCollections.INSTANCES):
+        self.collection_type = collection_type
+        self.document = document
+
+    def find_document(self, collection_name=Constants.INSTANCES, single_document=True, type=Constants.INSTANCE):
+        """
+        Finds a document in the database, and return a parsed dict response of the document if it was found.
+
+        Args:
+            collection_name (str): the collection name. etc: SecurityGroups, Instances
+            single_document (bool): indicate if the search should be on a single document.
+            type (str): what type of document it is. etc. Instances, Instance, SecurityGroup
+
+        Returns:
+            dict: the result from database if it was found.
+
+        Raises:
+            ResourceNotFoundError: in case the resource was not found in the DB.
+        """
+        if single_document:
+            database_result = self.collection_type.find_one(filter=self.document)
+            if database_result:
+                return database_result
+            else:
+                raise ResourceNotFoundError(type=type, id=self.document[Constants.ID])
+        else:
+            parsed_response = {collection_name: []}
+            database_result = self.collection_type.find(self.document)
+            for result in database_result:
+                parsed_response[collection_name].append(result)
+            if parsed_response[collection_name]:
+                return parsed_response
+            else:
+                raise ResourceNotFoundError(type=type)
+
+    def delete_document(self):
+        """
+        Deletes a single document from DB.
+
+        Raises:
+            DeleteDatabaseError: in case delete operation failed in the DB.
+        """
+        try:
+            self.collection_type.delete_one(filter=self.document)
+        except Exception as error:
+            raise DeleteDatabaseError(document=self.document, error_msg=error.__str__())
+
+    def insert_document(self):
+        """
+        Inserts a document into the DB.
+
+        Raises:
+            InsertDatabaseError: in case insertion to the DB fails.
+        """
+        try:
+            self.collection_type.insert_one(document=self.document)
+        except Exception as error:
+            raise InsertDatabaseError(document=self.document, error_msg=error.__str__())
+
+    def update_document(self, updated_document):
+        """
+        Updates a document in the DB
+        """
+        self.delete_document()
+        self.document = updated_document
+        self.insert_document()
 
 
 def find_documents(document, collection_type, collection_name="", single_document=True):

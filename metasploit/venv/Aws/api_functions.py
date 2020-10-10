@@ -15,20 +15,22 @@ from metasploit.venv.Aws.Api_Utils import (
     prepare_instance_response,
     prepare_security_group_response,
     prepare_container_response,
+    prepare_network_response,
     HttpCodes,
     choose_http_error_code,
     prepare_error_response,
     ApiResponse,
     update_container_document_attributes,
     find_container_document,
-    choose_port_for_msfrpcd
+    choose_port_for_msfrpcd,
 )
 from metasploit.venv.Aws.Docker_Utils import (
     pull_image,
     create_container,
     get_container,
     execute_command_in_container,
-    run_container_with_msfrpcd_metasploit
+    run_container_with_msfrpcd_metasploit,
+    create_network
 )
 from metasploit.venv.Aws.Aws_Api_Functions import (
     create_instance,
@@ -702,14 +704,17 @@ def execute_command_in_container_through_api(req, instance_id, container_id, ins
 
 
 def run_container_with_metasploit_daemon_through_api(instance_id):
+    """
+    Runs a container with metasploit image thar runs a msfrpc daemon is allocated to a random port dynamiclly.
 
+    Args:
+        instance_id (str): instance ID.
+    """
     instance_document = find_documents(
         document={Constants.ID: instance_id}, collection_type=DatabaseCollections.INSTANCES
     )
     if instance_document:
-
         port = choose_port_for_msfrpcd(containers_document=instance_document[Constants.DOCKER][Constants.CONTAINERS])
-        print(port)
         if port:
             msfrpcd_container = run_container_with_msfrpcd_metasploit(instance_id=instance_id, port=port)
 
@@ -723,3 +728,22 @@ def run_container_with_metasploit_daemon_through_api(instance_id):
                         return ApiResponse(response=container_response)
     else:
         raise InstanceNotFoundError(type=Constants.INSTANCE, id=instance_id)
+
+
+def create_docker_networks_through_api(req, instance_id, instance_document):
+    """
+    Creates a docker network on an instance.
+    """
+    try:
+        network = create_network(instance_id=instance_id, name=req.pop("Name"), kwargs=req)
+
+        network_response = prepare_network_response(network_obj=network)
+
+        instance_document[Constants.DOCKER][Constants.NETWORKS].append(network_response)
+
+        if update_instance_document_in_database(instance_id=instance_id, instance_response=instance_document):
+            return {
+                Constants.NETWORKS: instance_document[Constants.DOCKER][Constants.NETWORKS]
+            }
+    except APIError as e:
+        print(e)
