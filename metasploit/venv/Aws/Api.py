@@ -1,9 +1,6 @@
 from flask import Flask, jsonify
 from flask_restful import Api, request
 
-from metasploit.venv.Aws.Database import (
-    DatabaseCollections,
-)
 from metasploit.venv.Aws.Api_Utils import (
     HttpMethods,
     HttpCodes,
@@ -12,7 +9,6 @@ from metasploit.venv.Aws.Api_Utils import (
     EndpointAction,
     validate_json_request,
 )
-from metasploit.venv.Aws import Constants
 from metasploit.venv.Aws.api_functions import (
     pull_instance_image,
     create_instance_in_api,
@@ -32,7 +28,8 @@ from metasploit.venv.Aws.api_functions import (
     get_all_instance_images_from_database,
     update_security_group_inbound_permissions_in_api,
     start_container,
-    execute_command_in_container_through_api
+    execute_command_in_container_through_api,
+    run_container_with_metasploit_daemon_through_api
 )
 
 
@@ -473,6 +470,17 @@ class ContainersApi(CollectionApi):
             container_id=container_id
         )
 
+    @staticmethod
+    @make_response_decorator
+    def run_container_with_metasploit_daemon_endpoint(instance_id):
+        """
+        Runs a container with metasploit daemon endpoint
+
+        Args:
+             instance_id (str): instance ID.
+        """
+        return run_container_with_metasploit_daemon_through_api(instance_id=instance_id)
+
 
 class DockerImagesApi(CollectionApi):
 
@@ -633,6 +641,12 @@ if __name__ == "__main__":
             'ContainersApi.execute_command_endpoint',
             ContainersApi.execute_command_endpoint,
             [HttpMethods.PATCH]
+        ),
+        (
+            '/DockerServerInstances/<instance_id>/Containers/CreateMetasploitContainer',
+            'ContainersApi.run_container_with_metasploit_daemon_endpoint',
+            ContainersApi.run_container_with_metasploit_daemon_endpoint,
+            [HttpMethods.POST]
         )
     )
     flask_wrapper.run()

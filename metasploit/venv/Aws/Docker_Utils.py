@@ -25,6 +25,61 @@ def create_container(instance_id, image, command, kwargs):
     )
 
 
+def run_container(instance_id, image, kwargs):
+    """
+    runs a container over an instance ID. Similar to docker run command.
+
+    Args:
+        instance_id (str): instance ID.
+        image (str): image name that the docker will be created with.
+        kwargs (dict): https://docker-py.readthedocs.io/en/stable/containers.html#container-objects
+
+        Returns:
+            Container: a container object if created successfully.
+
+        Raises:
+            ImageNotFound: in case the image was not found on the docker server.
+            ApiError: In case the docker server returns an error.
+    """
+
+    if "detach" not in kwargs:
+        kwargs["detach"] = True
+    return get_docker_server_instance(id=instance_id).get_docker().get_container_collection().run(
+        image=image, **kwargs
+    )
+
+
+def run_container_with_msfrpcd_metasploit(instance_id, port):
+    """
+    Runs a container and start an msfrpc daemon for metasploit connection on a requested port.
+
+    Args:
+        instance_id (str): instance ID.
+        port (int): which port msfrpc daemon will listen to.
+
+    Returns:
+        Container: a container object if msfrpcd was deployed successfully, None otherwise
+
+    """
+    kwargs = {
+        "stdin_open": True,
+        "tty": True,
+        "ports": {port: port},
+        "detach": True
+    }
+
+    container = run_container(instance_id=instance_id, image="phocean/msf", kwargs=kwargs)
+
+    exit_code, o = container.exec_run(cmd=f"./msfrpcd -P 123456 -S -p {port}")
+
+    print(exit_code)
+    print(o)
+
+    if not exit_code:
+        return container
+    return None
+
+
 def get_container(instance_id, container_id):
     """
     Get container object by instance and container IDs.
@@ -129,3 +184,19 @@ def execute_command_in_container(instance_id, container_id, command, **kwargs):
         APIError: if the server returns an error.
     """
     return get_container(instance_id=instance_id, container_id=container_id).exec_run(cmd=command, **kwargs)
+
+
+# from metasploit.venv.Aws import Constants
+# from metasploit.venv.Aws.Aws_Api_Functions import create_instance
+# i = create_instance(Constants.CREATE_INSTANCES_DICT)
+# d = i.get_docker()
+# c = create_container(instance_id=i.get_instance_id(), image='phocean/msf', command="sleep 1000", kwargs={})
+# print()
+
+
+# class MetasploitContainer(object):
+#     def __init__(self, instance_id, container_id=""):
+#         port = get_docker_server_instance(id=instance_id).get_docker().get_api_client()
+#         if container_id:
+#             self.container = get_container(instance_id=instance_id, container_id=container_id)
+#         else:

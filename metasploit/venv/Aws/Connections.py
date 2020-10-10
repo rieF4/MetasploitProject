@@ -15,8 +15,8 @@ class Docker(object):
     This class attempts to connect to a specified docker server.
 
     Attributes:
-        docker_client (DockerClient): The docker client object can be used to maintain docker operations.
-        api_client (APIClient): The low level API object for docker.
+        _docker_client (DockerClient): The docker client object can be used to maintain docker operations.
+        _api_client (APIClient): The low level API object for docker.
     """
 
     def __init__(self, protocol, docker_server_ip, docker_port):
@@ -31,9 +31,15 @@ class Docker(object):
         """
         base_url = f"{protocol}://{docker_server_ip}:{docker_port}"
 
-        self.docker_client = docker.DockerClient(base_url=base_url)
+        self._docker_client = docker.DockerClient(base_url=base_url)
 
-        self.api_client = docker.APIClient(base_url=base_url)
+        self._api_client = docker.APIClient(base_url=base_url)
+
+    def get_api_client(self):
+        return self._api_client
+
+    def get_docker_client(self):
+        return self._docker_client
 
     def info(self):
         """
@@ -42,7 +48,7 @@ class Docker(object):
         Returns:
             dict: information about the the docker such as containers running, images, etc.
         """
-        return self.docker_client.info()
+        return self._docker_client.info()
 
     def get_container_collection(self):
         """
@@ -51,7 +57,7 @@ class Docker(object):
         Returns:
             ContainerCollection: a container collection object.
         """
-        return self.docker_client.containers
+        return self._docker_client.containers
 
     def get_network_collection(self):
         """
@@ -60,7 +66,7 @@ class Docker(object):
         Returns:
             NetworkCollection: a network collection object.
         """
-        return self.docker_client.networks
+        return self._docker_client.networks
 
     def get_image_collection(self):
         """
@@ -69,7 +75,7 @@ class Docker(object):
         Returns:
             ImageCollection: a image collection object.
         """
-        return self.docker_client.images
+        return self._docker_client.images
 
     def get_config_collection(self):
         """
@@ -79,7 +85,7 @@ class Docker(object):
             ConfigCollection: a config collection object.
 
         """
-        return self.docker_client.configs
+        return self._docker_client.configs
 
 
 class SSH(object):

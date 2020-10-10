@@ -21,6 +21,35 @@ from metasploit.venv.Aws.Aws_Api_Functions import (
 )
 
 
+def choose_port_for_msfrpcd(containers_document):
+    """
+    Choose dynamically the port that msfrpcd would listen to.
+
+    Args:
+        containers_document (dict): all of the instance container documents
+
+    Returns:
+        int: port to be used, 0 if there is not such a port.
+    """
+    used_ports = get_all_used_port_in_instance(containers_document=containers_document)
+    print(used_ports)
+    for port in Constants.PORTS:
+        if port not in used_ports:
+            return port
+    return 0
+
+
+def get_all_used_port_in_instance(containers_document):
+    all_containers_ports = [container_document["ports"] for container_document in containers_document]
+    print(containers_document)
+    print(all_containers_ports)
+    used_ports = []
+    for container_port_details in all_containers_ports:
+        for port in container_port_details.keys():
+            used_ports.append(port)
+    return used_ports
+
+
 def update_container_document_attributes(instance_id):
     """
     Updates the container(s) documents that belongs to the instance.
@@ -207,6 +236,7 @@ def prepare_container_response(container_obj):
         "image": container_obj.image.tags,
         "name": container_obj.name,
         "status": container_obj.status,
+        "ports": container_obj.ports
     }
 
 

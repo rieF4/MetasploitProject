@@ -104,5 +104,16 @@ def insert_document(collection_type, document):
         collection_type.insert_one(document=document)
         return True
     except Exception as e:
+        print("failed inserting element to DB")
         print(e)
+        return False
+
+
+def update_instance_document_in_database(instance_id, instance_response):
+    if delete_documents(collection_type=DatabaseCollections.INSTANCES, document={Constants.ID: instance_id}):
+        if insert_document(collection_type=DatabaseCollections.INSTANCES, document=instance_response):
+            return True
+        else:
+            return False
+    else:
         return False

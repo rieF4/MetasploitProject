@@ -4,7 +4,8 @@ from metasploit.venv.Aws.Database import (
     delete_documents,
     find_documents,
     insert_document,
-    update_document
+    update_document,
+    update_instance_document_in_database
 )
 
 from metasploit.venv.Aws import Constants
@@ -20,12 +21,14 @@ from metasploit.venv.Aws.Api_Utils import (
     ApiResponse,
     update_container_document_attributes,
     find_container_document,
+    choose_port_for_msfrpcd
 )
 from metasploit.venv.Aws.Docker_Utils import (
     pull_image,
     create_container,
     get_container,
-    execute_command_in_container
+    execute_command_in_container,
+    run_container_with_msfrpcd_metasploit
 )
 from metasploit.venv.Aws.Aws_Api_Functions import (
     create_instance,
@@ -233,7 +236,7 @@ def create_container_in_api(req, instance_document, instance_id):
         instance_document[Constants.DOCKER][Constants.CONTAINERS].append(container_response)
 
         if insert_document(collection_type=DatabaseCollections.INSTANCES, document=instance_document):
-            print(container_response)
+
             return container_response
 
 
@@ -331,7 +334,9 @@ def get_all_instances_from_database():
                 ins_res[Constants.DOCKER][Constants.CONTAINERS] = update_container_document_attributes(
                     instance_id=ins_res[Constants.ID]
                 )
-
+            update_instance_document_in_database(
+                instance_id=ins_res[Constants.ID], instance_response=ins_res
+            )
     if instances_response:
         return ApiResponse(response=instances_response, http_status_code=HttpCodes.OK)
     else:
@@ -359,6 +364,9 @@ def get_specific_instance_from_database(instance_id):
         if instance_response[Constants.DOCKER][Constants.CONTAINERS]:
             instance_response[Constants.DOCKER][Constants.CONTAINERS] = update_container_document_attributes(
                 instance_id=instance_response[Constants.ID]
+            )
+            update_instance_document_in_database(
+                instance_id=instance_id, instance_response=instance_response
             )
         return ApiResponse(response=instance_response, http_status_code=HttpCodes.OK)
     else:
@@ -414,12 +422,16 @@ def get_all_instance_containers_from_database(instance_id):
         if containers:
             containers = update_container_document_attributes(instance_id=instance_id)
 
-            return ApiResponse(
-                response={
-                    Constants.CONTAINERS: containers
-                },
-                http_status_code=HttpCodes.OK
-            )
+            instance_document[Constants.DOCKER][Constants.CONTAINERS] = containers
+
+            if update_instance_document_in_database(instance_id=instance_id, instance_response=instance_document):
+
+                return ApiResponse(
+                    response={
+                        Constants.CONTAINERS: containers
+                    },
+                    http_status_code=HttpCodes.OK
+                )
         else:
             raise ContainerNotFoundError(type=Constants.CONTAINERS)
     else:
@@ -688,10 +700,26 @@ def execute_command_in_container_through_api(req, instance_id, container_id, ins
         instance_id=instance_id, container_id=container_id, command=command, **req
     )
 
-    # container_document
 
-    return {
-        "Command": command,
-        "Status": "Success" if not exit_code else "Failed",
-        "Output": output.decode("utf-8")
-    }
+def run_container_with_metasploit_daemon_through_api(instance_id):
+
+    instance_document = find_documents(
+        document={Constants.ID: instance_id}, collection_type=DatabaseCollections.INSTANCES
+    )
+    if instance_document:
+
+        port = choose_port_for_msfrpcd(containers_document=instance_document[Constants.DOCKER][Constants.CONTAINERS])
+        print(port)
+        if port:
+            msfrpcd_container = run_container_with_msfrpcd_metasploit(instance_id=instance_id, port=port)
+
+            if msfrpcd_container:
+                if delete_documents(collection_type=DatabaseCollections.INSTANCES, document=instance_document):
+
+                    container_response = prepare_container_response(container_obj=msfrpcd_container)
+
+                    instance_document[Constants.DOCKER][Constants.CONTAINERS].append(container_response)
+                    if insert_document(collection_type=DatabaseCollections.INSTANCES, document=instance_document):
+                        return ApiResponse(response=container_response)
+    else:
+        raise InstanceNotFoundError(type=Constants.INSTANCE, id=instance_id)
