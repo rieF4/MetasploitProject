@@ -4,7 +4,6 @@ from metasploit.venv.Aws.ServerExceptions import (
     ResourceNotFoundError,
     DeleteDatabaseError,
     InsertDatabaseError,
-    DatabaseOperationError,
 )
 
 db_client = MongoClient(
@@ -26,9 +25,19 @@ class DataBaseManager(object):
         collection_type (pymongo.Collection): the collection to use in the DB.
         document (dict): the document to use all DB operations.
     """
-    def __init__(self, document={}, collection_type=DatabaseCollections.INSTANCES):
-        self.collection_type = collection_type
-        self.document = document
+    def __init__(self, collection_type, **kwargs):
+
+        self._collection_type = collection_type
+        self._resource_id = kwargs.get("resource_id", "")
+
+        if self._resource_id:
+            self._document = self.find_document(
+                collection_name=kwargs.get("collection_name", Constants.INSTANCES),
+                single_document=kwargs.get("single_document", True),
+                type=kwargs.get("type", Constants.INSTANCE)
+            )
+        else:
+            self._document = {}
 
     def find_document(self, collection_name=Constants.INSTANCES, single_document=True, type=Constants.INSTANCE):
         """
@@ -46,14 +55,15 @@ class DataBaseManager(object):
             ResourceNotFoundError: in case the resource was not found in the DB.
         """
         if single_document:
-            database_result = self.collection_type.find_one(filter=self.document)
+            database_result = self._collection_type.find_one(filter={Constants.ID: self._resource_id})
+            self._document = database_result
             if database_result:
                 return database_result
             else:
-                raise ResourceNotFoundError(type=type, id=self.document[Constants.ID])
+                raise ResourceNotFoundError(type=type, id=self._resource_id)
         else:
             parsed_response = {collection_name: []}
-            database_result = self.collection_type.find(self.document)
+            database_result = self._collection_type.find(self._document)
             for result in database_result:
                 parsed_response[collection_name].append(result)
             if parsed_response[collection_name]:
@@ -69,9 +79,9 @@ class DataBaseManager(object):
             DeleteDatabaseError: in case delete operation failed in the DB.
         """
         try:
-            self.collection_type.delete_one(filter=self.document)
+            self._collection_type.delete_one(filter=self._document)
         except Exception as error:
-            raise DeleteDatabaseError(document=self.document, error_msg=error.__str__())
+            raise DeleteDatabaseError(document=self._document, error_msg=error.__str__())
 
     def insert_document(self):
         """
@@ -81,17 +91,28 @@ class DataBaseManager(object):
             InsertDatabaseError: in case insertion to the DB fails.
         """
         try:
-            self.collection_type.insert_one(document=self.document)
+            self._collection_type.insert_one(document=self._document)
         except Exception as error:
-            raise InsertDatabaseError(document=self.document, error_msg=error.__str__())
+            raise InsertDatabaseError(document=self._document, error_msg=error.__str__())
 
     def update_document(self, updated_document):
         """
         Updates a document in the DB
         """
         self.delete_document()
-        self.document = updated_document
+        self._document = updated_document
         self.insert_document()
+
+    @property
+    def document(self):
+        return self._document
+
+    @document.setter
+    def document(self, document):
+        if isinstance(document, dict):
+            self._document = document
+        else:
+            raise AttributeError(f"{document} is not a dict type")
 
 
 def find_documents(document, collection_type, collection_name="", single_document=True):

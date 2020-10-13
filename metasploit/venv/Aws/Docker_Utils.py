@@ -205,8 +205,8 @@ def create_network(instance_id, name, kwargs):
 
 
 # from metasploit.venv.Aws import Constants
-# from metasploit.venv.Aws.Aws_Api_Functions import create_instance
-# i = create_instance(Constants.CREATE_INSTANCES_DICT)
+# from metasploit.venv.Aws.Aws_Api_Functions import create_resource
+# i = create_resource(Constants.CREATE_INSTANCES_DICT)
 # d = i.get_docker()
 # c = create_container(instance_id=i.get_instance_id(), image='phocean/msf', command="sleep 1000", kwargs={})
 # print()

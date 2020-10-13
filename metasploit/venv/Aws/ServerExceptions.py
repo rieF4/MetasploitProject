@@ -1,4 +1,14 @@
 
+from metasploit.venv.Aws.Response import HttpCodes
+from werkzeug.exceptions import (
+    BadRequest
+)
+from botocore.exceptions import ClientError, ParamValidationError
+from docker.errors import (
+    ImageNotFound,
+    APIError,
+)
+
 
 class ApiException(Exception):
     """
@@ -99,3 +109,23 @@ class DeleteDatabaseError(DatabaseOperationError):
 class InsertDatabaseError(DatabaseOperationError):
     def __init__(self, document, error_msg):
         super().__init__(document=document, error_msg=error_msg)
+
+
+def choose_http_error_code(error):
+    """
+    Returns the HTTP error code according to the error exception type.
+
+    Args:
+        error (Exception): an exception object.
+
+    Returns:
+        int: a http error code. (400's, 500's)
+    """
+    if isinstance(error, (ResourceNotFoundError, ImageNotFound)):
+        return HttpCodes.NOT_FOUND
+    elif isinstance(error, (ClientError, DuplicateDockerResourceError, DuplicateImageError)):
+        return HttpCodes.DUPLICATE
+    elif isinstance(error, (BadRequest, TypeError, AttributeError, ParamValidationError, BadJsonInput)):
+        return HttpCodes.BAD_REQUEST
+    elif isinstance(error, APIError):
+        return HttpCodes.INTERNAL_SERVER_ERROR

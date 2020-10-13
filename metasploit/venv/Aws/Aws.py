@@ -281,6 +281,17 @@ class DockerServerInstance(object):
 aws_api = AwsAccess()
 
 
+# def a(func):
+#     def b(**kwargs):
+#         c = 4
+#         return func(c=4)
+#     return b
+#
+# @a
+# def d(c):
+#     return c
+#
+# print(d(c=8))
 # from pymetasploit3.msfrpc import MsfRpcClient
 # # from pymetasploit3.msfconsole import MsfRpcConsole
 # # import nmap

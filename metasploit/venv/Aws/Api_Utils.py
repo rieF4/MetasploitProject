@@ -32,7 +32,6 @@ def choose_port_for_msfrpcd(containers_document):
         int: port to be used, 0 if there is not such a port.
     """
     used_ports = get_all_used_port_in_instance(containers_document=containers_document)
-    print(used_ports)
     for port in Constants.PORTS:
         if port not in used_ports:
             return port
@@ -41,8 +40,6 @@ def choose_port_for_msfrpcd(containers_document):
 
 def get_all_used_port_in_instance(containers_document):
     all_containers_ports = [container_document["ports"] for container_document in containers_document]
-    print(containers_document)
-    print(all_containers_ports)
     used_ports = []
     for container_port_details in all_containers_ports:
         for port in container_port_details.keys():
@@ -112,7 +109,7 @@ def check_if_image_already_exists(image_document, tag_to_check):
 
 def find_container_document(containers_documents, container_id):
     """
-    Find a container document with the specified ID.
+    Finds a container document with the specified ID.
 
     Args:
         containers_documents (dict): a container documents form.
@@ -123,7 +120,7 @@ def find_container_document(containers_documents, container_id):
     """
     for container in containers_documents:
         if container[Constants.ID] == container_id:
-            return container[Constants.ID]
+            return container
     return {}
 
 

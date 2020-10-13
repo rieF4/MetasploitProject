@@ -10,7 +10,7 @@ class Connection(object):
     pass
 
 
-class Docker(object):
+class Docker(Connection):
     """
     This class attempts to connect to a specified docker server.
 
@@ -88,7 +88,7 @@ class Docker(object):
         return self._docker_client.configs
 
 
-class SSH(object):
+class SSH(Connection):
     """
     This is a class to connect with ssh to a remote machine.
 
@@ -146,9 +146,9 @@ class SSH(object):
         return self._private_key
 
 
-class Metasploit(object):
+class Metasploit(Connection):
     """
-    Class that represents a connetion to msfrpc daemon of metasploit.
+    Class that represents a connection to msfrpc daemon of metasploit.
 
     Attributes:
         _metasploit_client (MsfRpcClient): msfrpc client object.

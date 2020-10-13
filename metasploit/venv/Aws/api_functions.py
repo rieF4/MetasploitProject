@@ -705,7 +705,7 @@ def execute_command_in_container_through_api(req, instance_id, container_id, ins
 
 def run_container_with_metasploit_daemon_through_api(instance_id):
     """
-    Runs a container with metasploit image thar runs a msfrpc daemon is allocated to a random port dynamiclly.
+    Runs a container with metasploit image thar runs a msfrpc daemon is allocated to a random port dynamically.
 
     Args:
         instance_id (str): instance ID.
@@ -747,3 +747,5 @@ def create_docker_networks_through_api(req, instance_id, instance_document):
             }
     except APIError as e:
         print(e)
+
+
