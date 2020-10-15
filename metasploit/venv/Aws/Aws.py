@@ -96,7 +96,8 @@ class DockerServerInstance(object):
     def get_commands(self):
         return self._commands
 
-    def get_docker(self):
+    @property
+    def docker(self):
         return self._docker
 
     def get_instance_id(self):
@@ -281,17 +282,30 @@ class DockerServerInstance(object):
 aws_api = AwsAccess()
 
 
-# def a(func):
-#     def b(**kwargs):
-#         c = 4
-#         return func(c=4)
+
+
+# def a(*args):
+#     def b(func):
+#         def c(**kwargs):
+#             if ""
+#             return func()
+#         return c
 #     return b
 #
-# @a
-# def d(c):
-#     return c
+# class test:
 #
-# print(d(c=8))
+#     def __init__(self, k):
+#         self.k = k
+#
+#     @a
+#     def d(self):
+#         print("dsfdsf")
+#
+# j = test(k=4).d()
+#
+# print(j)
+
+
 # from pymetasploit3.msfrpc import MsfRpcClient
 # # from pymetasploit3.msfconsole import MsfRpcConsole
 # # import nmap

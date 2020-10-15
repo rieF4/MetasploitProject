@@ -5,6 +5,9 @@ from metasploit.venv.Aws.ServerExceptions import (
     DeleteDatabaseError,
     InsertDatabaseError,
 )
+from metasploit.venv.Aws.Response import (
+    PrepareResponse
+)
 
 db_client = MongoClient(
     'mongodb+srv://Metasploit:FVDxbg312@metasploit.gdvxn.mongodb.net/metasploit?retryWrites=true&w=majority'
@@ -17,7 +20,7 @@ class DatabaseCollections:
     SECURITY_GROUPS = metasploit_db['securityGroups']
 
 
-class DataBaseManager(object):
+class DatabaseOperations(object):
     """
     Class to manage all database operations.
 
@@ -29,17 +32,27 @@ class DataBaseManager(object):
 
         self._collection_type = collection_type
         self._resource_id = kwargs.get("resource_id", "")
+        self._sub_resource_id = kwargs.get("sub_resource_id", "")
 
-        if self._resource_id:
-            self._document = self.find_document(
+        if not kwargs.get("create_resource_flag", False):
+            self.document = self.find_document(
                 collection_name=kwargs.get("collection_name", Constants.INSTANCES),
                 single_document=kwargs.get("single_document", True),
                 type=kwargs.get("type", Constants.INSTANCE)
             )
+            if kwargs.get("all_sub_resources", False):
+                self._document = self.document[Constants.DOCKER][kwargs.get("sub_document_type", Constants.CONTAINERS)]
+                if self._sub_resource_id:
+                    self._document = _find_specific_document(
+                        documents=self.document, sub_resource_id=self._sub_resource_id
+                    )
+                    # if not self.document = 1
         else:
             self._document = {}
 
-    def find_document(self, collection_name=Constants.INSTANCES, single_document=True, type=Constants.INSTANCE):
+    def find_document(
+            self, collection_name=Constants.INSTANCES, single_document=True, type=Constants.INSTANCE
+    ):
         """
         Finds a document in the database, and return a parsed dict response of the document if it was found.
 
@@ -56,7 +69,7 @@ class DataBaseManager(object):
         """
         if single_document:
             database_result = self._collection_type.find_one(filter={Constants.ID: self._resource_id})
-            self._document = database_result
+            self.document = database_result
             if database_result:
                 return database_result
             else:
@@ -100,7 +113,7 @@ class DataBaseManager(object):
         Updates a document in the DB
         """
         self.delete_document()
-        self._document = updated_document
+        self.document = updated_document
         self.insert_document()
 
     @property
@@ -115,106 +128,155 @@ class DataBaseManager(object):
             raise AttributeError(f"{document} is not a dict type")
 
 
-def find_documents(document, collection_type, collection_name="", single_document=True):
+class DatabaseManager(object):
+    def __init__(self, api_manager):
+        self._api_manager = api_manager
+
+    @property
+    def api_manger(self):
+        return self._api_manager
+
+
+class DockerServerDatabaseManager(DatabaseManager):
+    def __init__(self, api_manager, docker_server):
+        super(DockerServerDatabaseManager, self).__init__(api_manager=api_manager)
+        self.docker_server = docker_server
+
+
+class SecurityGroupDatabaseManager(DatabaseManager):
+    def __init__(self, api_manager, security_group):
+        super(SecurityGroupDatabaseManager, self).__init__(api_manager=api_manager)
+        self.security_group = security_group
+
+
+class ContainerDatabaseManager(DockerServerDatabaseManager):
+    def __init__(self, api_manager, docker_server, container):
+        super(ContainerDatabaseManager, self).__init__(api_manager=api_manager, docker_server=docker_server)
+        self.container = container
+
+
+class ImageDatabaseManager(DockerServerDatabaseManager):
+    def __init__(self, api_manager, docker_server, image):
+        super(ImageDatabaseManager, self).__init__(api_manager=api_manager, docker_server=docker_server)
+        self.image = image
+
+
+def _find_specific_document(documents, sub_resource_id):
     """
-    Find a document in the database, and return a parsed dict response of the document if it was found.
+    Finds a document with the specified ID.
 
     Args:
-        document (dict): The document to search for.
-        collection_type (pymongo.Collection): the collection that the request should be searched on.
-        collection_name (str): the collection name. etc: SecurityGroups, Instances, KeyPair
-        single_document (bool): indicate if the search should be on a single document.
+        documents (dict): documents form.
 
     Returns:
-        dict: the result from database if it was found, otherwise empty dict.
+        dict: a container document if found, empty dict otherwise.
     """
-    if single_document:
-        database_result = collection_type.find_one(filter=document)
-        return database_result if database_result else {}
-    else:
-        parsed_response = {collection_name: []}
-        database_result = collection_type.find(document)
-        for result in database_result:
-            parsed_response[collection_name].append(result)
-        if parsed_response[collection_name]:
-            return parsed_response
-        else:
-            return {}
+    for document in documents:
+        if document[Constants.ID] == sub_resource_id:
+            return document
+    return {}
 
 
-def update_document(fields, collection_type, operation, id):
-    """
-    update a document in the database.
-
-    Args:
-        fields (dict): a dictionary form of what to update.
-        collection_type (pymongo.Collection): the collection that the update should be on.
-        operation (str): the database operation that should be used. ("$set", "$push")
-        id (str): the id of the document to be updated.
-
-        fields parameter examples:
-        {
-            "IpPermissionsInbound": security_group_obj.ip_permissions
-        }
-        means update the IpInboundPermissions To a new ip permissions
-
-
-        {
-         "Docker": {
-            "Containers": container_response
-            }
-        }
-        means update the Containers over an instance
-
-    Returns:
-        True if database update was successful, False otherwise.
-    """
-    try:
-        collection_type.update_one({Constants.ID: id}, {operation: fields})
-        return True
-    except Exception as e:
-        print(e)
-        return False
-
-
-def delete_documents(collection_type, document={}, single_document=True):
-    """
-    Deletes a single or multiple documents from a chosen collection.
-
-    Args:
-        collection_type (pymongo.Collection): The collection that should be deleted from.
-        document (dict): the document from the database that should be deleted.
-        single_document (bool): indicate if the deletion should be on a single document.
-
-    Returns:
-        True if deletion from database was completed successfully, False otherwise.
-    """
-    try:
-        if single_document:
-            collection_type.delete_one(filter=document)
-        else:
-            collection_type.delete_many(filter=document)  # means delete all of them
-        return True
-    except Exception as e:
-        print(e)
-        return False
-
-
-def insert_document(collection_type, document):
-    try:
-        collection_type.insert_one(document=document)
-        return True
-    except Exception as e:
-        print("failed inserting element to DB")
-        print(e)
-        return False
-
-
-def update_instance_document_in_database(instance_id, instance_response):
-    if delete_documents(collection_type=DatabaseCollections.INSTANCES, document={Constants.ID: instance_id}):
-        if insert_document(collection_type=DatabaseCollections.INSTANCES, document=instance_response):
-            return True
-        else:
-            return False
-    else:
-        return False
+# def find_documents(document, collection_type, collection_name="", single_document=True):
+#     """
+#     Find a document in the database, and return a parsed dict response of the document if it was found.
+#
+#     Args:
+#         document (dict): The document to search for.
+#         collection_type (pymongo.Collection): the collection that the request should be searched on.
+#         collection_name (str): the collection name. etc: SecurityGroups, Instances, KeyPair
+#         single_document (bool): indicate if the search should be on a single document.
+#
+#     Returns:
+#         dict: the result from database if it was found, otherwise empty dict.
+#     """
+#     if single_document:
+#         database_result = collection_type.find_one(filter=document)
+#         return database_result if database_result else {}
+#     else:
+#         parsed_response = {collection_name: []}
+#         database_result = collection_type.find(document)
+#         for result in database_result:
+#             parsed_response[collection_name].append(result)
+#         if parsed_response[collection_name]:
+#             return parsed_response
+#         else:
+#             return {}
+#
+#
+# def update_document(fields, collection_type, operation, id):
+#     """
+#     update a document in the database.
+#
+#     Args:
+#         fields (dict): a dictionary form of what to update.
+#         collection_type (pymongo.Collection): the collection that the update should be on.
+#         operation (str): the database operation that should be used. ("$set", "$push")
+#         id (str): the id of the document to be updated.
+#
+#         fields parameter examples:
+#         {
+#             "IpPermissionsInbound": security_group_obj.ip_permissions
+#         }
+#         means update the IpInboundPermissions To a new ip permissions
+#
+#
+#         {
+#          "Docker": {
+#             "Containers": container_response
+#             }
+#         }
+#         means update the Containers over an instance
+#
+#     Returns:
+#         True if database update was successful, False otherwise.
+#     """
+#     try:
+#         collection_type.update_one({Constants.ID: id}, {operation: fields})
+#         return True
+#     except Exception as e:
+#         print(e)
+#         return False
+#
+#
+# def delete_documents(collection_type, document={}, single_document=True):
+#     """
+#     Deletes a single or multiple documents from a chosen collection.
+#
+#     Args:
+#         collection_type (pymongo.Collection): The collection that should be deleted from.
+#         document (dict): the document from the database that should be deleted.
+#         single_document (bool): indicate if the deletion should be on a single document.
+#
+#     Returns:
+#         True if deletion from database was completed successfully, False otherwise.
+#     """
+#     try:
+#         if single_document:
+#             collection_type.delete_one(filter=document)
+#         else:
+#             collection_type.delete_many(filter=document)  # means delete all of them
+#         return True
+#     except Exception as e:
+#         print(e)
+#         return False
+#
+#
+# def insert_document(collection_type, document):
+#     try:
+#         collection_type.insert_one(document=document)
+#         return True
+#     except Exception as e:
+#         print("failed inserting element to DB")
+#         print(e)
+#         return False
+#
+#
+# def update_instance_document_in_database(instance_id, instance_response):
+#     if delete_documents(collection_type=DatabaseCollections.INSTANCES, document={Constants.ID: instance_id}):
+#         if insert_document(collection_type=DatabaseCollections.INSTANCES, document=instance_response):
+#             return True
+#         else:
+#             return False
+#     else:
+#         return False

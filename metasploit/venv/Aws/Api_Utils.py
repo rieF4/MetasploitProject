@@ -19,6 +19,7 @@ from docker.errors import (
 from metasploit.venv.Aws.Aws_Api_Functions import (
     get_docker_server_instance,
 )
+from metasploit.venv.Aws.Response import HttpCodes
 
 
 def choose_port_for_msfrpcd(containers_document):
@@ -61,7 +62,7 @@ def update_container_document_attributes(instance_id):
     container_documents = []
 
     docker_server_instance = get_docker_server_instance(id=instance_id)
-    containers = docker_server_instance.get_docker().get_container_collection().list(all=True)
+    containers = docker_server_instance.docker().get_container_collection().list(all=True)
 
     for container in containers:
         container_documents.append(prepare_container_response(container_obj=container))
@@ -272,11 +273,12 @@ def validate_request_type():
         return False, err.__str__()
 
 
-def validate_json_request(*expected_args):
+def validate_json_request(*expected_args, validate=True):
     """
     Validates the json request for an api function that needs a request as input.
 
     Args:
+        validate (bool): is json validation required, True if it is, False otherwise.
         expected_args (list): list of arguments that should be checked if there are in the json request.
     """
     def decorator_validate_json(api_func):
@@ -302,17 +304,18 @@ def validate_json_request(*expected_args):
                 BadJsonInput: in case the parameters for the json request are not valid.
                 ResourceNotFoundError: in case the requested resource was not found.
             """
-            type_validation, msg = validate_request_type()
-            if not type_validation:
-                return make_error_response(msg=msg, http_error_code=HttpCodes.BAD_REQUEST, req=request.json)
+            if validate:
+                type_validation, msg = validate_request_type()
+                if not type_validation:
+                    return make_error_response(msg=msg, http_error_code=HttpCodes.BAD_REQUEST, req=request.json)
 
-            api_requests = request.json
-            bad_inputs, is_valid_argument = validate_api_request_arguments(
-                api_requests=api_requests, expected_args=expected_args
-            )
+                api_requests = request.json
+                bad_inputs, is_valid_argument = validate_api_request_arguments(
+                    api_requests=api_requests, expected_args=expected_args
+                )
 
-            if not is_valid_argument:
-                raise BadJsonInput(bad_inputs=bad_inputs)
+                if not is_valid_argument:
+                    raise BadJsonInput(bad_inputs=bad_inputs)
 
             api_response = api_func(*args, **kwargs)
             return make_response(api_response=api_response)
@@ -385,46 +388,46 @@ def make_response(api_response):
     Returns:
         tuple (Json, int): a (response, status_code) for the client.
     """
-    resp = api_response.get_response()
-    http_status_code = api_response.get_http_status_code()
+    resp = api_response.response
+    http_status_code = api_response.http_status_code
 
     if resp:
         return jsonify(resp), http_status_code
     return jsonify(''), http_status_code
 
 
-class ApiResponse(object):
-    """
-    This is a class to represent an API response.
-
-    Attributes:
-        response (dict): a response from the database.
-        http_status_code (int): the http status code of the response.
-    """
-    def __init__(self, response={}, http_status_code=200):
-        self._response = response
-        self._http_status_code = http_status_code
-
-    def get_response(self):
-        return self._response
-
-    def get_http_status_code(self):
-        return self._http_status_code
-
-
-class HttpCodes:
-    OK = 200
-    CREATED = 201
-    ACCEPTED = 202
-    NO_CONTENT = 204
-    MULTI_STATUS = 207
-    BAD_REQUEST = 400
-    UNAUTHORIZED = 401
-    FORBIDDEN = 403
-    NOT_FOUND = 404
-    METHOD_NOT_ALLOWED = 405
-    DUPLICATE = 409
-    INTERNAL_SERVER_ERROR = 500
+# class ApiResponse(object):
+#     """
+#     This is a class to represent an API response.
+#
+#     Attributes:
+#         response (dict): a response from the database.
+#         http_status_code (int): the http status code of the response.
+#     """
+#     def __init__(self, response={}, http_status_code=200):
+#         self._response = response
+#         self._http_status_code = http_status_code
+#
+#     def get_response(self):
+#         return self._response
+#
+#     def get_http_status_code(self):
+#         return self._http_status_code
+#
+#
+# class HttpCodes:
+#     OK = 200
+#     CREATED = 201
+#     ACCEPTED = 202
+#     NO_CONTENT = 204
+#     MULTI_STATUS = 207
+#     BAD_REQUEST = 400
+#     UNAUTHORIZED = 401
+#     FORBIDDEN = 403
+#     NOT_FOUND = 404
+#     METHOD_NOT_ALLOWED = 405
+#     DUPLICATE = 409
+#     INTERNAL_SERVER_ERROR = 500
 
 
 class HttpMethods:

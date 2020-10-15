@@ -3,12 +3,12 @@ from metasploit.venv.Aws.Aws_Api_Functions import (
 )
 
 
-def create_container(instance_id, image, command, kwargs):
+def create_container(instance, image, command, kwargs):
     """
     Creates a container over an instance ID. Similar to Docker create shell command.
 
     Args:
-        instance_id (str): instance ID.
+        instance (DockerServerInstance): DockerServerInstance object.
         image (str): image name that the docker will be created with.
         command (str): the command to run on the container.
         kwargs (dict): Keyword arguments: https://docker-py.readthedocs.io/en/stable/containers.html#container-objects
@@ -20,17 +20,15 @@ def create_container(instance_id, image, command, kwargs):
         ImageNotFound: in case the image was not found on the docker server.
         ApiError: In case the docker server returns an error.
     """
-    return get_docker_server_instance(id=instance_id).get_docker().get_container_collection().create(
-        image=image, command=command, **kwargs
-    )
+    return instance.docker().get_container_collection().create(image=image, command=command, **kwargs)
 
 
-def run_container(instance_id, image, kwargs):
+def run_container(instance, image, kwargs):
     """
     runs a container over an instance ID. Similar to docker run command.
 
     Args:
-        instance_id (str): instance ID.
+        instance (DockerServerInstance): docker server instance object.
         image (str): image name that the docker will be created with.
         kwargs (dict): https://docker-py.readthedocs.io/en/stable/containers.html#container-objects
 
@@ -44,21 +42,19 @@ def run_container(instance_id, image, kwargs):
 
     if "detach" not in kwargs:
         kwargs["detach"] = True
-    return get_docker_server_instance(id=instance_id).get_docker().get_container_collection().run(
-        image=image, **kwargs
-    )
+    return instance.docker.get_container_collection().run(image=image, **kwargs)
 
 
-def run_container_with_msfrpcd_metasploit(instance_id, port):
+def run_container_with_msfrpcd_metasploit(instance, port):
     """
     Runs a container and start an msfrpc daemon for metasploit connection on a requested port.
 
     Args:
-        instance_id (str): instance ID.
+        instance (DockerServerInstance): docker server instance object.
         port (int): which port msfrpc daemon will listen to.
 
     Returns:
-        Container: a container object if msfrpcd was deployed successfully, None otherwise
+        Container: a container object with msfrpcd deployed, None otherwise.
 
     """
     kwargs = {
@@ -69,7 +65,7 @@ def run_container_with_msfrpcd_metasploit(instance_id, port):
         "network": True
     }
 
-    container = run_container(instance_id=instance_id, image="phocean/msf", kwargs=kwargs)
+    container = run_container(instance=instance, image="phocean/msf", kwargs=kwargs)
 
     exit_code, o = container.exec_run(cmd=f"./msfrpcd -P 123456 -S -p {port}")
 
@@ -95,18 +91,18 @@ def get_container(instance_id, container_id):
     Raises:
         ApiError: in case the docker server returns an error.
     """
-    return get_docker_server_instance(id=instance_id).get_docker().get_container_collection().get(
+    return get_docker_server_instance(id=instance_id).docker().get_container_collection().get(
         container_id=container_id
     )
 
 
-def pull_image(instance_id, repository, tag=None, **kwargs):
+def pull_image(instance, repository, tag=None, **kwargs):
     """
     Pull an image of the given name and return it.
     Similar to the docker pull command. If no tag is specified, all tags from that repository will be pulled.
 
     Args:
-        instance_id (str): instance ID.
+        instance (DockerServerInstance): docker server instance object.
         repository (str) – The repository to pull.
         tag (str) – The tag to pull.
 
@@ -121,9 +117,7 @@ def pull_image(instance_id, repository, tag=None, **kwargs):
     Raises:
         ApiError: If the server returns an error.
     """
-    return get_docker_server_instance(id=instance_id).get_docker().get_image_collection().pull(
-        repository=repository, tag=tag, **kwargs
-    )
+    return instance.docker.get_image_collection().pull(repository=repository, tag=tag, **kwargs)
 
 
 def build_image(instance_id, **kwargs):
@@ -145,7 +139,7 @@ def build_image(instance_id, **kwargs):
         docker.errors.APIError – If the server returns any other error.
         TypeError – If neither path nor fileobj is specified.
     """
-    return get_docker_server_instance(id=instance_id).get_docker().get_image_collection().build(**kwargs)
+    return get_docker_server_instance(id=instance_id).docker().get_image_collection().build(**kwargs)
 
 
 def execute_command_in_container(instance_id, container_id, command, **kwargs):
@@ -201,20 +195,20 @@ def create_network(instance_id, name, kwargs):
     Returns:
         str: a network ID
     """
-    return get_docker_server_instance(id=instance_id).get_docker().get_network_collection().create(name=name, **kwargs)
+    return get_docker_server_instance(id=instance_id).docker().get_network_collection().create(name=name, **kwargs)
 
 
 # from metasploit.venv.Aws import Constants
-# from metasploit.venv.Aws.Aws_Api_Functions import create_resource
-# i = create_resource(Constants.CREATE_INSTANCES_DICT)
-# d = i.get_docker()
+# from metasploit.venv.Aws.Aws_Api_Functions import create_resources
+# i = create_resources(Constants.CREATE_INSTANCES_DICT)
+# d = i.docker()
 # c = create_container(instance_id=i.get_instance_id(), image='phocean/msf', command="sleep 1000", kwargs={})
 # print()
 
 
 # class MetasploitContainer(object):
 #     def __init__(self, instance_id, container_id=""):
-#         port = get_docker_server_instance(id=instance_id).get_docker().get_api_client()
+#         port = get_docker_server_instance(id=instance_id).docker().get_api_client()
 #         if container_id:
 #             self.container = get_container(instance_id=instance_id, container_id=container_id)
 #         else:

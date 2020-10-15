@@ -17,6 +17,7 @@ INSTANCES = "Instances"
 INSTANCE = "Instance"
 SECURITY_GROUPS = "SecurityGroups"
 SECURITY_GROUP = "SecurityGroup"
+IMAGE = "Image"
 IMAGES = "Images"
 NETWORKS = "Networks"
 

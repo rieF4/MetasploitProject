@@ -164,7 +164,8 @@ class Metasploit(Connection):
         """
         self._metasploit_client = MsfRpcClient(password=password, server=server, port=port)
 
-    def get_metasploit_client(self):
+    @property
+    def metasploit_client(self):
         return self._metasploit_client
 
     def get_exploits(self):
@@ -174,4 +175,4 @@ class Metasploit(Connection):
         Returns:
            list(str): a list of strings representing all the available exploits on metasploit
         """
-        return self._metasploit_client.modules.exploits
+        return self.metasploit_client.modules.exploits
