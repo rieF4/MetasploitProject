@@ -37,7 +37,7 @@ class ApiResponse(object):
         return self._http_status_code
 
 
-class PrepareResponse(ApiResponse):
+class PrepareResponse(object):
 
     @staticmethod
     def prepare_container_response(container):

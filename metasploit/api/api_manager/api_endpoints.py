@@ -1,140 +1,12 @@
-from flask import Flask, jsonify
-from flask_restful import Api, request
+from flask_restful import request
 
-from metasploit.venv.Aws.utils import (
-    HttpMethods,
-    validate_json_request,
+from metasploit.api.database import (
+    DatabaseCollections
 )
-from metasploit.venv.Aws.Response import (
-    HttpCodes
-)
+from metasploit import constants as global_constants
+from metasploit.utils.decorators import validate_json_request
 
-from metasploit.venv.Aws.api_management import ApiManager
-from metasploit.venv.Aws.Database import DatabaseCollections
-from metasploit.venv.Aws import Constants
-
-
-class FlaskAppWrapper(object):
-    """
-    This is a class to wrap flask program and to create its endpoints to functions.
-
-    Attributes:
-        self._api (FlaskApi) - the api of flask.
-    """
-    app = Flask(__name__)
-
-    def __init__(self):
-        self._api = Api(app=FlaskAppWrapper.app)
-
-    @app.errorhandler(HttpCodes.NOT_FOUND)
-    def invalid_urls_error(self):
-        """
-        Catches a client request that is not a valid API URL.
-
-        Returns:
-            tuple (Json, int): an error response that shows all available URL's for the client to use.
-        """
-        url_error = {
-            "Error": f"The given url {request.base_url} is invalid ",
-            "AvailableUrls": "In progress"
-        }
-
-        return jsonify(url_error), 404
-
-    @app.errorhandler(HttpCodes.BAD_REQUEST)
-    def method_not_allowed(self):
-        method_not_allowed_err = {
-            "Error": f"Method {request.method} is not allowed in URL {request.base_url}",
-            "AvailableMethods": "In progress"
-        }
-
-        return jsonify(method_not_allowed_err), 400
-
-    def get_app(self):
-        """
-        Get flask app.
-        """
-        return self.app
-
-    def get_api(self):
-        """
-        Get flask API.
-        """
-        return self._api
-
-    def run(self):
-        """
-        Run flask app.
-        """
-        self.app.run(debug=True)
-
-    def add_endpoints(self, *add_url_rules_params):
-        """
-        add url rules to class methods.
-
-        Args:
-             add_url_rules_params (list(tuple(str, str, Function, list(str)))):
-             a list of 4-tuple to add_url_rule function.
-
-        Examples:
-             add_url_rules_params = [
-            (
-                '/SecurityGroupsApi/Get',
-                'SecurityGroup.get_security_groups_endpoint',
-                SecurityGroup.get_security_groups_endpoint,
-                [HttpMethods.GET]
-            ),
-            (
-                '/Instances/Create',
-                'Instances.create_instances_endpoint',
-                Instances.create_instances_endpoint,
-                [HttpMethods.POST]
-            )
-        ]
-        """
-        for url_rule, endpoint_name, func, http_methods in add_url_rules_params:
-            try:
-                self.app.add_url_rule(
-                    rule=url_rule, endpoint=endpoint_name, view_func=EndpointAction(func), methods=http_methods
-                )
-            except Exception as e:
-                print(e)
-
-
-class EndpointAction(object):
-    """
-    Defines an Endpoint for a specific function for a client.
-
-    Attributes:
-        function (Function): the function that the endpoint will be forwarded to.
-    """
-
-    def __init__(self, function):
-        """
-        Create the endpoint by specifying which action we want the endpoint to perform, at each call.
-        function (Function): The function to execute on endpoint call.
-        """
-        self.function = function
-
-    def __call__(self, *args, **kwargs):
-        """
-        Standard method that effectively perform the stored function of its endpoint.
-
-        Args:
-            args (list): Arguments to give to the stored function.
-            kwargs (dict): Keyword arguments to the stored functions.
-
-        Returns:
-           tuple (Json, int): an API response to the client.
-        """
-        # Perform the function
-        try:
-            return self.function(*args, **kwargs)
-        except (ResourceNotFoundError, BadJsonInput) as err:
-            http_error = choose_http_error_code(error=err)
-            return make_error_response(
-                msg=err.__str__(), http_error_code=http_error, req=request.json, path=request.base_url
-            )
+from .manager import ApiManager
 
 
 class CollectionApi(object):
@@ -163,8 +35,8 @@ class SecurityGroupsApi(CollectionApi):
         return ApiManager(
             collection_type=SecurityGroupsApi.security_group_collection,
             single_document=False,
-            type=Constants.SECURITY_GROUPS,
-            collection_name=Constants.SECURITY_GROUPS
+            type=global_constants.SECURITY_GROUPS,
+            collection_name=global_constants.SECURITY_GROUPS
         ).get_resources.get_resource
 
     @staticmethod
@@ -184,7 +56,7 @@ class SecurityGroupsApi(CollectionApi):
         """
         return ApiManager(
             collection_type=SecurityGroupsApi.security_group_collection,
-            type=Constants.SECURITY_GROUP,
+            type=global_constants.SECURITY_GROUP,
             resource_id=id
         ).get_resources.get_resource
 
@@ -238,7 +110,7 @@ class SecurityGroupsApi(CollectionApi):
         return ApiManager(
             collection_type=SecurityGroupsApi.security_group_collection,
             resource_id=id,
-            type=Constants.SECURITY_GROUP
+            type=global_constants.SECURITY_GROUP
         ).delete_resource.delete_security_group
 
     @staticmethod
@@ -276,7 +148,7 @@ class SecurityGroupsApi(CollectionApi):
         return ApiManager(
             collection_type=SecurityGroupsApi.security_group_collection,
             resource_id=id,
-            type=Constants.SECURITY_GROUP
+            type=global_constants.SECURITY_GROUP
         ).update_resource.modify_security_group_inbound_permissions
 
 
@@ -337,7 +209,7 @@ class InstancesApi(CollectionApi):
         """
         return ApiManager(
             collection_type=InstancesApi.instance_collection,
-            type=Constants.INSTANCES,
+            type=global_constants.INSTANCES,
             single_document=False
         ).get_resources.get_resource
 
@@ -358,7 +230,7 @@ class InstancesApi(CollectionApi):
         """
         return ApiManager(
             collection_type=InstancesApi.instance_collection,
-            type=Constants.INSTANCE,
+            type=global_constants.INSTANCE,
             resource_id=id,
         ).get_resources.get_resource
 
@@ -380,7 +252,7 @@ class InstancesApi(CollectionApi):
         return ApiManager(
             collection_type=InstancesApi.instance_collection,
             resource_id=id,
-            type=Constants.INSTANCE,
+            type=global_constants.INSTANCE,
         ).delete_resource.delete_instance
 
 
@@ -413,7 +285,7 @@ class ContainersApi(CollectionApi):
         """
         return ApiManager(
             collection_type=InstancesApi.instance_collection,
-            type=Constants.INSTANCE,
+            type=global_constants.INSTANCE,
             resource_id=id,
             client_request=request.json,
         ).create_resources.create_container
@@ -456,10 +328,10 @@ class ContainersApi(CollectionApi):
         return ApiManager(
             collection_type=InstancesApi.instance_collection,
             resource_id=id,
-            type=Constants.INSTANCE,
-            collection_name=Constants.INSTANCES,
+            type=global_constants.INSTANCE,
+            collection_name=global_constants.INSTANCES,
             single_document=False
-        ).get_resources.get_all_sub_resource(document_type=Constants.CONTAINERS)
+        ).get_resources.get_all_sub_resource(document_type=global_constants.CONTAINERS)
 
     @staticmethod
     @validate_json_request(validate=False)
@@ -480,10 +352,10 @@ class ContainersApi(CollectionApi):
         """
         return ApiManager(
             collection_type=InstancesApi.instance_collection,
-            type=Constants.INSTANCE,
+            type=global_constants.INSTANCE,
             resource_id=instance_id,
             sub_resource_id=container_id,
-        ).get_resources.get_specific_sub_resource(document_type=Constants.CONTAINERS)
+        ).get_resources.get_specific_sub_resource(document_type=global_constants.CONTAINERS)
 
     @staticmethod
     @validate_json_request(validate=False)
@@ -599,124 +471,3 @@ class DockerImagesApi(CollectionApi):
             AmazonResourceNotFoundError: in case the instance was not found.
         """
         # return get_all_instance_images_from_database(instance_id=instance_id)
-
-
-if __name__ == "__main__":
-    flask_wrapper = FlaskAppWrapper()
-    flask_wrapper.add_endpoints(
-        (
-            '/SecurityGroups/Get',
-            'SecurityGroupsApi.get_security_groups_endpoint',
-            SecurityGroupsApi.get_security_groups_endpoint,
-            [HttpMethods.GET]
-        ),
-        (
-            '/SecurityGroups/Get/<id>',
-            'SecurityGroupsApi.get_specific_security_group_endpoint',
-            SecurityGroupsApi.get_specific_security_group_endpoint,
-            [HttpMethods.GET]
-        ),
-        (
-            '/SecurityGroups/Create',
-            'SecurityGroupsApi.create_security_groups_endpoint',
-            SecurityGroupsApi.create_security_groups_endpoint,
-            [HttpMethods.POST]
-        ),
-        (
-            '/SecurityGroups/Delete/<id>',
-            'SecurityGroupsApi.delete_specific_security_group_endpoint',
-            SecurityGroupsApi.delete_specific_security_group_endpoint,
-            [HttpMethods.DELETE]
-        ),
-        (
-            '/SecurityGroups/<id>/UpdateInboundPermissions',
-            'SecurityGroupsApi.modify_security_group_inbound_permissions_endpoint',
-            SecurityGroupsApi.modify_security_group_inbound_permissions_endpoint,
-            [HttpMethods.PATCH]
-        ),
-        (
-            '/DockerServerInstances/Create',
-            'InstancesApi.create_instances_endpoint',
-            InstancesApi.create_instances_endpoint,
-            [HttpMethods.POST]
-        ),
-        (
-            '/DockerServerInstances/Get',
-            'InstancesApi.get_all_instances_endpoint',
-            InstancesApi.get_all_instances_endpoint,
-            [HttpMethods.GET]
-        ),
-        (
-            '/DockerServerInstances/Get/<id>',
-            'InstancesApi.get_specific_instance_endpoint',
-            InstancesApi.get_specific_instance_endpoint,
-            [HttpMethods.GET]
-        ),
-        (
-            '/DockerServerInstances/Delete/<id>',
-            'InstancesApi.delete_instance_endpoint',
-            InstancesApi.delete_instance_endpoint,
-            [HttpMethods.DELETE]
-        ),
-        (
-            '/DockerServerInstances/<id>/CreateContainers',
-            'ContainersApi.create_containers_endpoint',
-            ContainersApi.create_containers_endpoint,
-            [HttpMethods.POST]
-        ),
-        (
-            '/DockerServerInstances/<id>/Containers/Get',
-            'ContainersApi.get_all_instance_containers_endpoint',
-            ContainersApi.get_all_instance_containers_endpoint,
-            [HttpMethods.GET]
-        ),
-        (
-            '/DockerServerInstances/<instance_id>/Containers/Get/<container_id>',
-            'ContainersApi.get_instance_container_endpoint',
-            ContainersApi.get_instance_container_endpoint,
-            [HttpMethods.GET]
-        ),
-        (
-            '/DockerServerInstances/Containers/Get',
-            'ContainersApi.get_all_instances_containers_endpoint',
-            ContainersApi.get_all_instances_containers_endpoint,
-            [HttpMethods.GET]
-        ),
-        (
-            '/DockerServerInstances/<instance_id>/Containers/Delete/<container_id>',
-            'ContainersApi.delete_container_endpoint',
-            ContainersApi.delete_container_endpoint,
-            [HttpMethods.DELETE]
-        ),
-        (
-            '/DockerServerInstances/<instance_id>/Containers/Start/<container_id>',
-            'ContainersApi.start_container_endpoint',
-            ContainersApi.start_container_endpoint,
-            [HttpMethods.PATCH],
-        ),
-        (
-            '/DockerServerInstances/<id>/Images/Pull',
-            'DockerImagesApi.pull_instance_images_endpoint',
-            DockerImagesApi.pull_instance_images_endpoint,
-            [HttpMethods.POST]
-        ),
-        (
-            '/DockerServerInstances/<instance_id>/Images/Get',
-            'DockerImagesApi.get_instance_images_endpoint',
-            DockerImagesApi.get_instance_images_endpoint,
-            [HttpMethods.GET]
-        ),
-        (
-            '/DockerServerInstances/<instance_id>/Containers/ExecuteCommand/<container_id>',
-            'ContainersApi.execute_command_endpoint',
-            ContainersApi.execute_command_endpoint,
-            [HttpMethods.PATCH]
-        ),
-        (
-            '/DockerServerInstances/<instance_id>/Containers/CreateMetasploitContainer',
-            'ContainersApi.run_container_with_metasploit_daemon_endpoint',
-            ContainersApi.run_container_with_metasploit_daemon_endpoint,
-            [HttpMethods.POST]
-        )
-    )
-    flask_wrapper.run()

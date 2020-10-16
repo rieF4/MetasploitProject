@@ -1,68 +1,24 @@
-from metasploit.venv.Aws.Database import (
+from metasploit.api.database import (
+    DatabaseCollections,
     DatabaseOperations,
     DockerServerDatabaseManager,
     SecurityGroupDatabaseManager,
     ContainerDatabaseManager,
     ImageDatabaseManager
 )
-from metasploit.venv.Aws import Constants
-from metasploit.venv.Aws import Aws_Api_Functions
-from metasploit.venv.Aws import Docker_Utils
-from metasploit.venv.Aws.Response import (
+
+from metasploit import constants as global_constants
+from metasploit.aws import utils as aws_utils
+from metasploit.docker import utils as docker_utils
+
+from metasploit.api.response import (
     PrepareResponse,
     ApiResponse,
     HttpCodes
 )
-from metasploit.venv.Aws.utils import choose_port_for_msfrpcd
-from metasploit.venv.Aws.ServerExceptions import choose_http_error_code
 
-
-def client_request_modifier(code):
-    """
-    Decorator for all API requests that were made by the client that requires data from client.
-
-    Args:
-        code (HttpCodes): HTTP code to return in case of success.
-    """
-    def client_request_decorator(api_func):
-        """
-        a decorator for an API function.
-
-        Args:
-            api_func (Function): the api function that gets decorated.
-        """
-        def client_request_wrapper(self):
-            """
-            Executes the function that handles a client request
-
-            Args:
-                self (ResourceOperation): the object reference as self. e.g. CreateResource, UpdateResource.
-            """
-            response = {}
-
-            http_status_code = code
-            is_valid = False
-            is_error = False
-
-            for key, req in self.api_manager.client_request.items():
-                try:
-                    print(self)
-                    response[key] = api_func(self=self, req=req)
-                    is_valid = True
-                except Exception as err:
-                    print(err.__str__())
-                    http_status_code = choose_http_error_code(error=err)
-                    response[key] = PrepareResponse.prepare_error_response(
-                        msg=err.__str__(), http_error_code=http_status_code, req=req
-                    )
-                    is_error = True
-
-            if is_valid and is_error:
-                http_status_code = HttpCodes.MULTI_STATUS
-
-            return ApiResponse(response=response, http_status_code=http_status_code)
-        return client_request_wrapper
-    return client_request_decorator
+from metasploit.utils.decorators import client_request_modifier
+from metasploit.api.utils import choose_port_for_msfrpcd
 
 
 class ApiManager(object):
@@ -99,9 +55,9 @@ class ApiManager(object):
             collection_type=collection_type,
             resource_id=self.amazon_resource_id,
             sub_resource_id=self.docker_resource_id,
-            collection_name=kwargs.get("collection_name", Constants.INSTANCES),
+            collection_name=kwargs.get("collection_name", global_constants.INSTANCES),
             single_document=kwargs.get("single_document", True),
-            type=kwargs.get("type", Constants.INSTANCE),
+            type=kwargs.get("type", global_constants.INSTANCE),
             create_resource_flag=kwargs.get("create_resource_flag")
 
         )
@@ -217,7 +173,7 @@ class CreateResource(ResourceOperation):
             dict: an instance document.
         """
         return self.api_manager.docker_server_database_manager(
-            docker_server=Aws_Api_Functions.create_instance(kwargs=req)
+            docker_server=aws_utils.create_instance(kwargs=req)
         ).create_docker_server_instance_document
 
     @property
@@ -233,7 +189,7 @@ class CreateResource(ResourceOperation):
             dict: a security group document.
         """
         return self.api_manager.security_group_database_manager(
-            security_group=Aws_Api_Functions.create_security_group(kwargs=req)
+            security_group=aws_utils.create_security_group(kwargs=req)
         ).create_security_group_document
 
     @property
@@ -250,9 +206,9 @@ class CreateResource(ResourceOperation):
         """
         instance_id = self.api_manager.amazon_resource_id
 
-        docker_server = Aws_Api_Functions.get_docker_server_instance(id=instance_id)
+        docker_server = aws_utils.get_docker_server_instance(id=instance_id)
 
-        container = Docker_Utils.create_container(
+        container = docker_utils.create_container(
             instance=docker_server,
             image=req.pop("Image"),
             command=req.pop("Command", None),
@@ -276,11 +232,11 @@ class CreateResource(ResourceOperation):
             dict: an image document.
         """
         instance_id = self.api_manager.amazon_resource_id
-        docker_server = Docker_Utils.get_docker_server_instance(id=instance_id)
+        docker_server = docker_utils.get_docker_server_instance(id=instance_id)
 
         repository = req.pop("Repository")
 
-        image = Docker_Utils.pull_image(
+        image = docker_utils.pull_image(
             instance=docker_server,
             repository=repository,
             tag=f"{repository}:latest",
@@ -298,26 +254,26 @@ class CreateResource(ResourceOperation):
             dict: a container document.
         """
         port = choose_port_for_msfrpcd(
-            containers_document=self.api_manager.db_manager.document[Constants.DOCKER][Constants.CONTAINERS]
+            containers_document=self.api_manager.db_manager.document[global_constants.DOCKER][global_constants.CONTAINERS]
         )
 
         if port:
             instance_id = self.api_manager.amazon_resource_id
-            instance = Aws_Api_Functions.get_docker_server_instance(id=instance_id)
+            instance = aws_utils.get_docker_server_instance(id=instance_id)
 
-            msfrpcd_container = Docker_Utils.run_container_with_msfrpcd_metasploit(instance=instance, port=port)
+            msfrpcd_container = docker_utils.run_container_with_msfrpcd_metasploit(instance=instance, port=port)
 
             return self.api_manager.database_operation(
-                type=Constants.CONTAINER,
+                type=global_constants.CONTAINER,
                 amazon_object=instance,
                 docker_object=msfrpcd_container
             )  # put here the DB required operation
 
             # container_document = PrepareResponse.prepare_container_response(container=msfrpcd_container)
-            # updated_containers_documents = self.api.db_manager.document
+            # updated_containers_documents = self.api_manager.db_manager.document
             # updated_containers_documents[Constants.DOCKER][Constants.CONTAINERS].append(container_document)
             #
-            # self.api.db_manager.update_amazon_document(updated_document=updated_containers_documents)
+            # self.api_manager.db_manager.update_amazon_document(updated_document=updated_containers_documents)
             #
             # return container_document
 
@@ -346,7 +302,7 @@ class GetResource(ResourceOperation):
             ApiResponse: an api response object.
         """
         return ApiResponse(
-            response=self.api_manager.db_manager.document[Constants.DOCKER][document_type],
+            response=self.api_manager.db_manager.document[global_constants.DOCKER][document_type],
             http_status_code=HttpCodes.OK
         )
 
@@ -357,7 +313,7 @@ class GetResource(ResourceOperation):
         Returns:
             ApiResponse: an api response object.
         """
-        # documents = self.api_manager.db_manager.document[Constants.DOCKER][document_type]
+        # documents = self.api_manager.db_manager.document[global_constants.DOCKER][document_type]
         # return ApiResponse(
         #     response=_find_specific_document(documents=documents, sub_resource_id=self.api_manager.docker_resource_id),
         #     http_status_code=HttpCodes.OK
@@ -374,7 +330,7 @@ class DeleteResource(ResourceOperation):
         Returns:
             ApiResponse: an api response object.
         """
-        Aws_Api_Functions.get_docker_server_instance(id=self.api_manager.amazon_resource_id).terminate()
+        aws_utils.get_docker_server_instance(id=self.api_manager.amazon_resource_id).terminate()
         self.api_manager.db_manager.delete_amazon_document()
         return ApiResponse(http_status_code=HttpCodes.NO_CONTENT)
 
@@ -386,7 +342,7 @@ class DeleteResource(ResourceOperation):
         Returns:
             ApiResponse: an api response object.
         """
-        Aws_Api_Functions.get_security_group_object(id=self.api_manager.amazon_resource_id)
+        aws_utils.get_security_group_object(id=self.api_manager.amazon_resource_id)
         self.api_manager.db_manager.delete_amazon_document()
         return ApiResponse(http_status_code=HttpCodes.NO_CONTENT)
 
@@ -398,7 +354,7 @@ class DeleteResource(ResourceOperation):
         Returns:
             ApiResponse: an api response object.
         """
-        Docker_Utils.get_container(
+        docker_utils.get_container(
             instance_id=self.api_manager.amazon_resource_id, container_id=self.api_manager.docker_resource_id
         ).remove()
 
@@ -415,13 +371,13 @@ class UpdateResource(ResourceOperation):
     @client_request_modifier(code=HttpCodes.OK)
     def modify_security_group_inbound_permissions(self, req=None):
 
-        Aws_Api_Functions.update_security_group_inbound_permissions(
+        aws_utils.update_security_group_inbound_permissions(
             security_group_id=self.api_manager.amazon_resource_id,
             req=req
         )
 
         security_group_document = PrepareResponse.prepare_security_group_response(
-            security_group_obj=Aws_Api_Functions.get_security_group_object(id=self.api_manager.amazon_resource_id)
+            security_group_obj=aws_utils.get_security_group_object(id=self.api_manager.amazon_resource_id)
         )
 
         self.api_manager.db_manager.update_amazon_document(updated_document=security_group_document)

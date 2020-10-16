@@ -9,7 +9,7 @@ from metasploit.venv.Aws.Database import (
 )
 
 from metasploit.venv.Aws import Constants
-from metasploit.venv.Aws.Api_Utils import (
+from metasploit.venv.Aws.utils import (
     check_if_image_already_exists,
     prepare_image_response,
     prepare_instance_response,
@@ -49,97 +49,6 @@ from metasploit.venv.Aws.ServerExceptions import (
 from docker.errors import (
     APIError
 )
-
-
-def create_update_resource(function, code=HttpCodes.CREATED, **create_update_kwargs):
-    """
-    Creates or updates a resource in the api.
-
-    Args:
-        function (Function): api function that should be executed.
-        code (HttpCodes): an http status code that should be returned to client in case of success.
-
-        Keyword arguments:
-            security_group_id (str): security group ID.
-            instance_id (str): Instance ID.
-            container_id (str): container ID.
-
-    Returns:
-        ApiResponse: api response object.
-
-    """
-    create_update_request = request.json
-    response = {}
-
-    create_update_kwargs = build_create_update_function_args(**create_update_kwargs)
-
-    http_status_code = code
-    is_valid = False
-    is_error = False
-
-    for key, req in create_update_request.items():
-        try:
-            response[key] = function(req=req, **create_update_kwargs)
-            is_valid = True
-        except Exception as err:
-            http_status_code = choose_http_error_code(error=err)
-            response[key] = prepare_error_response(
-                msg=err.__str__(), http_error_code=http_status_code, req=req
-            )
-            is_error = True
-
-    if is_valid and is_error:
-        http_status_code = HttpCodes.MULTI_STATUS
-
-    return ApiResponse(response=response, http_status_code=http_status_code)
-
-
-def build_create_update_function_args(**create_update_kwargs):
-    """
-    Builds the arguments needed for each api method that is executed.
-
-    Keyword Arguments:
-        security_group_id (str): security group ID.
-        instance_id (str): Instance ID.
-        container_id (str): container ID.
-
-    Returns:
-        dict: arguments that are needed according to the client request.
-
-    Raises:
-        AmazonResourceNotFoundError: in case instance ID is invalid.
-        DockerResourceNotFoundError: in case container ID is invalid.
-    """
-    instance_id = create_update_kwargs.get("instance_id", "")
-
-    if instance_id:
-        instance_document = find_documents(
-            document={Constants.ID: instance_id}, collection_type=DatabaseCollections.INSTANCES
-        )
-        if not instance_document:
-            raise AmazonResourceNotFoundError(type=Constants.INSTANCE, id=instance_id)
-        create_update_kwargs["instance_document"] = instance_document
-
-        container_id = create_update_kwargs.get("container_id", "")
-        if container_id:
-            container_document = find_container_document(
-                containers_documents=instance_document[Constants.DOCKER][Constants.CONTAINERS],
-                container_id=container_id
-            )
-            if container_document:
-                create_update_kwargs["container_document"] = container_document
-            else:
-                raise DockerResourceNotFoundError(type=Constants.CONTAINER, id=container_id)
-
-    security_group_id = create_update_kwargs.get("security_group_id", "")
-
-    if security_group_id:
-        security_group_document = find_documents(
-            document={Constants.ID: security_group_id}, collection_type=DatabaseCollections.SECURITY_GROUPS
-        )
-        create_update_kwargs["security_group_document"] = security_group_document
-
-    return create_update_kwargs
 
 
 def pull_instance_image(req, instance_document, instance_id):
