@@ -91,14 +91,14 @@ class ApiManager(object):
                 type (str): type of the collection. eg. Constants.Instance, Constants.SecurityGroup
                 create_resource_flag (bool): indicate if a resource needs to be created. True if yes, False otherwise.
         """
-        self._resource_id = kwargs.get('resource_id', '')
-        self._sub_resource_id = kwargs.get('sub_resource_id', '')
+        self._amazon_resource_id = kwargs.get('amazon_resource_id', '')
+        self._docker_resource_id = kwargs.get('docker_resource_id', '')
         self._client_request = kwargs.get('client_request', {})
 
-        self._db_manager = DatabaseOperations(
+        self._db_operations_manager = DatabaseOperations(
             collection_type=collection_type,
-            resource_id=self.resource_id,
-            sub_resource_id=self.sub_resource_id,
+            resource_id=self.amazon_resource_id,
+            sub_resource_id=self.docker_resource_id,
             collection_name=kwargs.get("collection_name", Constants.INSTANCES),
             single_document=kwargs.get("single_document", True),
             type=kwargs.get("type", Constants.INSTANCE),
@@ -111,25 +111,25 @@ class ApiManager(object):
         return self._client_request
 
     @property
-    def resource_id(self):
+    def amazon_resource_id(self):
         """
         Get resource ID.
         """
-        return self._resource_id
+        return self._amazon_resource_id
 
     @property
-    def sub_resource_id(self):
+    def docker_resource_id(self):
         """
         Get sub resource ID.
         """
-        return self._sub_resource_id
+        return self._docker_resource_id
 
     @property
-    def db_manager(self):
+    def db_operations_manager(self):
         """
         Get DB manager.
         """
-        return self._db_manager
+        return self._db_operations_manager
 
     @property
     def create_resources(self):
@@ -159,16 +159,29 @@ class ApiManager(object):
         """
         return UpdateResource(self)
 
-    def database_operation(self, type, amazon_object, docker_object=None):
+    def docker_server_database_manager(self, docker_server=None):
+        """
+        Get docker server database manager object.
+        """
+        return DockerServerDatabaseManager(self, docker_server=docker_server)
 
-        if type == Constants.INSTANCE:
-            return DockerServerDatabaseManager(self, docker_server=amazon_object)
-        elif type == Constants.SECURITY_GROUP:
-            return SecurityGroupDatabaseManager(self, security_group=amazon_object)
-        elif type == Constants.CONTAINER:
-            return ContainerDatabaseManager(self, docker_server=amazon_object, container=docker_object)
-        elif type == Constants.IMAGE:
-            return ImageDatabaseManager(self, docker_server=amazon_object, image=docker_object)
+    def security_group_database_manager(self, security_group=None):
+        """
+        Get security group database manager object.
+        """
+        return SecurityGroupDatabaseManager(self, security_group=security_group)
+
+    def container_database_manager(self, docker_server=None, container=None):
+        """
+        Get container database manager object.
+        """
+        return ContainerDatabaseManager(self, docker_server=docker_server, container=container)
+
+    def image_database_manager(self, docker_server=None, image=None):
+        """
+        Get image database manager object.
+        """
+        return ImageDatabaseManager(self, docker_server=docker_server, image=image)
 
 
 class ResourceOperation(object):
@@ -203,16 +216,9 @@ class CreateResource(ResourceOperation):
         Returns:
             dict: an instance document.
         """
-        return self.api_manager.database_operation(
-            type=Constants.INSTANCE,
-            amazon_object=Aws_Api_Functions.create_instance(kwargs=req)
-        )  # call the DB operation here
-
-        # docker_server = Aws_Api_Functions.create_instance(kwargs=req)
-        # instance_document = PrepareResponse.prepare_instance_response(docker_server=docker_server)
-        # self.api_manager.db_manager.document = instance_document
-        # self.api_manager.db_manager.insert_document()
-        # return instance_document
+        return self.api_manager.docker_server_database_manager(
+            docker_server=Aws_Api_Functions.create_instance(kwargs=req)
+        ).create_docker_server_instance_document
 
     @property
     @client_request_modifier(code=HttpCodes.CREATED)
@@ -226,16 +232,10 @@ class CreateResource(ResourceOperation):
         Returns:
             dict: a security group document.
         """
-        return self.api_manager.database_operation(
-            type=Constants.SECURITY_GROUP,
-            amazon_object=Aws_Api_Functions.create_security_group(kwargs=req)
-        )  # call the DB operation here
+        return self.api_manager.security_group_database_manager(
+            security_group=Aws_Api_Functions.create_security_group(kwargs=req)
+        ).create_security_group_document
 
-        # security_group = Aws_Api_Functions.create_security_group(kwargs=req)
-        # security_group_document = PrepareResponse.prepare_security_group_response(security_group_obj=security_group)
-        # self.api_manager.db_manager.document = security_group_document
-        # self.api_manager.db_manager.insert_document()
-        # return security_group_document
 
     @property
     @client_request_modifier(code=HttpCodes.CREATED)
@@ -249,7 +249,7 @@ class CreateResource(ResourceOperation):
         Returns:
             dict: a container document.
         """
-        instance_id = self.api_manager.resource_id
+        instance_id = self.api_manager.amazon_resource_id
         instance = Aws_Api_Functions.get_docker_server_instance(id=instance_id)
 
         return self.api_manager.database_operation(
@@ -269,7 +269,7 @@ class CreateResource(ResourceOperation):
         #
         # updated_containers_document[Constants.DOCKER][Constants.CONTAINERS].append(container_document)
         #
-        # self.api_manager.db_manager.update_document(updated_document=updated_containers_document)
+        # self.api_manager.db_manager.update_amazon_document(updated_document=updated_containers_document)
         #
         # return container_document
 
@@ -285,7 +285,7 @@ class CreateResource(ResourceOperation):
         Returns:
             dict: an image document.
         """
-        instance_id = self.api_manager.resource_id
+        instance_id = self.api_manager.amazon_resource_id
         instance = Docker_Utils.get_docker_server_instance(id=instance_id)
 
         repository = req.pop("Repository")
@@ -305,7 +305,7 @@ class CreateResource(ResourceOperation):
         # updated_instance_document = self.api_manager.db_manager.document[Constants.DOCKER][Constants.IMAGES].append(
         #     image_document
         # )
-        # self.api_manager.db_manager.update_document(updated_document=updated_instance_document)
+        # self.api_manager.db_manager.update_amazon_document(updated_document=updated_instance_document)
         # return image_document
 
     @property
@@ -321,7 +321,7 @@ class CreateResource(ResourceOperation):
         )
 
         if port:
-            instance_id = self.api_manager.resource_id
+            instance_id = self.api_manager.amazon_resource_id
             instance = Aws_Api_Functions.get_docker_server_instance(id=instance_id)
 
             msfrpcd_container = Docker_Utils.run_container_with_msfrpcd_metasploit(instance=instance, port=port)
@@ -336,7 +336,7 @@ class CreateResource(ResourceOperation):
             # updated_containers_documents = self.api_manager.db_manager.document
             # updated_containers_documents[Constants.DOCKER][Constants.CONTAINERS].append(container_document)
             #
-            # self.api_manager.db_manager.update_document(updated_document=updated_containers_documents)
+            # self.api_manager.db_manager.update_amazon_document(updated_document=updated_containers_documents)
             #
             # return container_document
 
@@ -378,7 +378,7 @@ class GetResource(ResourceOperation):
         """
         documents = self.api_manager.db_manager.document[Constants.DOCKER][document_type]
         return ApiResponse(
-            response=_find_specific_document(documents=documents, sub_resource_id=self.api_manager.sub_resource_id),
+            response=_find_specific_document(documents=documents, sub_resource_id=self.api_manager.docker_resource_id),
             http_status_code=HttpCodes.OK
         )
 
@@ -393,8 +393,8 @@ class DeleteResource(ResourceOperation):
         Returns:
             ApiResponse: an api response object.
         """
-        Aws_Api_Functions.get_docker_server_instance(id=self.api_manager.resource_id).terminate()
-        self.api_manager.db_manager.delete_document()
+        Aws_Api_Functions.get_docker_server_instance(id=self.api_manager.amazon_resource_id).terminate()
+        self.api_manager.db_manager.delete_amazon_document()
         return ApiResponse(http_status_code=HttpCodes.NO_CONTENT)
 
     @property
@@ -405,8 +405,8 @@ class DeleteResource(ResourceOperation):
         Returns:
             ApiResponse: an api response object.
         """
-        Aws_Api_Functions.get_security_group_object(id=self.api_manager.resource_id)
-        self.api_manager.db_manager.delete_document()
+        Aws_Api_Functions.get_security_group_object(id=self.api_manager.amazon_resource_id)
+        self.api_manager.db_manager.delete_amazon_document()
         return ApiResponse(http_status_code=HttpCodes.NO_CONTENT)
 
     @property
@@ -418,13 +418,13 @@ class DeleteResource(ResourceOperation):
             ApiResponse: an api response object.
         """
         Docker_Utils.get_container(
-            instance_id=self.api_manager.resource_id, container_id=self.api_manager.sub_resource_id
+            instance_id=self.api_manager.amazon_resource_id, container_id=self.api_manager.docker_resource_id
         ).remove()
 
-        # update here all the container documents [TO DO!!!]
+        # update here all the container docker_documents [TO DO!!!]
         updated_containers_documents = None
 
-        self.api_manager.db_manager.update_document(updated_document=updated_containers_documents)
+        self.api_manager.db_manager.update_amazon_document(updated_document=updated_containers_documents)
         return ApiResponse(http_status_code=HttpCodes.NO_CONTENT)
 
 
@@ -435,15 +435,15 @@ class UpdateResource(ResourceOperation):
     def modify_security_group_inbound_permissions(self, req=None):
 
         Aws_Api_Functions.update_security_group_inbound_permissions(
-            security_group_id=self.api_manager.resource_id,
+            security_group_id=self.api_manager.amazon_resource_id,
             req=req
         )
 
         security_group_document = PrepareResponse.prepare_security_group_response(
-            security_group_obj=Aws_Api_Functions.get_security_group_object(id=self.api_manager.resource_id)
+            security_group_obj=Aws_Api_Functions.get_security_group_object(id=self.api_manager.amazon_resource_id)
         )
 
-        self.api_manager.db_manager.update_document(updated_document=security_group_document)
+        self.api_manager.db_manager.update_amazon_document(updated_document=security_group_document)
 
         return security_group_document
 

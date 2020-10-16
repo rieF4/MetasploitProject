@@ -42,6 +42,16 @@ class ResourceNotFoundError(ApiException):
         super().__init__(msg)
 
 
+class AmazonResourceNotFoundError(ResourceNotFoundError):
+    def __init__(self, type, id=None):
+        super().__init__(type=type, id=id)
+
+
+class DockerResourceNotFoundError(ResourceNotFoundError):
+    def __init__(self, type, id=None):
+        super().__init__(type=type, id=id)
+
+
 class DuplicateDockerResourceError(ApiException):
     """
     This class represents an exception for a resource that already exists in the DB.
@@ -55,27 +65,6 @@ class DuplicateImageError(DuplicateDockerResourceError):
 
     def __init__(self, resource):
         super().__init__(resource=resource)
-
-
-class SecurityGroupNotFoundError(ResourceNotFoundError):
-
-    def __init__(self, type, id=None):
-        super().__init__(type=type, id=id)
-
-
-class InstanceNotFoundError(ResourceNotFoundError):
-    def __init__(self, type, id=None):
-        super().__init__(type=type, id=id)
-
-
-class ContainerNotFoundError(ResourceNotFoundError):
-    def __init__(self, type, id=None):
-        super().__init__(type=type, id=id)
-
-
-class ImageNotFoundError(ResourceNotFoundError):
-    def __init__(self, type, id=None):
-        super().__init__(type=type, id=id)
 
 
 class VulnerabilityNotSupported(ApiException):

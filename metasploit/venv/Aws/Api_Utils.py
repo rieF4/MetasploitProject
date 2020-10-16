@@ -27,7 +27,7 @@ def choose_port_for_msfrpcd(containers_document):
     Choose dynamically the port that msfrpcd would listen to.
 
     Args:
-        containers_document (dict): all of the instance container documents
+        containers_document (dict): all of the instance container docker_documents
 
     Returns:
         int: port to be used, 0 if there is not such a port.
@@ -50,13 +50,13 @@ def get_all_used_port_in_instance(containers_document):
 
 def update_container_document_attributes(instance_id):
     """
-    Updates the container(s) documents that belongs to the instance.
+    Updates the container(s) docker_documents that belongs to the instance.
 
     Args:
         instance_id (str): instance ID.
 
     Returns:
-        list(dict): a list of dictionaries that composes the container updated documents.
+        list(dict): a list of dictionaries that composes the container updated docker_documents.
     """
 
     container_documents = []
@@ -113,7 +113,7 @@ def find_container_document(containers_documents, container_id):
     Finds a container document with the specified ID.
 
     Args:
-        containers_documents (dict): a container documents form.
+        containers_documents (dict): a container docker_documents form.
         container_id (str): container ID.
 
     Returns:

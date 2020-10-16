@@ -299,7 +299,7 @@ class InstancesApi(CollectionApi):
             ApiResponse: an api response object.
 
         Raises:
-            InstanceNotFoundError: in case there are not instances.
+            AmazonResourceNotFoundError: in case there are not instances.
         """
         return ApiManager(
             collection_type=InstancesApi.instance_collection,
@@ -320,7 +320,7 @@ class InstancesApi(CollectionApi):
             ApiResponse: an api response object.
 
         Raises:
-            InstanceNotFoundError: in case there is not an instance with the ID.
+            AmazonResourceNotFoundError: in case there is not an instance with the ID.
         """
         return ApiManager(
             collection_type=InstancesApi.instance_collection,
@@ -341,7 +341,7 @@ class InstancesApi(CollectionApi):
             ApiResponse: an api response object.
 
         Raises:
-            InstanceNotFoundError: in case there is not an instance with the ID.
+            AmazonResourceNotFoundError: in case there is not an instance with the ID.
         """
         return ApiManager(
             collection_type=InstancesApi.instance_collection,
@@ -398,8 +398,8 @@ class ContainersApi(CollectionApi):
             ApiResponse: an api response object.
 
         Raises:
-            InstanceNotFoundError: in case the instance ID is not valid.
-            ContainerNotFoundError: in case there aren't any available containers.
+            AmazonResourceNotFoundError: in case the instance ID is not valid.
+            DockerResourceNotFoundError: in case there aren't any available containers.
         """
         # return start_container(instance_id=instance_id, container_id=container_id)
 
@@ -416,8 +416,8 @@ class ContainersApi(CollectionApi):
             ApiResponse: an api response object.
 
         Raises:
-            InstanceNotFoundError: in case the instance ID is not valid.
-            ContainerNotFoundError: in case there aren't any available containers.
+            AmazonResourceNotFoundError: in case the instance ID is not valid.
+            DockerResourceNotFoundError: in case there aren't any available containers.
         """
         return ApiManager(
             collection_type=InstancesApi.instance_collection,
@@ -441,8 +441,8 @@ class ContainersApi(CollectionApi):
             ApiResponse: an api response object.
 
         Raises:
-            InstanceNotFoundError: in case the instance ID is not valid.
-            ContainerNotFoundError: in case there aren't any available containers.
+            AmazonResourceNotFoundError: in case the instance ID is not valid.
+            DockerResourceNotFoundError: in case there aren't any available containers.
         """
         return ApiManager(
             collection_type=InstancesApi.instance_collection,
@@ -461,8 +461,8 @@ class ContainersApi(CollectionApi):
             ApiResponse: an api response object.
 
         Raises:
-            InstanceNotFoundError: in case the instance ID is not valid.
-            ContainerNotFoundError: in case there aren't any available containers.
+            AmazonResourceNotFoundError: in case the instance ID is not valid.
+            DockerResourceNotFoundError: in case there aren't any available containers.
         """
         # return get_all_instances_containers_from_database()
 
@@ -480,8 +480,8 @@ class ContainersApi(CollectionApi):
             ApiResponse: an api response object.
 
         Raises:
-            InstanceNotFoundError: in case the instance ID is not valid.
-            ContainerNotFoundError: in case there aren't any available containers.
+            AmazonResourceNotFoundError: in case the instance ID is not valid.
+            DockerResourceNotFoundError: in case there aren't any available containers.
             ApiError: in case the docker server returns an error.
         """
         # return delete_container(instance_id=instance_id, container_id=container_id)
@@ -543,7 +543,7 @@ class DockerImagesApi(CollectionApi):
             ApiResponse: an api response object.
 
         Raises:
-            InstanceNotFoundError: in case it's invalid instance ID.
+            AmazonResourceNotFoundError: in case it's invalid instance ID.
             ApiError: in case docker server returns an error.
         """
         # return create_update_resource(function=pull_instance_image, instance_id=id)
@@ -562,7 +562,7 @@ class DockerImagesApi(CollectionApi):
 
         Raises:
             ImageNotFoundError: in case there aren't any images available.
-            InstanceNotFoundError: in case the instance was not found.
+            AmazonResourceNotFoundError: in case the instance was not found.
         """
         # return get_all_instance_images_from_database(instance_id=instance_id)
 

@@ -41,9 +41,9 @@ from metasploit.venv.Aws.Aws_Api_Functions import (
 )
 from metasploit.venv.Aws.ServerExceptions import (
     DuplicateImageError,
-    InstanceNotFoundError,
+    AmazonResourceNotFoundError,
     SecurityGroupNotFoundError,
-    ContainerNotFoundError,
+    DockerResourceNotFoundError,
     ImageNotFoundError
 )
 from docker.errors import (
@@ -107,8 +107,8 @@ def build_create_update_function_args(**create_update_kwargs):
         dict: arguments that are needed according to the client request.
 
     Raises:
-        InstanceNotFoundError: in case instance ID is invalid.
-        ContainerNotFoundError: in case container ID is invalid.
+        AmazonResourceNotFoundError: in case instance ID is invalid.
+        DockerResourceNotFoundError: in case container ID is invalid.
     """
     instance_id = create_update_kwargs.get("instance_id", "")
 
@@ -117,7 +117,7 @@ def build_create_update_function_args(**create_update_kwargs):
             document={Constants.ID: instance_id}, collection_type=DatabaseCollections.INSTANCES
         )
         if not instance_document:
-            raise InstanceNotFoundError(type=Constants.INSTANCE, id=instance_id)
+            raise AmazonResourceNotFoundError(type=Constants.INSTANCE, id=instance_id)
         create_update_kwargs["instance_document"] = instance_document
 
         container_id = create_update_kwargs.get("container_id", "")
@@ -129,7 +129,7 @@ def build_create_update_function_args(**create_update_kwargs):
             if container_document:
                 create_update_kwargs["container_document"] = container_document
             else:
-                raise ContainerNotFoundError(type=Constants.CONTAINER, id=container_id)
+                raise DockerResourceNotFoundError(type=Constants.CONTAINER, id=container_id)
 
     security_group_id = create_update_kwargs.get("security_group_id", "")
 
@@ -244,7 +244,7 @@ def create_container_in_api(req, instance_document, instance_id):
 
 def get_security_groups_from_database():
     """
-    Get all the security groups documents available in the database.
+    Get all the security groups docker_documents available in the database.
 
     Returns:
         ApiResponse: an api response object.
@@ -315,13 +315,13 @@ def delete_security_group(security_group_id):
 
 def get_all_instances_from_database():
     """
-    Get all the instances documents available from the database.
+    Get all the instances docker_documents available from the database.
 
     Returns:
         ApiResponse: an api response object.
 
     Raises:
-        InstanceNotFoundError: in case there are not instances.
+        AmazonResourceNotFoundError: in case there are not instances.
     """
     instances_response = find_documents(
         document={},  # means bring everything in the collection
@@ -342,7 +342,7 @@ def get_all_instances_from_database():
     if instances_response:
         return ApiResponse(response=instances_response, http_status_code=HttpCodes.OK)
     else:
-        raise InstanceNotFoundError(type=Constants.INSTANCES)
+        raise AmazonResourceNotFoundError(type=Constants.INSTANCES)
 
 
 def get_specific_instance_from_database(instance_id):
@@ -356,7 +356,7 @@ def get_specific_instance_from_database(instance_id):
         ApiResponse: an api response object.
 
     Raises:
-        InstanceNotFoundError: in case there is not an instance with the ID.
+        AmazonResourceNotFoundError: in case there is not an instance with the ID.
     """
     instance_response = find_documents(
         document={Constants.ID: instance_id}, collection_type=DatabaseCollections.INSTANCES
@@ -372,7 +372,7 @@ def get_specific_instance_from_database(instance_id):
             )
         return ApiResponse(response=instance_response, http_status_code=HttpCodes.OK)
     else:
-        raise InstanceNotFoundError(type=Constants.INSTANCE, id=instance_id)
+        raise AmazonResourceNotFoundError(type=Constants.INSTANCE, id=instance_id)
 
 
 def delete_instance(instance_id):
@@ -386,7 +386,7 @@ def delete_instance(instance_id):
         ApiResponse: an api response object.
 
     Raises:
-        InstanceNotFoundError: in case there is not an instance with the ID.
+        AmazonResourceNotFoundError: in case there is not an instance with the ID.
     """
     instance_document = find_documents(
         document={Constants.ID: instance_id}, collection_type=DatabaseCollections.INSTANCES
@@ -397,12 +397,12 @@ def delete_instance(instance_id):
         if delete_documents(collection_type=DatabaseCollections.INSTANCES, document=instance_document):
             return ApiResponse(http_status_code=HttpCodes.NO_CONTENT)
     else:
-        raise InstanceNotFoundError(type=Constants.INSTANCE, id=instance_id)
+        raise AmazonResourceNotFoundError(type=Constants.INSTANCE, id=instance_id)
 
 
 def get_all_instance_containers_from_database(instance_id):
     """
-    Get all the containers documents of a specific instance from the database.
+    Get all the containers docker_documents of a specific instance from the database.
 
     Args:
         instance_id (str): instance ID.
@@ -411,8 +411,8 @@ def get_all_instance_containers_from_database(instance_id):
         ApiResponse: an api response object.
 
     Raises:
-        InstanceNotFoundError: in case the instance ID is not valid.
-        ContainerNotFoundError: in case there aren't any available containers.
+        AmazonResourceNotFoundError: in case the instance ID is not valid.
+        DockerResourceNotFoundError: in case there aren't any available containers.
     """
     instance_document = find_documents(
         document={Constants.ID: instance_id}, collection_type=DatabaseCollections.INSTANCES
@@ -435,9 +435,9 @@ def get_all_instance_containers_from_database(instance_id):
                     http_status_code=HttpCodes.OK
                 )
         else:
-            raise ContainerNotFoundError(type=Constants.CONTAINERS)
+            raise DockerResourceNotFoundError(type=Constants.CONTAINERS)
     else:
-        raise InstanceNotFoundError(type=Constants.INSTANCE, id=instance_id)
+        raise AmazonResourceNotFoundError(type=Constants.INSTANCE, id=instance_id)
 
 
 def get_instance_container_from_database(instance_id, container_id):
@@ -452,8 +452,8 @@ def get_instance_container_from_database(instance_id, container_id):
         ApiResponse: an api response object.
 
     Raises:
-        InstanceNotFoundError: in case the instance ID is not valid.
-        ContainerNotFoundError: in case there aren't any available containers.
+        AmazonResourceNotFoundError: in case the instance ID is not valid.
+        DockerResourceNotFoundError: in case there aren't any available containers.
     """
 
     instance_document = find_documents(
@@ -477,21 +477,21 @@ def get_instance_container_from_database(instance_id, container_id):
                     http_status_code=HttpCodes.OK
                 )
         else:
-            raise ContainerNotFoundError(type=Constants.CONTAINER, id=container_id)
+            raise DockerResourceNotFoundError(type=Constants.CONTAINER, id=container_id)
     else:
-        raise InstanceNotFoundError(type=Constants.INSTANCE, id=instance_id)
+        raise AmazonResourceNotFoundError(type=Constants.INSTANCE, id=instance_id)
 
 
 def get_all_instances_containers_from_database():
     """
-    Get all the the documents of all the containers of all available instances from the DB.
+    Get all the the docker_documents of all the containers of all available instances from the DB.
 
     Returns:
         ApiResponse: an api response object.
 
     Raises:
-        InstanceNotFoundError: in case the instance ID is not valid.
-        ContainerNotFoundError: in case there aren't any available containers.
+        AmazonResourceNotFoundError: in case the instance ID is not valid.
+        DockerResourceNotFoundError: in case there aren't any available containers.
     """
     instances_documents = find_documents(
         document={},
@@ -524,9 +524,9 @@ def get_all_instances_containers_from_database():
         if found_containers:
             return ApiResponse(response=all_containers_response, http_status_code=HttpCodes.OK)
         else:
-            raise ContainerNotFoundError(type=Constants.CONTAINERS)
+            raise DockerResourceNotFoundError(type=Constants.CONTAINERS)
     else:
-        raise InstanceNotFoundError(type=Constants.INSTANCES)
+        raise AmazonResourceNotFoundError(type=Constants.INSTANCES)
 
 
 def delete_container(instance_id, container_id):
@@ -541,8 +541,8 @@ def delete_container(instance_id, container_id):
         ApiResponse: an api response object.
 
     Raises:
-        InstanceNotFoundError: in case the instance ID is not valid.
-        ContainerNotFoundError: in case there aren't any available containers.
+        AmazonResourceNotFoundError: in case the instance ID is not valid.
+        DockerResourceNotFoundError: in case there aren't any available containers.
         ApiError: in case the docker server returns an error.
     """
     instance_document = find_documents(
@@ -573,9 +573,9 @@ def delete_container(instance_id, container_id):
                     http_status_code=HttpCodes.INTERNAL_SERVER_ERROR
                 )
         else:
-            raise ContainerNotFoundError(type=Constants.CONTAINER, id=container_id)
+            raise DockerResourceNotFoundError(type=Constants.CONTAINER, id=container_id)
     else:
-        raise InstanceNotFoundError(type=Constants.INSTANCE, id=instance_id)
+        raise AmazonResourceNotFoundError(type=Constants.INSTANCE, id=instance_id)
 
 
 def get_all_instance_images_from_database(instance_id):
@@ -590,7 +590,7 @@ def get_all_instance_images_from_database(instance_id):
 
     Raises:
         ImageNotFoundError: in case there aren't any images available.
-        InstanceNotFoundError: in case the instance was not found.
+        AmazonResourceNotFoundError: in case the instance was not found.
     """
     instance_document = find_documents(
         document={Constants.ID: instance_id}, collection_type=DatabaseCollections.INSTANCES
@@ -603,7 +603,7 @@ def get_all_instance_images_from_database(instance_id):
         else:
             raise ImageNotFoundError(type=Constants.IMAGES)
     else:
-        raise InstanceNotFoundError(type=Constants.INSTANCE, id=instance_id)
+        raise AmazonResourceNotFoundError(type=Constants.INSTANCE, id=instance_id)
 
 
 def update_security_group_inbound_permissions_in_api(req, **update_sc_permissions_kwargs):
@@ -647,8 +647,8 @@ def start_container(instance_id, container_id):
         ApiResponse: an api response object.
 
     Raises:
-        InstanceNotFoundError: in case the instance ID is not valid.
-        ContainerNotFoundError: in case the container ID is not valid.
+        AmazonResourceNotFoundError: in case the instance ID is not valid.
+        DockerResourceNotFoundError: in case the container ID is not valid.
     """
     instance_document = find_documents(
         document={Constants.ID: instance_id}, collection_type=DatabaseCollections.INSTANCES
@@ -675,9 +675,9 @@ def start_container(instance_id, container_id):
                 if insert_document(collection_type=DatabaseCollections.INSTANCES, document=instance_document):
                     return ApiResponse(response=updated_container_document, http_status_code=HttpCodes.OK)
         else:
-            raise ContainerNotFoundError(type=Constants.CONTAINER, id=container_id)
+            raise DockerResourceNotFoundError(type=Constants.CONTAINER, id=container_id)
     else:
-        raise InstanceNotFoundError(type=Constants.INSTANCE, id=instance_id)
+        raise AmazonResourceNotFoundError(type=Constants.INSTANCE, id=instance_id)
 
 
 def execute_command_in_container_through_api(req, instance_id, container_id, instance_document, container_document):
@@ -727,7 +727,7 @@ def run_container_with_metasploit_daemon_through_api(instance_id):
                     if insert_document(collection_type=DatabaseCollections.INSTANCES, document=instance_document):
                         return ApiResponse(response=container_response)
     else:
-        raise InstanceNotFoundError(type=Constants.INSTANCE, id=instance_id)
+        raise AmazonResourceNotFoundError(type=Constants.INSTANCE, id=instance_id)
 
 
 def create_docker_networks_through_api(req, instance_id, instance_document):
