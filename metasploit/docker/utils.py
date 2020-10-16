@@ -1,5 +1,6 @@
 
 from metasploit.aws.amazon_docker_server import DockerServerInstance
+from metasploit.aws.utils import get_docker_server_instance
 
 
 def create_container(instance, image, command, kwargs):
@@ -195,19 +196,3 @@ def create_network(instance_id, name, kwargs):
         str: a network ID
     """
     return get_docker_server_instance(id=instance_id).docker().get_network_collection().create(name=name, **kwargs)
-
-
-# from metasploit.venv.Aws import Constants
-# from metasploit.venv.Aws.Aws_Api_Functions import create_resources
-# i = create_resources(Constants.CREATE_INSTANCES_DICT)
-# d = i.docker()
-# c = create_container(instance_id=i.get_instance_id(), image='phocean/msf', command="sleep 1000", kwargs={})
-# print()
-
-
-# class MetasploitContainer(object):
-#     def __init__(self, instance_id, container_id=""):
-#         port = get_docker_server_instance(id=instance_id).docker().get_api_client()
-#         if container_id:
-#             self.container = get_container(instance_id=instance_id, container_id=container_id)
-#         else:

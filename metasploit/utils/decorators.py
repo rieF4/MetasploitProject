@@ -1,4 +1,21 @@
 import functools
+from flask_restful import request
+
+from metasploit.api.utils import (
+    validate_request_type,
+    validate_api_request_arguments
+)
+from metasploit.api.response import (
+    make_error_response,
+    make_response,
+    HttpCodes,
+    ApiResponse,
+    PrepareResponse
+)
+from metasploit.api.errors import (
+    BadJsonInput,
+    choose_http_error_code
+)
 
 
 def singleton(cls):
@@ -46,13 +63,12 @@ def validate_json_request(*expected_args, validate=True):
                 ResourceNotFoundError: in case the requested resource was not found.
             """
             if validate:
-                type_validation, msg = validate_request_type()
+                type_validation, msg = validate_request_type(client_request=request.json)
                 if not type_validation:
                     return make_error_response(msg=msg, http_error_code=HttpCodes.BAD_REQUEST, req=request.json)
 
-                api_requests = request.json
                 bad_inputs, is_valid_argument = validate_api_request_arguments(
-                    api_requests=api_requests, expected_args=expected_args
+                    api_requests=request.json, expected_args=expected_args
                 )
 
                 if not is_valid_argument:

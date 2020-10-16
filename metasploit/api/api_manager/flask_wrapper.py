@@ -1,5 +1,5 @@
 from flask import Flask, jsonify
-from flask_restful import Api, request
+from flask_restful import Api
 
 from metasploit.api.response import (
     HttpCodes,

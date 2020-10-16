@@ -1,5 +1,7 @@
 from metasploit import constants as global_constants
 
+from .errors import BadRequest
+
 
 def choose_port_for_msfrpcd(containers_document):
     """
@@ -45,7 +47,7 @@ def check_if_image_already_exists(image_document, tag_to_check):
     return False
 
 
-def validate_request_type():
+def validate_request_type(client_request):
     """
     Validate the client request type (dict).
 
@@ -59,8 +61,7 @@ def validate_request_type():
          AttributeError:
     """
     try:
-        req = request.json
-        if not isinstance(req, dict):
+        if not isinstance(client_request, dict):
             return False, "Request type is not a dictionary form."
         return True, 'Success'
     except (BadRequest, TypeError, AttributeError) as err:

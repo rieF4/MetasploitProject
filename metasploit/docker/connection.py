@@ -1,7 +1,10 @@
+
 import docker
 
+from metasploit.connections import Connection
 
-class Docker(object):
+
+class Docker(Connection):
     """
     This class attempts to connect to a specified docker server.
 
