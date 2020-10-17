@@ -203,7 +203,7 @@ class NetworkResponse(ResourceResponse):
 
 class ErrorResponse(ApiResponse):
 
-    def __init__(self, error_msg, http_error_code, req=None, path=None, api_manager=None):
+    def __init__(self, api_manager, error_msg, http_error_code, req=None, path=None):
         """
         Prepare an error response for a resource.
         Args:

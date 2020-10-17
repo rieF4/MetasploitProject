@@ -63,7 +63,7 @@ def validate_json_request(*expected_args):
             type_validation, msg = validate_request_type(client_request=request.json)
             if not type_validation:
                 return ErrorResponse(
-                    error_msg=msg, http_error_code=HttpCodes.BAD_REQUEST, req=request.json
+                    api_manager=None, error_msg=msg, http_error_code=HttpCodes.BAD_REQUEST, req=request.json
                 ).make_response
 
             bad_inputs, is_valid_argument = validate_api_request_arguments(
@@ -114,7 +114,7 @@ def client_request_modifier(code):
                     print(err.__str__())
                     http_status_code = choose_http_error_code(error=err)
                     response[key] = ErrorResponse(
-                        error_msg=err.__str__(), http_error_code=http_status_code, req=req
+                        api_manager=self.api_manager, error_msg=err.__str__(), http_error_code=http_status_code, req=req
                     ).response
                     is_error = True
 
