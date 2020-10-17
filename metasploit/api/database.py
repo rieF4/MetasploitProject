@@ -289,14 +289,13 @@ class DockerServerDatabaseManager(DatabaseManager):
 
         # every time that a container documents needs to be displayed to the client, it is important to update
         # all the containers attributes because they may vary every second.
-        if self.docker_server:
-            instances_documents = super().amazon_document
-            for instance_doc in instances_documents:
-                if instance_doc[global_constants.DOCKER][global_constants.CONTAINERS]:
-                    instance_doc[global_constants.DOCKER][global_constants.CONTAINERS] = _update_container_docs_attrs(
-                        docker_server=self.docker_server
-                    )
-                    self.api_manager.db_operations_manager.update_amazon_document(updated_document=instance_doc)
+        instances_documents = super().amazon_document
+        for instance_doc in instances_documents:
+            if instance_doc[global_constants.DOCKER][global_constants.CONTAINERS]:
+                instance_doc[global_constants.DOCKER][global_constants.CONTAINERS] = _update_container_docs_attrs(
+                    docker_server=self.docker_server
+                )
+                self.api_manager.db_operations_manager.update_amazon_document(updated_document=instance_doc)
 
     @property
     def get_docker_server_instance_document(self):

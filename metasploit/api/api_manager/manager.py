@@ -280,9 +280,19 @@ class CreateDockerResources(ResourceOperation):
 class GetResource(ResourceOperation):
 
     @property
-    def get_amazon_resource(self):
+    def security_group_resource(self):
         """
-        Get a resource(s) from the DB.
+        Get the security group(s) from the DB.
+
+        Returns:
+            ApiResponse: an api response object.
+        """
+        return ApiResponse(response=super().amazon_document, http_status_code=HttpCodes.OK)
+
+    @property
+    def docker_server_instance_resource(self):
+        """
+        Get the docker server(s) from the DB.
 
         Returns:
             ApiResponse: an api response object.
@@ -296,9 +306,10 @@ class GetResource(ResourceOperation):
             http_status_code=HttpCodes.OK
         )
 
-    def get_docker_resource(self):
+    @property
+    def docker_resource(self):
         """
-        Get all sub resources from the DB of an instance such as containers, images or networks.
+        Get all docker resource(s) from the DB of an instance such as containers, images or networks.
 
         Returns:
             ApiResponse: an api response object.
@@ -308,7 +319,7 @@ class GetResource(ResourceOperation):
         return ApiResponse(
             response=self.api_manager.docker_server_database_manager(
                 docker_server=aws_utils.get_docker_server_instance(id=self.api_manager.amazon_resource_id)
-            ).docker_document,
+            ).amazon_document,
             http_status_code=HttpCodes.OK
         )
 

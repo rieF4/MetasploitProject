@@ -51,6 +51,7 @@ class DockerServerInstance(object):
             docker_port=global_constants.DOCKER_PORT
         )
 
+    @property
     def get_commands(self):
         return self._commands
 
@@ -58,34 +59,44 @@ class DockerServerInstance(object):
     def docker(self):
         return self._docker
 
-    def get_instance_id(self):
+    @property
+    def instance_id(self):
         return self._instance_obj.instance_id
 
-    def get_public_ip_address(self):
+    @property
+    def public_ip_address(self):
         return self._instance_obj.public_ip_address
 
-    def get_public_dns_name(self):
+    @property
+    def public_dns_name(self):
         return self._instance_obj.public_dns_name
 
-    def get_state(self):
+    @property
+    def state(self):
         return self._instance_obj.state
 
-    def get_key_name(self):
+    @property
+    def key_name(self):
         return self._instance_obj.key_name
 
-    def get_security_groups(self):
+    @property
+    def security_groups(self):
         return self._instance_obj.security_groups
 
-    def get_image_id(self):
+    @property
+    def image_id(self):
         return self._instance_obj.image_id
 
-    def get_private_ip_address(self):
+    @property
+    def private_ip_address(self):
         return self._instance_obj.private_ip_address
 
-    def get_private_dns_name(self):
+    @property
+    def private_dns_name(self):
         return self._instance_obj.private_dns_name
 
-    def get_instance_obj(self):
+    @property
+    def instance_obj(self):
         return self._instance_obj
 
     def _reload(self):

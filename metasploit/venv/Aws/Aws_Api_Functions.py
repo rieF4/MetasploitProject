@@ -14,7 +14,7 @@ def get_security_group_object(id):
     Returns:
         SecurityGroup: a security group object if found.
     """
-    return aws_api.get_amazon_resource().SecurityGroup(id)
+    return aws_api.resource.SecurityGroup(id)
 
 
 def create_security_group(kwargs):
@@ -74,7 +74,7 @@ def create_instance(kwargs):
     Raises:
         ParamValidationError: in case kwargs params are not valid to create a new instance.
     """
-    aws_instance = aws_api.get_amazon_resource().create_instances(**kwargs)[0]
+    aws_instance = aws_api.resource.create_instances(**kwargs)[0]
     aws_instance.wait_until_running()
     aws_instance.reload()
     return DockerServerInstance(instance_obj=aws_instance, ssh_flag=True, init_docker_server_flag=True)
@@ -107,7 +107,7 @@ def get_aws_instance(id):
     Raises:
         ClientError: in case there isn't an instance with the ID.
     """
-    return aws_api.get_amazon_resource().Instance(id)
+    return aws_api.security_group_resource().Instance(id)
 
 
 def update_security_group_inbound_permissions(security_group_id, req):

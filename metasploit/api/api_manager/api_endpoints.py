@@ -37,7 +37,7 @@ class SecurityGroupsApi(CollectionApi):
             single_document=False,
             type=global_constants.SECURITY_GROUPS,
             collection_name=global_constants.SECURITY_GROUPS
-        ).get_resources.get_amazon_resource
+        ).get_resources.security_group_resource
 
     @staticmethod
     @validate_json_request(validate=False)
@@ -58,7 +58,7 @@ class SecurityGroupsApi(CollectionApi):
             collection_type=SecurityGroupsApi.security_group_collection,
             type=global_constants.SECURITY_GROUP,
             resource_id=id
-        ).get_resources.get_amazon_resource
+        ).get_resources.security_group_resource
 
     @staticmethod
     @validate_json_request("GroupName", "Description")
@@ -210,7 +210,7 @@ class InstancesApi(CollectionApi):
             collection_type=InstancesApi.instance_collection,
             type=global_constants.INSTANCES,
             single_document=False
-        ).get_resources.get_amazon_resource
+        ).get_resources.security_group_resource
 
     @staticmethod
     @validate_json_request(validate=False)
@@ -231,7 +231,7 @@ class InstancesApi(CollectionApi):
             collection_type=InstancesApi.instance_collection,
             type=global_constants.INSTANCE,
             resource_id=id,
-        ).get_resources.get_amazon_resource
+        ).get_resources.security_group_resource
 
     @staticmethod
     @validate_json_request(validate=False)

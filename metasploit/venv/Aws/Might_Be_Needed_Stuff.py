@@ -166,6 +166,6 @@
 #         KeyPair: a key pair object in AWS.
 #     """
 #     try:
-#         return aws_api.get_amazon_resource().KeyPair(key_name)
+#         return aws_api.security_group_resource().KeyPair(key_name)
 #     except Exception:
 #         return None
