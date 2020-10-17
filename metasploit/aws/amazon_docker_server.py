@@ -37,7 +37,7 @@ class DockerServerInstance(object):
 
         if ssh_flag:
             self._ssh = SSH(
-                hostname=self.get_public_dns_name(),
+                hostname=self.public_dns_name,
                 username=aws_constants.USER_NAME,
                 private_key=aws_constants.DEFAULT_PRIVATE_KEY_PATH
             )
@@ -47,7 +47,7 @@ class DockerServerInstance(object):
 
         self._docker = Docker(
             protocol=global_constants.IP_PROTOCOL,
-            docker_server_ip=self.get_public_ip_address(),
+            docker_server_ip=self.public_ip_address,
             docker_port=global_constants.DOCKER_PORT
         )
 
@@ -107,7 +107,7 @@ class DockerServerInstance(object):
         Start the instance and wait till is is on running state
 
         """
-        if self.get_state()['Name'] == aws_constants.STOPPED_STATE:
+        if self.state['Name'] == aws_constants.STOPPED_STATE:
             self._instance_obj.start()
             self._instance_obj.wait_until_running()
             self._reload()
@@ -117,7 +117,7 @@ class DockerServerInstance(object):
         Stop the instance and wait till it's in a stopped state
 
         """
-        if self.get_state()['Name'] == aws_constants.RUNNING_STATE:
+        if self.state['Name'] == aws_constants.RUNNING_STATE:
             self._instance_obj.stop()
             self._instance_obj.wait_until_stopped()
             self._reload()
@@ -127,7 +127,7 @@ class DockerServerInstance(object):
         Reboot the instance and wait till it's in a running state
 
         """
-        if self.get_state()['Name'] == aws_constants.RUNNING_STATE:
+        if self.state['Name'] == aws_constants.RUNNING_STATE:
             self._instance_obj.reboot()
             self._instance_obj.wait_until_running()
             self._reload()
@@ -149,7 +149,7 @@ class DockerServerInstance(object):
         Raises:
             CommandFailureError in case the command fails over the instance
         """
-        if self.get_state()['Name'] == aws_constants.RUNNING_STATE:
+        if self.state['Name'] == aws_constants.RUNNING_STATE:
             ssh_flag = True
             while ssh_flag:
                 try:
@@ -162,7 +162,7 @@ class DockerServerInstance(object):
                         else:
                             ssh_flag = False
                             raise CommandFailureError(
-                                cmd=command, instance_id=self.get_instance_id()
+                                cmd=command, instance_id=self.instance_id
                             )
                     ssh_flag = False
                 except Exception as error:

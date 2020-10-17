@@ -25,13 +25,19 @@ class ApiResponse(object):
         response (dict): a response from the database.
         http_status_code (int): the http status code of the response.
     """
-    def __init__(self, response={}, http_status_code=HttpCodes.OK):
-        self._response = response if response else ''
+    def __init__(self, api_manager=None, response=None, http_status_code=HttpCodes.OK):
+
+        self._api_manager = api_manager
+        self._response = response
         self._http_status_code = http_status_code
 
     @property
     def make_response(self):
         return make_response(jsonify(self.response), self.http_status_code)
+
+    @property
+    def api_manager(self):
+        return self._api_manager
 
     @property
     def response(self):
@@ -44,8 +50,10 @@ class ApiResponse(object):
 
 class ResourceResponse(ApiResponse):
 
-    def __init__(self, response, http_status_code, docker_amazon_object):
-        super(ResourceResponse, self).__init__(response=response, http_status_code=http_status_code)
+    def __init__(self, api_manager, response, http_status_code, docker_amazon_object=None):
+        super(ResourceResponse, self).__init__(
+            api_manager=api_manager, response=response, http_status_code=http_status_code
+        )
         self._docker_amazon_object = docker_amazon_object
 
     @property
@@ -55,8 +63,16 @@ class ResourceResponse(ApiResponse):
 
 class SecurityGroupResponse(ResourceResponse):
 
+    def __init__(self, api_manager, http_status_code, security_group, response):
+        super(SecurityGroupResponse, self).__init__(
+            api_manager=api_manager,
+            response=self._prepare_security_group_response if security_group else response,
+            http_status_code=http_status_code,
+            docker_amazon_object=security_group
+        )
+
     @property
-    def prepare_security_group_response(self):
+    def _prepare_security_group_response(self):
         """
         Create a security group parsed response for the client.
 
@@ -74,8 +90,16 @@ class SecurityGroupResponse(ResourceResponse):
 
 class DockerInstanceResponse(ResourceResponse):
 
+    def __init__(self, api_manager, http_status_code, docker_server, response):
+        super(DockerInstanceResponse, self).__init__(
+            api_manager=api_manager,
+            response=self._prepare_instance_response if docker_server else response,
+            http_status_code=http_status_code,
+            docker_amazon_object=docker_server
+        )
+
     @property
-    def prepare_instance_response(self):
+    def _prepare_instance_response(self):
         """
         Prepare a create instance parsed response for the client.
 
@@ -103,8 +127,16 @@ class DockerInstanceResponse(ResourceResponse):
 
 class ContainerResponse(ResourceResponse):
 
+    def __init__(self, api_manager, http_status_code, container, response):
+        super(ContainerResponse, self).__init__(
+            api_manager=api_manager,
+            response=self._prepare_container_response if container else response,
+            http_status_code=http_status_code,
+            docker_amazon_object=container
+        )
+
     @property
-    def prepare_container_response(self):
+    def _prepare_container_response(self):
         """
         Prepare a create container parsed response for the client.
 
@@ -124,8 +156,16 @@ class ContainerResponse(ResourceResponse):
 
 class ImageResponse(ResourceResponse):
 
+    def __init__(self, api_manager, http_status_code, image, response):
+        super(ImageResponse, self).__init__(
+            api_manager=api_manager,
+            response=self._prepare_image_response if image else response,
+            http_status_code=http_status_code,
+            docker_amazon_object=image
+        )
+
     @property
-    def prepare_image_response(self):
+    def _prepare_image_response(self):
         """
         Prepare an image parsed response for the client.
 
@@ -140,7 +180,15 @@ class ImageResponse(ResourceResponse):
 
 class NetworkResponse(ResourceResponse):
 
-    def prepare_network_response(self):
+    def __init__(self, api_manager, http_status_code, network, response):
+        super(NetworkResponse, self).__init__(
+            api_manager=api_manager,
+            response=self._prepare_network_response if network else response,
+            http_status_code=http_status_code,
+            docker_amazon_object=network
+        )
+
+    def _prepare_network_response(self):
         """
         Prepare a network parsed response for the client
         """
@@ -155,11 +203,11 @@ class NetworkResponse(ResourceResponse):
 
 class ErrorResponse(ApiResponse):
 
-    def __init__(self, error_msg, http_error_code, req=None, path=None):
+    def __init__(self, api_manager, error_msg, http_error_code, req=None, path=None):
         """
         Prepare an error response for a resource.
         Args:
-            msg (str): error message to send.
+            error_msg (str): error message to send.
             http_error_code (int): the http error code.
             req (dict): the request by the client.
             path (str): The path in the api the error occurred.
@@ -176,146 +224,6 @@ class ErrorResponse(ApiResponse):
                     "Url": path
                 }
         }
-        super(ErrorResponse, self).__init__(response=response, http_status_code=http_error_code)
-
-
-# class PrepareResponse(object):
-#
-#     @staticmethod
-#     def prepare_container_response(container):
-#         """
-#         Prepare a create container parsed response for the client.
-#
-#         Args:
-#
-#         Returns:
-#             dict: a parsed instance response.
-#         """
-#         container.reload()
-#
-#         return {
-#             "_id": container.id,
-#             "image": container.image.tags,
-#             "name": container.name,
-#             "status": container.status,
-#             "ports": container.ports
-#         }
-#
-#     @staticmethod
-#     def prepare_instance_response(docker_server):
-#         """
-#         Prepare a create instance parsed response for the client.
-#
-#         Returns:
-#             dict: a parsed instance response.
-#         """
-#         return {
-#             "_id": docker_server.get_instance_id(),
-#             "IpParameters": {
-#                 "PublicIpAddress": docker_server.get_public_ip_address(),
-#                 "PublicDNSName": docker_server.get_public_dns_name(),
-#                 "PrivateIpAddress": docker_server.get_private_ip_address(),
-#                 "PrivateDNSName": docker_server.get_private_dns_name()
-#             },
-#             "SecurityGroups": docker_server.get_security_groups(),
-#             "State": docker_server.get_state(),
-#             "KeyName": docker_server.get_key_name(),
-#             "Docker": {
-#                 "Containers": [],
-#                 "Images": [],
-#                 "Networks": []
-#             },
-#         }
-#
-#     @staticmethod
-#     def prepare_security_group_response(security_group_obj):
-#         """
-#         Create a security group parsed response for the client.
-#
-#         Args:
-#             security_group_obj (SecurityGroup): security group object.
-#             path (str): the api path to the newly created security group
-#
-#         Returns:
-#             dict: a parsed security group response.
-#         """
-#         return {
-#             "_id": security_group_obj.group_id,
-#             "Description": security_group_obj.description,
-#             "Name": security_group_obj.group_name,
-#             "IpPermissionsInbound": security_group_obj.ip_permissions,  # means permissions to connect to the instance
-#             "IpPermissionsOutbound": security_group_obj.ip_permissions_egress
-#         }
-#
-#     @staticmethod
-#     def prepare_error_response(msg, http_error_code, req=None, path=None):
-#         """
-#         Prepare an error response for a resource.
-#
-#         Args:
-#             msg (str): error message to send.
-#             http_error_code (int): the http error code.
-#             req (dict): the request by the client.
-#             path (str): The path in the api the error occurred.
-#
-#         Returns:
-#             dict: parsed error response for the client.
-#         """
-#         return {
-#             "Error":
-#                 {
-#                     "Message": msg,
-#                     "Code": http_error_code,
-#                     "Request": req,
-#                     "Url": path
-#                 }
-#         }
-#
-#     @staticmethod
-#     def prepare_image_response(image):
-#         """
-#         Prepare an image parsed response for the client.
-#
-#         Args:
-#             image (Image): an image object.
-#
-#         Returns:
-#             dict: a parsed instance response.
-#         """
-#         return {
-#             "_id": image.id,
-#             "tags": image.tags
-#         }
-#
-#     @staticmethod
-#     def prepare_network_response(network_obj):
-#         """
-#         Prepare a network parsed response for the client
-#         """
-#         network_obj.reload()
-#
-#         return {
-#             "_id": network_obj.id,
-#             "name": network_obj.name,
-#             "containers": [container.id for container in network_obj.containers]
-#         }
-#
-#
-# def make_error_response(msg, http_error_code, req=None, path=None):
-#     """
-#     Make error response for the client.
-#
-#     Args:
-#         msg (str): error message to send.
-#         http_error_code (int): the http error code.
-#         req (dict): the request by the client.
-#         path (str): The path in the api the error occurred.
-#
-#     Returns:
-#         tuple (Json, int): (error, error_status_code) for the client.
-#     """
-#     return jsonify(
-#         PrepareResponse.prepare_error_response(
-#             msg=msg, http_error_code=http_error_code, req=req, path=path
-#         )
-#     ), http_error_code
+        super(ErrorResponse, self).__init__(
+            api_manager=api_manager, response=response, http_status_code=http_error_code
+        )

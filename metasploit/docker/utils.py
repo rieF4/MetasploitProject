@@ -96,7 +96,7 @@ def get_container(instance_id, container_id):
     Raises:
         ApiError: in case the docker server returns an error.
     """
-    return get_docker_server_instance(id=instance_id).docker().get_container_collection().get(
+    return get_docker_server_instance(id=instance_id).docker.get_container_collection().get(
         container_id=container_id
     )
 

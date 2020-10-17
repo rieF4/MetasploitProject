@@ -3,7 +3,7 @@ from flask_restful import Api, request
 
 from metasploit.api.response import (
     HttpCodes,
-    make_error_response
+    ErrorResponse
 )
 from metasploit.api.errors import (
     ApiException,
@@ -129,6 +129,6 @@ class EndpointAction(object):
             return self.function(*args, **kwargs)
         except ApiException as err:
             http_error = choose_http_error_code(error=err)
-            return make_error_response(
-                msg=err.__str__(), http_error_code=http_error, req=request.json, path=request.base_url
-            )
+            return ErrorResponse(
+                error_msg=err.__str__(), http_error_code=http_error, req=request.json, path=request.base_url
+            ).make_response

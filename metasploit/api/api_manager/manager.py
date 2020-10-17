@@ -12,12 +12,20 @@ from metasploit.aws import utils as aws_utils
 from metasploit.docker import utils as docker_utils
 
 from metasploit.api.response import (
-    PrepareResponse,
     ApiResponse,
     HttpCodes
 )
 
 from metasploit.utils.decorators import client_request_modifier
+
+from metasploit.api.response import (
+    SecurityGroupResponse,
+    DockerInstanceResponse,
+    ErrorResponse,
+    ContainerResponse,
+    ImageResponse,
+    ResourceResponse
+)
 
 
 class ApiManager(object):
@@ -120,29 +128,73 @@ class ApiManager(object):
         """
         return UpdateResource(self)
 
-    def docker_server_database_manager(self, docker_server=None):
+    def docker_server_database_manager(self, docker_server=None, response=None):
         """
         Get docker server database manager object.
         """
-        return DockerServerDatabaseManager(self, docker_server=docker_server)
+        return DockerServerDatabaseManager(self, docker_server=docker_server, response=response)
 
-    def security_group_database_manager(self, security_group=None):
+    def security_group_database_manager(self, security_group_response=None):
         """
         Get security group database manager object.
         """
-        return SecurityGroupDatabaseManager(self, security_group=security_group)
+        return SecurityGroupDatabaseManager(self, security_group_response=security_group_response)
 
-    def container_database_manager(self, docker_server=None, container=None):
+    def container_database_manager(self, docker_server=None, response=None):
         """
         Get container database manager object.
         """
-        return ContainerDatabaseManager(self, docker_server=docker_server, container=container)
+        return ContainerDatabaseManager(self, docker_server=docker_server, response=response)
 
-    def image_database_manager(self, docker_server=None, image=None):
+    def image_database_manager(self, docker_server=None, response=None):
         """
         Get image database manager object.
         """
-        return ImageDatabaseManager(self, docker_server=docker_server, image=image)
+        return ImageDatabaseManager(self, docker_server=docker_server, response=response)
+
+    def docker_server_response(self, http_status_code, docker_server=None, response=None):
+        """
+        Get docker instance response object.
+        """
+        return DockerInstanceResponse(
+            self, response=response, http_status_code=http_status_code, docker_server=docker_server
+        )
+
+    def security_group_response(self, http_status_code, security_group=None, response=None):
+        """
+        Get security group response object.
+        """
+        return SecurityGroupResponse(
+            self, response=response, http_status_code=http_status_code, security_group=security_group
+        )
+
+    def container_response(self, http_status_code=HttpCodes.OK, container=None, response=None):
+        """
+        Get container response object.
+        """
+        return ContainerResponse(self, http_status_code=http_status_code, container=container, response=response)
+
+    def image_response(self, http_status_code, image=None, response=None):
+        """
+        Get image response object.
+        """
+        return ImageResponse(
+            self, http_status_code=http_status_code, image=image, response=response
+        )
+
+    def error_response(self, error_msg, http_status_code, req=None, path=None):
+        """
+        Get error response object.
+        """
+        return ErrorResponse(self, error_msg=error_msg, http_error_code=http_status_code, req=req, path=path)
+
+    def resource_response(self, response, http_status_code, docker_amazon_object=None):
+        """
+        Get general resource response object.
+        """
+        return ResourceResponse(
+            self, response=response, http_status_code=http_status_code, docker_amazon_object=docker_amazon_object
+        )
 
 
 class ResourceOperation(object):
@@ -185,9 +237,16 @@ class CreateAmazonResources(ResourceOperation):
         Returns:
             dict: an instance document.
         """
-        return self.api_manager.docker_server_database_manager(
+        docker_server_response = self.api_manager.docker_server_response(
+            http_status_code=HttpCodes.CREATED,
             docker_server=aws_utils.create_instance(kwargs=req)
-        ).create_docker_server_instance_document
+        ).response
+
+        self.api_manager.docker_server_database_manager(
+            security_group_response=docker_server_response
+        ).insert_docker_server_document()
+
+        return docker_server_response
 
     @property
     @client_request_modifier(code=HttpCodes.CREATED)
@@ -201,9 +260,16 @@ class CreateAmazonResources(ResourceOperation):
         Returns:
             dict: a security group document.
         """
-        return self.api_manager.security_group_database_manager(
+        security_group_response = self.api_manager.security_group_response(
+            http_status_code=HttpCodes.CREATED,
             security_group=aws_utils.create_security_group(kwargs=req)
-        ).create_security_group_document
+        ).response
+
+        self.api_manager.security_group_database_manager(
+            security_group_response=security_group_response
+        ).insert_security_group_document()
+
+        return security_group_response
 
 
 class CreateDockerResources(ResourceOperation):
@@ -224,16 +290,21 @@ class CreateDockerResources(ResourceOperation):
         Returns:
             dict: a container document.
         """
-        container = docker_utils.create_container(
-            instance=self.docker_server,
-            image=req.pop("Image"),
-            command=req.pop("Command", None),
-            kwargs=req
-        )
+        container_response = self.api_manager.container_response(
+            http_status_code=HttpCodes.CREATED,
+            container=docker_utils.create_container(
+                instance=self.docker_server,
+                image=req.pop("Image"),
+                command=req.pop("Command", None),
+                kwargs=req
+            )
+        ).response
 
-        return self.api_manager.container_database_manager(
-            docker_server=self.docker_server, container=container
-        ).create_container_document()
+        self.api_manager.container_database_manager(
+            docker_server=self.docker_server, response=container_response
+        ).insert_container_document()
+
+        return container_response
 
     @property
     @client_request_modifier(code=HttpCodes.CREATED)
@@ -248,16 +319,22 @@ class CreateDockerResources(ResourceOperation):
             dict: an image document.
         """
         repository = req.pop("Repository")
-        image = docker_utils.pull_image(
-            instance=self.docker_server,
-            repository=repository,
-            tag=f"{repository}:latest",
-            **req
-        )
 
-        return self.api_manager.image_database_manager(
-            docker_server=self.docker_server, image=image
-        ).create_image_document()
+        image_response = self.api_manager.image_response(
+            http_status_code=HttpCodes.CREATED,
+            image=docker_utils.pull_image(
+                instance=self.docker_server,
+                repository=repository,
+                tag=f"{repository}:latest",
+                **req
+            )
+        ).response
+
+        self.api_manager.image_database_manager(
+            docker_server=self.docker_server, response=image_response
+        ).insert_image_document()
+
+        return image_response
 
     @property
     def run_metasploit_container(self):
@@ -267,27 +344,34 @@ class CreateDockerResources(ResourceOperation):
         Returns:
             dict: a container document.
         """
-        msfrpcd_container = docker_utils.run_container_with_msfrpcd_metasploit(
-            instance=self.docker_server,
-            containers_documents=self.amazon_document[global_constants.DOCKER][global_constants.CONTAINERS]
+        msfrpcd_container_response = self.api_manager.container_response(
+            http_status_code=HttpCodes.CREATED,
+            container=docker_utils.run_container_with_msfrpcd_metasploit(
+                instance=self.docker_server,
+                containers_documents=self.amazon_document[global_constants.DOCKER][global_constants.CONTAINERS]
+            )
         )
 
-        return self.api_manager.container_database_manager(
-            docker_server=self.docker_server, container=msfrpcd_container
-        ).create_container_document
+        self.api_manager.container_database_manager(
+            docker_server=self.docker_server, response=msfrpcd_container_response.response
+        ).insert_container_document()
+
+        return msfrpcd_container_response.make_response
 
 
 class GetResource(ResourceOperation):
 
     @property
-    def security_group_resource(self):
+    def amazon_resource(self):
         """
-        Get the security group(s) from the DB.
+        Get amazon document(s) the DB. note: except docker server instance.
 
         Returns:
             ApiResponse: an api response object.
         """
-        return ApiResponse(response=super().amazon_document, http_status_code=HttpCodes.OK)
+        return self.api_manager.resource_response(
+            response=self.amazon_resource, http_status_code=HttpCodes.OK
+        ).make_response
 
     @property
     def docker_server_instance_resource(self):
@@ -299,12 +383,12 @@ class GetResource(ResourceOperation):
         """
         # need to init docker server constructor to update all the container documents in the DB because
         # their attributes change all the time
-        return ApiResponse(
+        return self.api_manager.resource_response(
             response=self.api_manager.docker_server_database_manager(
                 docker_server=aws_utils.get_docker_server_instance(id=self.api_manager.amazon_resource_id)
             ).amazon_document,
             http_status_code=HttpCodes.OK
-        )
+        ).make_response
 
     @property
     def docker_resource(self):
@@ -316,12 +400,12 @@ class GetResource(ResourceOperation):
         """
         # need to init docker server constructor to update all the container documents in the DB because
         # their attributes change all the time
-        return ApiResponse(
+        return self.api_manager.resource_response(
             response=self.api_manager.docker_server_database_manager(
                 docker_server=aws_utils.get_docker_server_instance(id=self.api_manager.amazon_resource_id)
-            ).amazon_document,
+            ).docker_document,
             http_status_code=HttpCodes.OK
-        )
+        ).make_response
 
 
 class DeleteResource(ResourceOperation):
@@ -335,8 +419,12 @@ class DeleteResource(ResourceOperation):
             ApiResponse: an api response object.
         """
         aws_utils.get_docker_server_instance(id=self.api_manager.amazon_resource_id).terminate()
-        self.api_manager.db_manager.delete_amazon_document()
-        return ApiResponse(http_status_code=HttpCodes.NO_CONTENT)
+
+        self.api_manager.docker_server_database_manager.delete_docker_server_instance_document()
+
+        return self.api_manager.docker_server_response(
+            http_status_code=HttpCodes.NO_CONTENT, response=''
+        ).make_response()
 
     @property
     def delete_security_group(self):
@@ -347,8 +435,12 @@ class DeleteResource(ResourceOperation):
             ApiResponse: an api response object.
         """
         aws_utils.get_security_group_object(id=self.api_manager.amazon_resource_id)
-        self.api_manager.db_manager.delete_amazon_document()
-        return ApiResponse(http_status_code=HttpCodes.NO_CONTENT)
+
+        self.api_manager.security_group_database_manager.delete_security_group_document()
+
+        return self.api_manager.security_group_response(
+            http_status_code=HttpCodes.NO_CONTENT, response=''
+        ).make_response()
 
     @property
     def delete_container(self):
@@ -362,11 +454,11 @@ class DeleteResource(ResourceOperation):
             instance_id=self.api_manager.amazon_resource_id, container_id=self.api_manager.docker_resource_id
         ).remove()
 
-        # update here all the container docker_documents [TO DO!!!]
-        updated_containers_documents = None
+        self.api_manager.container_database_manager().delete_container_document()
 
-        self.api_manager.db_manager.update_amazon_document(updated_document=updated_containers_documents)
-        return ApiResponse(http_status_code=HttpCodes.NO_CONTENT)
+        return self.api_manager.container_response(
+            http_status_code=HttpCodes.NO_CONTENT, response=''
+        ).make_response()
 
 
 class UpdateResource(ResourceOperation):

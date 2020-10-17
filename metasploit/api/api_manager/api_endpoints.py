@@ -21,7 +21,6 @@ class SecurityGroupsApi(CollectionApi):
     security_group_collection = DatabaseCollections.SECURITY_GROUPS
 
     @staticmethod
-    @validate_json_request(validate=False)
     def get_security_groups_endpoint():
         """
         Security group endpoint that gets all the security groups available in the DB.
@@ -37,10 +36,9 @@ class SecurityGroupsApi(CollectionApi):
             single_document=False,
             type=global_constants.SECURITY_GROUPS,
             collection_name=global_constants.SECURITY_GROUPS
-        ).get_resources.security_group_resource
+        ).get_resources.amazon_resource
 
     @staticmethod
-    @validate_json_request(validate=False)
     def get_specific_security_group_endpoint(id):
         """
         Security group endpoint to get a specific security group from the DB by its ID.
@@ -58,7 +56,7 @@ class SecurityGroupsApi(CollectionApi):
             collection_type=SecurityGroupsApi.security_group_collection,
             type=global_constants.SECURITY_GROUP,
             resource_id=id
-        ).get_resources.security_group_resource
+        ).get_resources.amazon_resource
 
     @staticmethod
     @validate_json_request("GroupName", "Description")
@@ -92,7 +90,6 @@ class SecurityGroupsApi(CollectionApi):
         ).create_amazon_resources.create_security_group
 
     @staticmethod
-    @validate_json_request(validate=False)
     def delete_specific_security_group_endpoint(id):
         """
         Security group endpoint in order to delete a specific security group from the API.
@@ -195,7 +192,6 @@ class InstancesApi(CollectionApi):
         ).create_amazon_resources.create_instance
 
     @staticmethod
-    @validate_json_request(validate=False)
     def get_all_instances_endpoint():
         """
         Instance endpoint the get all the available instances from the DB.
@@ -210,10 +206,9 @@ class InstancesApi(CollectionApi):
             collection_type=InstancesApi.instance_collection,
             type=global_constants.INSTANCES,
             single_document=False
-        ).get_resources.security_group_resource
+        ).get_resources.amazon_resource
 
     @staticmethod
-    @validate_json_request(validate=False)
     def get_specific_instance_endpoint(id):
         """
         Instance endpoint to get a specific instance from the DB.
@@ -231,10 +226,9 @@ class InstancesApi(CollectionApi):
             collection_type=InstancesApi.instance_collection,
             type=global_constants.INSTANCE,
             resource_id=id,
-        ).get_resources.security_group_resource
+        ).get_resources.amazon_resource
 
     @staticmethod
-    @validate_json_request(validate=False)
     def delete_instance_endpoint(id):
         """
         Instance endpoint to delete a specific instance from the API.
@@ -290,7 +284,6 @@ class ContainersApi(CollectionApi):
         ).create_amazon_resources.create_container
 
     @staticmethod
-    @validate_json_request(validate=False)
     def start_container_endpoint(instance_id, container_id):
         """
         Start a container in the instance.
@@ -309,7 +302,6 @@ class ContainersApi(CollectionApi):
         # return start_container(instance_id=instance_id, container_id=container_id)
 
     @staticmethod
-    @validate_json_request(validate=False)
     def get_all_instance_containers_endpoint(id):
         """
         Container endpoint to get all the containers of a specific instance from the database.
@@ -333,7 +325,6 @@ class ContainersApi(CollectionApi):
         ).get_resources.get_docker_resource(document_type=global_constants.CONTAINERS)
 
     @staticmethod
-    @validate_json_request(validate=False)
     def get_instance_container_endpoint(instance_id, container_id):
         """
         Container endpoint to get a container by instance and container IDs from the DB.
@@ -357,7 +348,6 @@ class ContainersApi(CollectionApi):
         ).get_resources.get_specific_sub_resource(document_type=global_constants.CONTAINERS)
 
     @staticmethod
-    @validate_json_request(validate=False)
     def get_all_instances_containers_endpoint():
         """
         Container endpoint to get all the containers of all the instances from the DB.
@@ -372,7 +362,6 @@ class ContainersApi(CollectionApi):
         # return get_all_instances_containers_from_database()
 
     @staticmethod
-    @validate_json_request(validate=False)
     def delete_container_endpoint(instance_id, container_id):
         """
         Container endpoint to deletes the container from an instance and remove it from DB.
@@ -412,7 +401,6 @@ class ContainersApi(CollectionApi):
         # )
 
     @staticmethod
-    @validate_json_request(validate=False)
     def run_container_with_metasploit_daemon_endpoint(instance_id):
         """
         Runs a container with metasploit daemon endpoint
@@ -454,7 +442,6 @@ class DockerImagesApi(CollectionApi):
         # return create_update_resource(function=pull_instance_image, instance_id=id)
 
     @staticmethod
-    @validate_json_request(validate=False)
     def get_instance_images_endpoint(instance_id):
         """
         Get all instance docker images by instance ID.

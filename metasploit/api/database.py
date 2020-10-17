@@ -8,9 +8,6 @@ from metasploit.api.errors import (
     DockerResourceNotFoundError
 )
 
-from .response import PrepareResponse
-
-
 db_client = MongoClient(
     'mongodb+srv://Metasploit:FVDxbg312@metasploit.gdvxn.mongodb.net/metasploit?retryWrites=true&w=majority'
 )
@@ -209,8 +206,13 @@ class DatabaseOperations(object):
 
 class DatabaseManager(object):
 
-    def __init__(self, api_manager):
+    def __init__(self, api_manager, response=None):
         self._api_manager = api_manager
+        self._response = response
+
+    @property
+    def response(self):
+        return self._response
 
     @property
     def api_manager(self):
@@ -224,14 +226,9 @@ class DatabaseManager(object):
     def docker_document(self):
         return self.api_manager.db_operations_manager.docker_document
 
-    def create_amazon_document(self, prepare_function_document, amazon_object):
-        """
-        Creates amazon document and inserts it in to the DB.
-        """
-        amazon_document = prepare_function_document(amazon_object)
-        self.api_manager.db_operations_manager.amazon_document = amazon_document
+    def insert_amazon_document(self):
+        self.api_manager.db_operations_manager.amazon_document = self.response
         self.api_manager.db_operations_manager.insert_amazon_document()
-        return amazon_document
 
     def delete_amazon_document(self):
         """
@@ -239,23 +236,17 @@ class DatabaseManager(object):
         """
         self.api_manager.db_operations_manager.delete_amazon_document()
 
-    def create_docker_document(self, docker_document_type, docker_object, prepare_docker_document_function):
+    def insert_docker_document(self, docker_document_type):
         """
         Creates docker document in the DB.
 
         Args:
             docker_document_type (str): type of docker document. e.g. Constants.Containers, Constants.Images
-            docker_object (DockerObject): a docker object (Container, Image).
-            prepare_docker_document_function (function): prepare docker document function.
         """
-        docker_document = prepare_docker_document_function(docker_object)
-
         updated_instance_document = self.amazon_document
-        updated_instance_document[global_constants.DOCKER][docker_document_type].append(docker_document)
+        updated_instance_document[global_constants.DOCKER][docker_document_type].append(self.response)
 
         self.api_manager.db_operations_manager.update_amazon_document(updated_document=updated_instance_document)
-
-        return docker_document
 
     def delete_docker_document(self, docker_document_type):
         """
@@ -283,8 +274,8 @@ class DatabaseManager(object):
 
 class DockerServerDatabaseManager(DatabaseManager):
 
-    def __init__(self, api_manager, docker_server):
-        super(DockerServerDatabaseManager, self).__init__(api_manager=api_manager)
+    def __init__(self, api_manager, docker_server, response=None):
+        super(DockerServerDatabaseManager, self).__init__(api_manager=api_manager, response=response)
         self._docker_server = docker_server
 
         # every time that a container documents needs to be displayed to the client, it is important to update
@@ -293,7 +284,7 @@ class DockerServerDatabaseManager(DatabaseManager):
         for instance_doc in instances_documents:
             if instance_doc[global_constants.DOCKER][global_constants.CONTAINERS]:
                 instance_doc[global_constants.DOCKER][global_constants.CONTAINERS] = _update_container_docs_attrs(
-                    docker_server=self.docker_server
+                    docker_server=self.docker_server, api_manager=self.api_manager
                 )
                 self.api_manager.db_operations_manager.update_amazon_document(updated_document=instance_doc)
 
@@ -307,18 +298,14 @@ class DockerServerDatabaseManager(DatabaseManager):
         """
         return super().amazon_document
 
-    @property
-    def create_docker_server_instance_document(self):
+    def insert_docker_server_document(self):
         """
         Creates instance document and inserts them to the DB.
 
         Returns:
             dict: a new instance document.
         """
-        return super().create_amazon_document(
-            prepare_function_document=PrepareResponse.prepare_instance_response,
-            amazon_object=self.docker_server
-        )
+        super().insert_amazon_document()
 
     def delete_docker_server_instance_document(self):
         """
@@ -333,9 +320,8 @@ class DockerServerDatabaseManager(DatabaseManager):
 
 class SecurityGroupDatabaseManager(DatabaseManager):
 
-    def __init__(self, api_manager, security_group):
-        super(SecurityGroupDatabaseManager, self).__init__(api_manager=api_manager)
-        self._security_group = security_group
+    def __init__(self, api_manager, security_group_response=None):
+        super(SecurityGroupDatabaseManager, self).__init__(api_manager=api_manager, response=security_group_response)
 
     @property
     def get_security_group_document(self):
@@ -344,15 +330,11 @@ class SecurityGroupDatabaseManager(DatabaseManager):
         """
         return super().amazon_document
 
-    @property
-    def create_security_group_document(self):
+    def insert_security_group_document(self):
         """
         Creates a security group document and inserts it into the DB.
         """
-        return super().create_amazon_document(
-            prepare_function_document=PrepareResponse.prepare_security_group_response,
-            amazon_object=self.security_group
-        )
+        super().insert_amazon_document()
 
     def delete_security_group_document(self):
         """
@@ -360,16 +342,13 @@ class SecurityGroupDatabaseManager(DatabaseManager):
         """
         super().delete_amazon_document()
 
-    @property
-    def security_group(self):
-        return self._security_group
-
 
 class ContainerDatabaseManager(DockerServerDatabaseManager):
 
-    def __init__(self, api_manager, docker_server, container):
-        super(ContainerDatabaseManager, self).__init__(api_manager=api_manager, docker_server=docker_server)
-        self._container = container
+    def __init__(self, api_manager, docker_server, response=None):
+        super(ContainerDatabaseManager, self).__init__(
+            api_manager=api_manager, docker_server=docker_server, response=response
+        )
 
     @property
     def get_container_document(self):
@@ -378,16 +357,11 @@ class ContainerDatabaseManager(DockerServerDatabaseManager):
         """
         return super().docker_document
 
-    @property
-    def create_container_document(self):
+    def insert_container_document(self):
         """
         Creates container document and inserts it into the DB.
         """
-        return super().create_docker_document(
-            docker_document_type=global_constants.CONTAINERS,
-            docker_object=self.container,
-            prepare_docker_document_function=PrepareResponse.prepare_container_response
-        )
+        super().insert_docker_document(docker_document_type=global_constants.CONTAINERS)
 
     def delete_container_document(self):
         """
@@ -395,16 +369,13 @@ class ContainerDatabaseManager(DockerServerDatabaseManager):
         """
         super().delete_docker_document(docker_document_type=global_constants.CONTAINERS)
 
-    @property
-    def container(self):
-        return self._container
-
 
 class ImageDatabaseManager(DockerServerDatabaseManager):
 
-    def __init__(self, api_manager, docker_server, image):
-        super(ImageDatabaseManager, self).__init__(api_manager=api_manager, docker_server=docker_server)
-        self._image = image
+    def __init__(self, api_manager, docker_server, response=None):
+        super(ImageDatabaseManager, self).__init__(
+            api_manager=api_manager, docker_server=docker_server, response=response
+        )
 
     @property
     def get_image_document(self):
@@ -413,25 +384,17 @@ class ImageDatabaseManager(DockerServerDatabaseManager):
         """
         return super().docker_document
 
-    def create_image_document(self):
+    def insert_image_document(self):
         """
         Creates image document and inserts it into the DB.
         """
-        return super().create_docker_document(
-            docker_document_type=global_constants.IMAGES,
-            docker_object=self.image,
-            prepare_docker_document_function=PrepareResponse.prepare_image_response
-        )
+        super().insert_docker_document(docker_document_type=global_constants.IMAGES)
 
     def delete_image_document(self):
         """
         Deletes image document from the DB.
         """
         super().delete_docker_document(docker_document_type=global_constants.IMAGES)
-
-    @property
-    def image(self):
-        return self._image
 
 
 def _find_specific_document(docker_documents, docker_resource_id):
@@ -450,12 +413,13 @@ def _find_specific_document(docker_documents, docker_resource_id):
     return {}
 
 
-def _update_container_docs_attrs(docker_server):
+def _update_container_docs_attrs(docker_server, api_manager):
     """
     Updates the container(s) attributes that belongs to the instance.
 
     Args:
         docker_server (DockerServerInstance): docker server instance object.
+        api_manager (ApiManager): api manager object.
 
     Returns:
         list(dict): a list of dictionaries that composes the container updated documents.
@@ -466,6 +430,6 @@ def _update_container_docs_attrs(docker_server):
     containers = docker_server.docker.get_container_collection().list(all=True)
 
     for container in containers:
-        container_documents.append(PrepareResponse.prepare_container_response(container=container))
+        container_documents.append(api_manager.container_response(container=container).response)
 
     return container_documents

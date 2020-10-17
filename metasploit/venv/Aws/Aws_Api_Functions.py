@@ -107,7 +107,7 @@ def get_aws_instance(id):
     Raises:
         ClientError: in case there isn't an instance with the ID.
     """
-    return aws_api.security_group_resource().Instance(id)
+    return aws_api.amazon_resource().Instance(id)
 
 
 def update_security_group_inbound_permissions(security_group_id, req):

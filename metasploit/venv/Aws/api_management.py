@@ -234,7 +234,7 @@ class CreateResource(ResourceOperation):
         """
         return self.api_manager.security_group_database_manager(
             security_group=Aws_Api_Functions.create_security_group(kwargs=req)
-        ).create_security_group_document
+        ).insert_security_group_document
 
     @property
     @client_request_modifier(code=HttpCodes.CREATED)
@@ -261,7 +261,7 @@ class CreateResource(ResourceOperation):
 
         return self.api_manager.container_database_manager(
             docker_server=docker_server, container=container
-        ).create_container_document()
+        ).insert_container_document()
 
     @property
     @client_request_modifier(code=HttpCodes.CREATED)
@@ -287,7 +287,7 @@ class CreateResource(ResourceOperation):
             **req
         )
 
-        return self.api_manager.image_database_manager(docker_server=docker_server, image=image).create_image_document()
+        return self.api_manager.image_database_manager(docker_server=docker_server, image=image).insert_image_document()
 
     @property
     def run_metasploit_container(self):
