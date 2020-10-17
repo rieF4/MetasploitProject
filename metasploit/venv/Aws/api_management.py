@@ -36,7 +36,7 @@ def client_request_modifier(code):
             Executes the function that handles a client request
 
             Args:
-                self (ResourceOperation): the object reference as self. e.g. CreateResource, UpdateResource.
+                self (ResourceOperation): the object reference as self. e.g. CreateAmazonResources, UpdateResource.
             """
             response = {}
 
@@ -134,7 +134,7 @@ class ApiManager(object):
     @property
     def create_resources(self):
         """
-        Get CreateResource object that manages all create API operations.
+        Get CreateAmazonResources object that manages all create API operations.
         """
         return CreateResource(self)
 

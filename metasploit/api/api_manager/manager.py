@@ -18,7 +18,6 @@ from metasploit.api.response import (
 )
 
 from metasploit.utils.decorators import client_request_modifier
-from metasploit.api.utils import choose_port_for_msfrpcd
 
 
 class ApiManager(object):
@@ -33,66 +32,72 @@ class ApiManager(object):
     """
     def __init__(self, collection_type, **kwargs):
         """
-        Initializes the ApiManager class.
+        Initializes the ApiManager class attributes.
 
         Args:
-            collection_type (DatabaseCollections): a database collection.
+            collection_type (pymongo.Collection): the collection to use to access/modify DB documents.
 
-            Keyword Arguments:
-                resource_id (str): resource ID.
-                client_request (dict): client request from the server.
-                sub_resource_id (str): sub resource ID.
-                collection_name (str): collection name. eg. Constants.Instances, Constants.SecurityGroups
-                single_document (bool): refers whether the DB manager should look for a single document.
-                type (str): type of the collection. eg. Constants.Instance, Constants.SecurityGroup
-                create_resource_flag (bool): indicate if a resource needs to be created. True if yes, False otherwise.
+        Keyword Arguments:
+            client_request (dict): the client request.
+            amazon_resource_id (str): the amazon resource ID that the DB operation should be performed on.
+            docker_resource_id (str): the docker resource ID that the DB operation should be performed on.
+            all_docker_documents (bool): indicate if all docker document type is needed, True if yes, False otherwise.
+            docker_document_type (str): indicate which type is needed for docker e.g. Constants.Containers
+            single_docker_document (bool): indicate if a specific docker document is required.
+                                           True if yes, False otherwise
+            collection_name (str): the collection name. e.g. SecurityGroups, Instances
+            single_amazon_document (bool): indicate if the search should be on a single amazon document. True if yes,
+                                           False to look for all documents available in the DB.
+            amazon_resource_type (str): what type of amazon document it is. e.g. Instance, SecurityGroup.
+            docker_resource_type (str): which type of docker document it is. e.g. Container, Image.
         """
         self._amazon_resource_id = kwargs.get('amazon_resource_id', '')
         self._docker_resource_id = kwargs.get('docker_resource_id', '')
-        self._client_request = kwargs.get('client_request', {})
+        self._client_request = kwargs.pop('client_request', {})
 
-        self._db_operations_manager = DatabaseOperations(
-            collection_type=collection_type,
-            resource_id=self.amazon_resource_id,
-            sub_resource_id=self.docker_resource_id,
-            collection_name=kwargs.get("collection_name", global_constants.INSTANCES),
-            single_document=kwargs.get("single_document", True),
-            type=kwargs.get("type", global_constants.INSTANCE),
-            create_resource_flag=kwargs.get("create_resource_flag")
-
-        )
+        self._db_operations_manager = DatabaseOperations(collection_type=collection_type, **kwargs)
 
     @property
     def client_request(self):
+        """
+        Get client request attribute.
+        """
         return self._client_request
 
     @property
     def amazon_resource_id(self):
         """
-        Get resource ID.
+        Get amazon resource ID.
         """
         return self._amazon_resource_id
 
     @property
     def docker_resource_id(self):
         """
-        Get sub resource ID.
+        Get docker resource ID.
         """
         return self._docker_resource_id
 
     @property
     def db_operations_manager(self):
         """
-        Get DB manager.
+        Get DB operation manager object.
         """
         return self._db_operations_manager
 
     @property
-    def create_resources(self):
+    def create_amazon_resources(self):
         """
-        Get CreateResource object that manages all create API operations.
+        Get CreateAmazonResources object that manages all create amazon resources API operations.
         """
-        return CreateResource(self)
+        return CreateAmazonResources(self)
+
+    @property
+    def create_docker_resources(self):
+        """
+        Get CreateDockerResources object that manages all create Docker resources API operations
+        """
+        return CreateDockerResources(self)
 
     @property
     def get_resources(self):
@@ -157,8 +162,16 @@ class ResourceOperation(object):
         """
         return self._api_manager
 
+    @property
+    def amazon_document(self):
+        return self.api_manager.db_operations_manager.amazon_document
 
-class CreateResource(ResourceOperation):
+    @property
+    def docker_document(self):
+        return self.api_manager.db_operations_manager.docker_document
+
+
+class CreateAmazonResources(ResourceOperation):
 
     @property
     @client_request_modifier(code=HttpCodes.CREATED)
@@ -192,6 +205,13 @@ class CreateResource(ResourceOperation):
             security_group=aws_utils.create_security_group(kwargs=req)
         ).create_security_group_document
 
+
+class CreateDockerResources(ResourceOperation):
+
+    def __init__(self, api_manager):
+        super(CreateDockerResources, self).__init__(api_manager=api_manager)
+        self.docker_server = aws_utils.get_docker_server_instance(id=self.api_manager.amazon_resource_id)
+
     @property
     @client_request_modifier(code=HttpCodes.CREATED)
     def create_container(self, req=None):
@@ -204,19 +224,15 @@ class CreateResource(ResourceOperation):
         Returns:
             dict: a container document.
         """
-        instance_id = self.api_manager.amazon_resource_id
-
-        docker_server = aws_utils.get_docker_server_instance(id=instance_id)
-
         container = docker_utils.create_container(
-            instance=docker_server,
+            instance=self.docker_server,
             image=req.pop("Image"),
             command=req.pop("Command", None),
             kwargs=req
         )
 
         return self.api_manager.container_database_manager(
-            docker_server=docker_server, container=container
+            docker_server=self.docker_server, container=container
         ).create_container_document()
 
     @property
@@ -231,19 +247,17 @@ class CreateResource(ResourceOperation):
         Returns:
             dict: an image document.
         """
-        instance_id = self.api_manager.amazon_resource_id
-        docker_server = docker_utils.get_docker_server_instance(id=instance_id)
-
         repository = req.pop("Repository")
-
         image = docker_utils.pull_image(
-            instance=docker_server,
+            instance=self.docker_server,
             repository=repository,
             tag=f"{repository}:latest",
             **req
         )
 
-        return self.api_manager.image_database_manager(docker_server=docker_server, image=image).create_image_document()
+        return self.api_manager.image_database_manager(
+            docker_server=self.docker_server, image=image
+        ).create_image_document()
 
     @property
     def run_metasploit_container(self):
@@ -253,71 +267,50 @@ class CreateResource(ResourceOperation):
         Returns:
             dict: a container document.
         """
-        port = choose_port_for_msfrpcd(
-            containers_document=self.api_manager.db_manager.document[global_constants.DOCKER][global_constants.CONTAINERS]
+        msfrpcd_container = docker_utils.run_container_with_msfrpcd_metasploit(
+            instance=self.docker_server,
+            containers_documents=self.amazon_document[global_constants.DOCKER][global_constants.CONTAINERS]
         )
 
-        if port:
-            instance_id = self.api_manager.amazon_resource_id
-            instance = aws_utils.get_docker_server_instance(id=instance_id)
-
-            msfrpcd_container = docker_utils.run_container_with_msfrpcd_metasploit(instance=instance, port=port)
-
-            return self.api_manager.database_operation(
-                type=global_constants.CONTAINER,
-                amazon_object=instance,
-                docker_object=msfrpcd_container
-            )  # put here the DB required operation
-
-            # container_document = PrepareResponse.prepare_container_response(container=msfrpcd_container)
-            # updated_containers_documents = self.api_manager.db_manager.document
-            # updated_containers_documents[Constants.DOCKER][Constants.CONTAINERS].append(container_document)
-            #
-            # self.api_manager.db_manager.update_amazon_document(updated_document=updated_containers_documents)
-            #
-            # return container_document
+        return self.api_manager.container_database_manager(
+            docker_server=self.docker_server, container=msfrpcd_container
+        ).create_container_document
 
 
 class GetResource(ResourceOperation):
 
     @property
-    def get_resource(self):
+    def get_amazon_resource(self):
         """
         Get a resource(s) from the DB.
 
         Returns:
             ApiResponse: an api response object.
         """
-        return ApiResponse(response=self.api_manager.db_manager.document, http_status_code=HttpCodes.OK)
-        # need to think of a way how to update container document
-
-    def get_all_sub_resource(self, document_type):
-        """
-        Get all sub resources from the DB of an instance such as containers, images or networks.
-
-        Args:
-            document_type (str): document type. eg. Constants.Containers/Constants.Images
-
-        Returns:
-            ApiResponse: an api response object.
-        """
+        # need to init docker server constructor to update all the container documents in the DB because
+        # their attributes change all the time
         return ApiResponse(
-            response=self.api_manager.db_manager.document[global_constants.DOCKER][document_type],
+            response=self.api_manager.docker_server_database_manager(
+                docker_server=aws_utils.get_docker_server_instance(id=self.api_manager.amazon_resource_id)
+            ).amazon_document,
             http_status_code=HttpCodes.OK
         )
 
-    def get_specific_sub_resource(self, document_type):
+    def get_docker_resource(self):
         """
-        Get a specific sub resource from the DB of an instance such as container, image or network.
+        Get all sub resources from the DB of an instance such as containers, images or networks.
 
         Returns:
             ApiResponse: an api response object.
         """
-        # documents = self.api_manager.db_manager.document[global_constants.DOCKER][document_type]
-        # return ApiResponse(
-        #     response=_find_specific_document(documents=documents, sub_resource_id=self.api_manager.docker_resource_id),
-        #     http_status_code=HttpCodes.OK
-        # )
+        # need to init docker server constructor to update all the container documents in the DB because
+        # their attributes change all the time
+        return ApiResponse(
+            response=self.api_manager.docker_server_database_manager(
+                docker_server=aws_utils.get_docker_server_instance(id=self.api_manager.amazon_resource_id)
+            ).docker_document,
+            http_status_code=HttpCodes.OK
+        )
 
 
 class DeleteResource(ResourceOperation):

@@ -46,7 +46,9 @@ class DockerServerInstance(object):
             self._init_docker_server_on_instance()
 
         self._docker = Docker(
-            protocol='tcp', docker_server_ip=self.get_public_ip_address(), docker_port=global_constants.DOCKER_PORT
+            protocol=global_constants.IP_PROTOCOL,
+            docker_server_ip=self.get_public_ip_address(),
+            docker_port=global_constants.DOCKER_PORT
         )
 
     def get_commands(self):

@@ -19,6 +19,12 @@ class ApiException(Exception):
     pass
 
 
+class PortNotFoundError(ApiException):
+    def __init__(self):
+        msg = f"There isn't any port available currently, please remove one of the msfrpc containers to proceed."
+        super().__init__(msg)
+
+
 class CommandFailureError(ApiException):
     """
     This class represents an error exception for executing a command over an aws instance
@@ -29,6 +35,13 @@ class CommandFailureError(ApiException):
     """
     def __init__(self, cmd, instance_id):
         msg = f"The following command {cmd} has failed over the instance {instance_id}!"
+        super().__init__(msg)
+
+
+class ContainerCommandFailure(ApiException):
+    def __init__(self, error_code, output, cmd, container_id):
+        output = output.decode('utf-8')
+        msg = f"the following {cmd} failed on container {container_id}, error code:{error_code}, output: {output}"
         super().__init__(msg)
 
 

@@ -165,7 +165,7 @@ class SecurityGroupsApi(CollectionApi):
             single_document=False,
             type=Constants.SECURITY_GROUPS,
             collection_name=Constants.SECURITY_GROUPS
-        ).get_resources.get_resource
+        ).get_resources.get_amazon_resource
 
     @staticmethod
     @validate_json_request(validate=False)
@@ -186,7 +186,7 @@ class SecurityGroupsApi(CollectionApi):
             collection_type=SecurityGroupsApi.security_group_collection,
             type=Constants.SECURITY_GROUP,
             resource_id=id
-        ).get_resources.get_resource
+        ).get_resources.get_amazon_resource
 
     @staticmethod
     @validate_json_request("GroupName", "Description")
@@ -339,7 +339,7 @@ class InstancesApi(CollectionApi):
             collection_type=InstancesApi.instance_collection,
             type=Constants.INSTANCES,
             single_document=False
-        ).get_resources.get_resource
+        ).get_resources.get_amazon_resource
 
     @staticmethod
     @validate_json_request(validate=False)
@@ -360,7 +360,7 @@ class InstancesApi(CollectionApi):
             collection_type=InstancesApi.instance_collection,
             type=Constants.INSTANCE,
             resource_id=id,
-        ).get_resources.get_resource
+        ).get_resources.get_amazon_resource
 
     @staticmethod
     @validate_json_request(validate=False)
@@ -459,7 +459,7 @@ class ContainersApi(CollectionApi):
             type=Constants.INSTANCE,
             collection_name=Constants.INSTANCES,
             single_document=False
-        ).get_resources.get_all_sub_resource(document_type=Constants.CONTAINERS)
+        ).get_resources.get_docker_resource(document_type=Constants.CONTAINERS)
 
     @staticmethod
     @validate_json_request(validate=False)

@@ -10,6 +10,26 @@ from .api_endpoints import (
     DockerImagesApi
 )
 
+# class a(object):
+#
+#     def __init__(self, n):
+#         self._n = n
+#
+#     @property
+#     def b(self):
+#         return self._n
+#
+#
+# class c(a):
+#     def __init__(self, n, p):
+#         super(c, self).__init__(n=n)
+#         self.p = p
+#
+#     def d(self):
+#         print("bla")
+#
+# y = c(n=4, p=5)
+# print(y.)
 
 flask_wrapper = FlaskAppWrapper()
 flask_wrapper.add_endpoints(

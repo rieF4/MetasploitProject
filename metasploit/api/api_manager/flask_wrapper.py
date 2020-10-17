@@ -1,13 +1,12 @@
 from flask import Flask, jsonify
-from flask_restful import Api
+from flask_restful import Api, request
 
 from metasploit.api.response import (
     HttpCodes,
     make_error_response
 )
 from metasploit.api.errors import (
-    ResourceNotFoundError,
-    BadJsonInput,
+    ApiException,
     choose_http_error_code
 )
 
@@ -128,7 +127,7 @@ class EndpointAction(object):
         # Perform the function
         try:
             return self.function(*args, **kwargs)
-        except (ResourceNotFoundError, BadJsonInput) as err:
+        except ApiException as err:
             http_error = choose_http_error_code(error=err)
             return make_error_response(
                 msg=err.__str__(), http_error_code=http_error, req=request.json, path=request.base_url

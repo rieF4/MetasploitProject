@@ -100,7 +100,7 @@ def client_request_modifier(code):
             Executes the function that handles a client request
 
             Args:
-                self (ResourceOperation): the object reference as self. e.g. CreateResource, UpdateResource.
+                self (ResourceOperation): the object reference as self. e.g. CreateAmazonResources, UpdateResource.
             """
             response = {}
 

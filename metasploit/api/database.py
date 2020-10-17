@@ -28,10 +28,31 @@ class DatabaseOperations(object):
 
     Attributes:
         collection_type (pymongo.Collection): the collection to use in the DB.
-        document (dict): the document to use all DB operations.
+        amazon_resource_id (str): amazon resource ID.
+        docker_resource_id (str): docker resource ID.
+        amazon_document (dict): amazon document in case it was found.
+        docker_document (dict): docker document in case it was found.
     """
     def __init__(self, collection_type, **kwargs):
+        """
+        Initialize the DatabaseOperations class attributes.
 
+        Args:
+            collection_type (pymongo.Collection): the collection to use to access/modify DB documents.
+
+        Keyword Arguments:
+            amazon_resource_id (str): the amazon resource ID that the DB operation should be performed on.
+            docker_resource_id (str): the docker resource ID that the DB operation should be performed on.
+            all_docker_documents (bool): indicate if all docker document type is needed, True if yes, False otherwise.
+            docker_document_type (str): indicate which type is needed for docker e.g. Constants.Containers
+            single_docker_document (bool): indicate if a specific docker document is required.
+                                           True if yes, False otherwise
+            collection_name (str): the collection name. e.g. SecurityGroups, Instances
+            single_amazon_document (bool): indicate if the search should be on a single amazon document. True if yes,
+                                           False to look for all documents available in the DB.
+            amazon_resource_type (str): what type of amazon document it is. e.g. Instance, SecurityGroup
+            docker_resource_type (str): which type of docker document it is. e.g. Container, Image
+        """
         self._collection_type = collection_type
         self._amazon_resource_id = kwargs.pop("amazon_resource_id", "")
         self._docker_resource_id = kwargs.pop("docker_resource_id", "")
@@ -203,12 +224,6 @@ class DatabaseManager(object):
     def docker_document(self):
         return self.api_manager.db_operations_manager.docker_document
 
-    def delete_amazon_document(self):
-        """
-        Deletes amazon document from the DB.
-        """
-        self.api_manager.db_operations_manager.delete_amazon_document()
-
     def create_amazon_document(self, prepare_function_document, amazon_object):
         """
         Creates amazon document and inserts it in to the DB.
@@ -218,6 +233,53 @@ class DatabaseManager(object):
         self.api_manager.db_operations_manager.insert_amazon_document()
         return amazon_document
 
+    def delete_amazon_document(self):
+        """
+        Deletes amazon document from the DB.
+        """
+        self.api_manager.db_operations_manager.delete_amazon_document()
+
+    def create_docker_document(self, docker_document_type, docker_object, prepare_docker_document_function):
+        """
+        Creates docker document in the DB.
+
+        Args:
+            docker_document_type (str): type of docker document. e.g. Constants.Containers, Constants.Images
+            docker_object (DockerObject): a docker object (Container, Image).
+            prepare_docker_document_function (function): prepare docker document function.
+        """
+        docker_document = prepare_docker_document_function(docker_object)
+
+        updated_instance_document = self.amazon_document
+        updated_instance_document[global_constants.DOCKER][docker_document_type].append(docker_document)
+
+        self.api_manager.db_operations_manager.update_amazon_document(updated_document=updated_instance_document)
+
+        return docker_document
+
+    def delete_docker_document(self, docker_document_type):
+        """
+        Deletes a docker server document(s) from the DB.
+        """
+        if isinstance(self.docker_document, list):
+            amazon_doc = self.amazon_document
+            amazon_doc[global_constants.DOCKER][docker_document_type] = []
+            self.api_manager.db_operations_manager.update_amazon_document(updated_document=amazon_doc)
+        else:
+
+            docker_document = _find_specific_document(
+                docker_documents=self.amazon_document[global_constants.DOCKER][docker_document_type],
+                docker_resource_id=self.api_manager.docker_resource_id
+            )
+
+            updated_amazon_document = list(
+                filter(
+                    lambda docker_doc: docker_doc[global_constants.ID] != docker_document[global_constants.ID],
+                    self.amazon_document[global_constants.DOCKER][docker_document_type]
+                )
+            )
+            self.api_manager.db_operations_manager.update_amazon_document(updated_document=updated_amazon_document)
+
 
 class DockerServerDatabaseManager(DatabaseManager):
 
@@ -225,11 +287,13 @@ class DockerServerDatabaseManager(DatabaseManager):
         super(DockerServerDatabaseManager, self).__init__(api_manager=api_manager)
         self._docker_server = docker_server
 
+        # every time that a container documents needs to be displayed to the client, it is important to update
+        # all the containers attributes because they may vary every second.
         if self.docker_server:
             instances_documents = super().amazon_document
             for instance_doc in instances_documents:
                 if instance_doc[global_constants.DOCKER][global_constants.CONTAINERS]:
-                    instance_doc[global_constants.DOCKER][global_constants.CONTAINERS] = _update_container_document_attributes(
+                    instance_doc[global_constants.DOCKER][global_constants.CONTAINERS] = _update_container_docs_attrs(
                         docker_server=self.docker_server
                     )
                     self.api_manager.db_operations_manager.update_amazon_document(updated_document=instance_doc)
@@ -262,47 +326,6 @@ class DockerServerDatabaseManager(DatabaseManager):
         Deletes a docker server instance document.
         """
         super().delete_amazon_document()
-
-    def create_docker_document(self, docker_document_type, docker_object, prepare_docker_document_function):
-        """
-        Creates docker document in the DB.
-
-        Args:
-            docker_document_type (str): type of docker document. e.g. Constants.Containers, Constants.Images
-            docker_object (DockerObject): a docker object (Container, Image).
-            prepare_docker_document_function (function): prepare docker document function.
-        """
-        docker_document = prepare_docker_document_function(docker_object)
-
-        updated_instance_document = super().amazon_document
-        updated_instance_document[global_constants.DOCKER][docker_document_type].append(docker_document)
-
-        self.api_manager.db_operations_manager.update_amazon_document(updated_document=updated_instance_document)
-
-        return docker_document
-
-    def delete_docker_document(self, docker_document_type):
-        """
-        Deletes a docker server document(s) from the DB.
-        """
-        if isinstance(self.docker_document, list):
-            amazon_doc = super().amazon_document
-            amazon_doc[global_constants.DOCKER][docker_document_type] = []
-            self.api_manager.db_operations_manager.update_amazon_document(updated_document=amazon_doc)
-        else:
-
-            docker_document = _find_specific_document(
-                docker_documents=self.amazon_document[global_constants.DOCKER][docker_document_type],
-                docker_resource_id=self.api_manager.docker_resource_id
-            )
-
-            updated_amazon_document = list(
-                filter(
-                    lambda docker_doc: docker_doc[global_constants.ID] != docker_document,
-                    super().amazon_document[global_constants.DOCKER][docker_document_type]
-                )
-            )
-            self.api_manager.db_operations_manager.update_amazon_document(updated_document=updated_amazon_document)
 
     @property
     def docker_server(self):
@@ -338,6 +361,7 @@ class SecurityGroupDatabaseManager(DatabaseManager):
         """
         super().delete_amazon_document()
 
+    @property
     def security_group(self):
         return self._security_group
 
@@ -427,7 +451,7 @@ def _find_specific_document(docker_documents, docker_resource_id):
     return {}
 
 
-def _update_container_document_attributes(docker_server):
+def _update_container_docs_attrs(docker_server):
     """
     Updates the container(s) attributes that belongs to the instance.
 

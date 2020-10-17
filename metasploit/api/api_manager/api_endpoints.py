@@ -37,7 +37,7 @@ class SecurityGroupsApi(CollectionApi):
             single_document=False,
             type=global_constants.SECURITY_GROUPS,
             collection_name=global_constants.SECURITY_GROUPS
-        ).get_resources.get_resource
+        ).get_resources.get_amazon_resource
 
     @staticmethod
     @validate_json_request(validate=False)
@@ -58,7 +58,7 @@ class SecurityGroupsApi(CollectionApi):
             collection_type=SecurityGroupsApi.security_group_collection,
             type=global_constants.SECURITY_GROUP,
             resource_id=id
-        ).get_resources.get_resource
+        ).get_resources.get_amazon_resource
 
     @staticmethod
     @validate_json_request("GroupName", "Description")
@@ -88,9 +88,8 @@ class SecurityGroupsApi(CollectionApi):
         """
         return ApiManager(
             collection_type=SecurityGroupsApi.security_group_collection,
-            create_resource_flag=True,
             client_request=request.json
-        ).create_resources.create_security_group
+        ).create_amazon_resources.create_security_group
 
     @staticmethod
     @validate_json_request(validate=False)
@@ -193,7 +192,7 @@ class InstancesApi(CollectionApi):
             collection_type=InstancesApi.instance_collection,
             create_resource_flag=True,
             client_request=request.json
-        ).create_resources.create_instance
+        ).create_amazon_resources.create_instance
 
     @staticmethod
     @validate_json_request(validate=False)
@@ -211,7 +210,7 @@ class InstancesApi(CollectionApi):
             collection_type=InstancesApi.instance_collection,
             type=global_constants.INSTANCES,
             single_document=False
-        ).get_resources.get_resource
+        ).get_resources.get_amazon_resource
 
     @staticmethod
     @validate_json_request(validate=False)
@@ -232,7 +231,7 @@ class InstancesApi(CollectionApi):
             collection_type=InstancesApi.instance_collection,
             type=global_constants.INSTANCE,
             resource_id=id,
-        ).get_resources.get_resource
+        ).get_resources.get_amazon_resource
 
     @staticmethod
     @validate_json_request(validate=False)
@@ -288,7 +287,7 @@ class ContainersApi(CollectionApi):
             type=global_constants.INSTANCE,
             resource_id=id,
             client_request=request.json,
-        ).create_resources.create_container
+        ).create_amazon_resources.create_container
 
     @staticmethod
     @validate_json_request(validate=False)
@@ -331,7 +330,7 @@ class ContainersApi(CollectionApi):
             type=global_constants.INSTANCE,
             collection_name=global_constants.INSTANCES,
             single_document=False
-        ).get_resources.get_all_sub_resource(document_type=global_constants.CONTAINERS)
+        ).get_resources.get_docker_resource(document_type=global_constants.CONTAINERS)
 
     @staticmethod
     @validate_json_request(validate=False)

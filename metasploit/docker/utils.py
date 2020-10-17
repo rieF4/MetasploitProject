@@ -1,6 +1,8 @@
 
 from metasploit.aws.amazon_docker_server import DockerServerInstance
 from metasploit.aws.utils import get_docker_server_instance
+from metasploit.api.errors import ContainerCommandFailure
+from metasploit.api.utils import choose_port_for_msfrpcd
 
 
 def create_container(instance, image, command, kwargs):
@@ -45,18 +47,23 @@ def run_container(instance, image, kwargs):
     return instance.docker.get_container_collection().run(image=image, **kwargs)
 
 
-def run_container_with_msfrpcd_metasploit(instance, port):
+def run_container_with_msfrpcd_metasploit(instance, containers_documents):
     """
     Runs a container and start an msfrpc daemon for metasploit connection on a requested port.
 
     Args:
         instance (DockerServerInstance): docker server instance object.
-        port (int): which port msfrpc daemon will listen to.
+        containers_documents (dict): all of the the containers documents of the instance.
 
     Returns:
-        Container: a container object with msfrpcd deployed, None otherwise.
+        Container: a container object with msfrpcd deployed.
+
+    Raises:
+        ContainerCommandFailure: in case the command fails to be executed on the container.
 
     """
+    port = choose_port_for_msfrpcd(containers_document=containers_documents)
+
     kwargs = {
         "stdin_open": True,
         "tty": True,
@@ -66,15 +73,13 @@ def run_container_with_msfrpcd_metasploit(instance, port):
     }
 
     container = run_container(instance=instance, image="phocean/msf", kwargs=kwargs)
+    run_msfrpcd_cmd = f"./msfrpcd -P 123456 -S -p {port}"
 
-    exit_code, o = container.exec_run(cmd=f"./msfrpcd -P 123456 -S -p {port}")
-
-    print(exit_code)
-    print(o)
+    exit_code, output = container.exec_run(cmd=run_msfrpcd_cmd)
 
     if not exit_code:
         return container
-    return None
+    raise ContainerCommandFailure(error_code=exit_code, output=output, cmd=run_msfrpcd_cmd, container_id=container.id)
 
 
 def get_container(instance_id, container_id):

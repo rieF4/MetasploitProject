@@ -1,6 +1,9 @@
 from metasploit import constants as global_constants
 
-from .errors import BadRequest
+from .errors import (
+    BadRequest,
+    PortNotFoundError
+)
 
 
 def choose_port_for_msfrpcd(containers_document):
@@ -17,7 +20,7 @@ def choose_port_for_msfrpcd(containers_document):
     for port in global_constants.PORTS:
         if port not in used_ports:
             return port
-    return 0
+    raise PortNotFoundError()
 
 
 def get_all_used_port_in_instance(containers_document):

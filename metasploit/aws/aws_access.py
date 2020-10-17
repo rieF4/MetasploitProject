@@ -32,7 +32,7 @@ class AwsAccess(object):
         return self._resource
 
     @property
-    def get_session(self):
+    def session(self):
         return self._session
 
 
