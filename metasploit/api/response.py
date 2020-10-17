@@ -203,7 +203,7 @@ class NetworkResponse(ResourceResponse):
 
 class ErrorResponse(ApiResponse):
 
-    def __init__(self, api_manager, error_msg, http_error_code, req=None, path=None):
+    def __init__(self, error_msg, http_error_code, req=None, path=None, api_manager=None):
         """
         Prepare an error response for a resource.
         Args:
@@ -211,6 +211,7 @@ class ErrorResponse(ApiResponse):
             http_error_code (int): the http error code.
             req (dict): the request by the client.
             path (str): The path in the api the error occurred.
+            api_manager (ApiManager): api manager object.
 
         Returns:
             dict: parsed error response for the client.
