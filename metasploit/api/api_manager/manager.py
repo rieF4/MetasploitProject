@@ -370,7 +370,7 @@ class GetResource(ResourceOperation):
             ApiResponse: an api response object.
         """
         return self.api_manager.resource_response(
-            response=self.amazon_resource, http_status_code=HttpCodes.OK
+            response=self.amazon_document, http_status_code=HttpCodes.OK
         ).make_response
 
     @property

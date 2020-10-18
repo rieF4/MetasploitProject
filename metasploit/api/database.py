@@ -54,7 +54,7 @@ class DatabaseOperations(object):
         self._amazon_resource_id = kwargs.pop("amazon_resource_id", "")
         self._docker_resource_id = kwargs.pop("docker_resource_id", "")
 
-        if self._amazon_resource_id:
+        if self._amazon_resource_id or not kwargs.get("single_amazon_document", True):
             self._amazon_document, self._docker_document = self.find_document(**kwargs)
         else:
             self._amazon_document, self._docker_document = {}, {}

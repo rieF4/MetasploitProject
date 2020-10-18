@@ -33,9 +33,9 @@ class SecurityGroupsApi(CollectionApi):
         """
         return ApiManager(
             collection_type=SecurityGroupsApi.security_group_collection,
-            single_document=False,
-            type=global_constants.SECURITY_GROUPS,
-            collection_name=global_constants.SECURITY_GROUPS
+            single_amazon_document=False,
+            collection_name=global_constants.SECURITY_GROUPS,
+            amazon_resource_type=global_constants.SECURITY_GROUPS
         ).get_resources.amazon_resource
 
     @staticmethod
@@ -54,8 +54,9 @@ class SecurityGroupsApi(CollectionApi):
         """
         return ApiManager(
             collection_type=SecurityGroupsApi.security_group_collection,
-            type=global_constants.SECURITY_GROUP,
-            resource_id=id
+            single_amazon_document=True,
+            amazon_resource_type=global_constants.SECURITY_GROUP,
+            amazon_resource_id=id
         ).get_resources.amazon_resource
 
     @staticmethod
