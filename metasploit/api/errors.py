@@ -20,8 +20,7 @@ class ApiException(Exception):
 
 
 class PortNotFoundError(ApiException):
-    def __init__(self):
-        msg = f"There isn't any port available currently, please remove one of the msfrpc containers to proceed."
+    def __init__(self, msg):
         super().__init__(msg)
 
 

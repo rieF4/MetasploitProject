@@ -8,17 +8,69 @@ from .aws_access import (
 )
 
 
-def get_security_group_object(id):
-    """
-    Returns the security group object by the ID.
+class AmazonObjectOperations(object):
+    def __init__(self, amazon_resource_id):
+        self._amazon_resource_id = amazon_resource_id
 
-    Args:
-        id (str): security group ID.
+    @property
+    def amazon_resource_id(self):
+        return self._amazon_resource_id
 
-    Returns:
-        SecurityGroup: a security group object if found.
-    """
-    return aws_api.resource.SecurityGroup(id)
+
+class SecurityGroupOperations(AmazonObjectOperations):
+
+    @property
+    def security_group_object(self):
+        """
+        Returns the security group object by the security group ID.
+
+        Returns:
+            SecurityGroup: a security group object if found.
+        """
+        return aws_api.resource.SecurityGroup(self.amazon_resource_id)
+
+    def update_security_group_inbound_permissions(self, req):
+        """
+        Updates the security group inbound in AWS.
+
+        Args:
+            req (dict): the client api request.
+
+        Returns:
+            dict: updated security group permissions.
+        """
+        security_group_obj = self.security_group_object
+        security_group_obj.authorize_ingress(**req)
+        security_group_obj.reload()
+        return security_group_obj.ip_permissions
+
+
+class DockerServerInstanceOperations(AmazonObjectOperations):
+
+    @property
+    def aws_instance_object(self):
+        """
+        Get the AWS instance object by its ID.
+
+        Returns:
+            Aws.Instance: an AWS instance object if found
+
+        Raises:
+            ClientError: in case there isn't an instance with the ID.
+        """
+        return aws_api.resource.Instance(self.amazon_resource_id)
+
+    def get_docker_server_instance(self, ssh_flag=False):
+        """
+        Get the docker server instance object.
+
+        Args:
+            ssh_flag (bool): True if ssh connection needs to be deployed, False otherwise.
+
+        Returns:
+            DockerServerInstance: a docker server instance object if exits, None otherwise.
+        """
+        return DockerServerInstance(instance_obj=self.aws_instance_object, ssh_flag=ssh_flag)
 
 
 def create_security_group(kwargs):
@@ -53,7 +105,9 @@ def create_security_group(kwargs):
             ParamValidationError: in case kwargs params are not valid to create a new security group.
             ClientError: in case there is a duplicate security group that exits with the same name.
     """
-    return get_security_group_object(aws_api.client.create_security_group(**kwargs)['GroupId'])
+    return SecurityGroupOperations(
+        amazon_resource_id=aws_api.client.create_security_group(**kwargs)['GroupId']
+    ).security_group_object
 
 
 def create_instance(kwargs):
@@ -82,50 +136,3 @@ def create_instance(kwargs):
     aws_instance.wait_until_running()
     aws_instance.reload()
     return DockerServerInstance(instance_obj=aws_instance, ssh_flag=True, init_docker_server_flag=True)
-
-
-def get_docker_server_instance(id, ssh_flag=False):
-    """
-    Get the docker server instance object.
-
-    Args:
-        id (str): instance id.
-        ssh_flag (bool): True if ssh connection needs to be deployed, False otherwise.
-
-    Returns:
-        DockerServerInstance: a docker server instance object if exits, None otherwise.
-    """
-    return DockerServerInstance(instance_obj=get_aws_instance(id=id), ssh_flag=ssh_flag)
-
-
-def get_aws_instance(id):
-    """
-    Get the AWS instance object by its ID.
-
-    Args:
-        id (str): instance ID.
-
-    Returns:
-        Aws.Instance: an AWS instance object if found
-
-    Raises:
-        ClientError: in case there isn't an instance with the ID.
-    """
-    return aws_api.resource.Instance(id)
-
-
-def update_security_group_inbound_permissions(security_group_id, req):
-    """
-    Updates the security group inbound in AWS.
-
-    Args:
-        security_group_id (id): security group ID.
-        req (dict): the client api request.
-
-    Returns:
-        dict: updated security group permissions.
-    """
-    security_group_obj = get_security_group_object(id=security_group_id)
-    security_group_obj.authorize_ingress(**req)
-    security_group_obj.reload()
-    return security_group_obj.ip_permissions

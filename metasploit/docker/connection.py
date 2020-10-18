@@ -29,12 +29,15 @@ class Docker(Connection):
 
         self._api_client = docker.APIClient(base_url=base_url)
 
-    def get_api_client(self):
+    @property
+    def api_client(self):
         return self._api_client
 
-    def get_docker_client(self):
+    @property
+    def docker_client(self):
         return self._docker_client
 
+    @property
     def info(self):
         """
         Display system-wide information about the docker, Identical to the docker info command.
@@ -44,7 +47,8 @@ class Docker(Connection):
         """
         return self._docker_client.info()
 
-    def get_container_collection(self):
+    @property
+    def container_collection(self):
         """
         Get a container collection object.
 
@@ -53,7 +57,8 @@ class Docker(Connection):
         """
         return self._docker_client.containers
 
-    def get_network_collection(self):
+    @property
+    def network_collection(self):
         """
         Get a network collection object.
 
@@ -62,7 +67,8 @@ class Docker(Connection):
         """
         return self._docker_client.networks
 
-    def get_image_collection(self):
+    @property
+    def image_collection(self):
         """
         Get an image collection object.
 
@@ -71,7 +77,8 @@ class Docker(Connection):
         """
         return self._docker_client.images
 
-    def get_config_collection(self):
+    @property
+    def config_collection(self):
         """
         Get a config collection object.
 

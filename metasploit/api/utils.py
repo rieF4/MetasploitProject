@@ -2,7 +2,8 @@ from metasploit import constants as global_constants
 
 from .errors import (
     BadRequest,
-    PortNotFoundError
+    PortNotFoundError,
+    DuplicateImageError
 )
 
 
@@ -20,7 +21,7 @@ def choose_port_for_msfrpcd(containers_document):
     for port in global_constants.PORTS:
         if port not in used_ports:
             return port
-    raise PortNotFoundError()
+    raise PortNotFoundError('No port available to run msfrpc daemon in a container - internal server error')
 
 
 def get_all_used_port_in_instance(containers_document):
@@ -41,12 +42,14 @@ def check_if_image_already_exists(image_document, tag_to_check):
         tag_to_check (str): tag that should be checked.
 
     Returns:
-        bool: True if the tag was found, False otherwise
+        bool: False if the tag was not found.
+
+    Raises
     """
     for image in image_document:
         for tag in image['tags']:
             if tag == tag_to_check:
-                return True
+                raise DuplicateImageError(resource=tag)
     return False
 
 

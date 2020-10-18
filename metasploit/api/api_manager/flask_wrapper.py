@@ -9,6 +9,8 @@ from metasploit.api.errors import (
     ApiException,
     choose_http_error_code
 )
+from boto3.exceptions import Boto3Error
+from docker.errors import DockerException
 
 
 class FlaskAppWrapper(object):
@@ -127,7 +129,7 @@ class EndpointAction(object):
         # Perform the function
         try:
             return self.function(*args, **kwargs)
-        except ApiException as err:
+        except (ApiException, DockerException, Boto3Error) as err:
             http_error = choose_http_error_code(error=err)
             return ErrorResponse(
                 api_manager=None, error_msg=err.__str__(), http_error_code=http_error, req=request.json, path=request.base_url

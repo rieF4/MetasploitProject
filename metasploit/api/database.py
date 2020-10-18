@@ -274,7 +274,7 @@ class DatabaseManager(object):
 
 class DockerServerDatabaseManager(DatabaseManager):
 
-    def __init__(self, api_manager, docker_server, response=None):
+    def __init__(self, api_manager, docker_server=None, response=None):
         super(DockerServerDatabaseManager, self).__init__(api_manager=api_manager, response=response)
         self._docker_server = docker_server
 
