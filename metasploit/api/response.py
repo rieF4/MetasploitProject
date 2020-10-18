@@ -43,6 +43,13 @@ class ApiResponse(object):
     def response(self):
         return self._response
 
+    @response.setter
+    def response(self, res):
+        if isinstance(res, dict):
+            self._response = res
+        else:
+            raise AttributeError(f"{res} must be a dictionary type.")
+
     @property
     def http_status_code(self):
         return self._http_status_code
@@ -51,10 +58,10 @@ class ApiResponse(object):
 class ResourceResponse(ApiResponse):
 
     def __init__(self, api_manager, response, http_status_code, docker_amazon_object=None):
+        self._docker_amazon_object = docker_amazon_object
         super(ResourceResponse, self).__init__(
             api_manager=api_manager, response=response, http_status_code=http_status_code
         )
-        self._docker_amazon_object = docker_amazon_object
 
     @property
     def docker_amazon_object(self):
@@ -64,14 +71,16 @@ class ResourceResponse(ApiResponse):
 class SecurityGroupResponse(ResourceResponse):
 
     def __init__(self, api_manager, http_status_code, security_group, response):
+
         super(SecurityGroupResponse, self).__init__(
             api_manager=api_manager,
-            response=self._prepare_security_group_response if security_group else response,
+            response=response,
             http_status_code=http_status_code,
             docker_amazon_object=security_group
         )
+        if security_group:
+            self.response = self._prepare_security_group_response()
 
-    @property
     def _prepare_security_group_response(self):
         """
         Create a security group parsed response for the client.
@@ -93,10 +102,12 @@ class DockerInstanceResponse(ResourceResponse):
     def __init__(self, api_manager, http_status_code, docker_server, response):
         super(DockerInstanceResponse, self).__init__(
             api_manager=api_manager,
-            response=self._prepare_instance_response if docker_server else response,
+            response=response,
             http_status_code=http_status_code,
             docker_amazon_object=docker_server
         )
+        if docker_server:
+            self.response = self._prepare_instance_response
 
     @property
     def _prepare_instance_response(self):
@@ -130,10 +141,12 @@ class ContainerResponse(ResourceResponse):
     def __init__(self, api_manager, http_status_code, container, response):
         super(ContainerResponse, self).__init__(
             api_manager=api_manager,
-            response=self._prepare_container_response if container else response,
+            response=response,
             http_status_code=http_status_code,
             docker_amazon_object=container
         )
+        if container:
+            self.response = self._prepare_container_response
 
     @property
     def _prepare_container_response(self):
@@ -159,10 +172,12 @@ class ImageResponse(ResourceResponse):
     def __init__(self, api_manager, http_status_code, image, response):
         super(ImageResponse, self).__init__(
             api_manager=api_manager,
-            response=self._prepare_image_response if image else response,
+            response=response,
             http_status_code=http_status_code,
             docker_amazon_object=image
         )
+        if image:
+            self.response = self._prepare_image_response
 
     @property
     def _prepare_image_response(self):
@@ -183,11 +198,14 @@ class NetworkResponse(ResourceResponse):
     def __init__(self, api_manager, http_status_code, network, response):
         super(NetworkResponse, self).__init__(
             api_manager=api_manager,
-            response=self._prepare_network_response if network else response,
+            response=response,
             http_status_code=http_status_code,
             docker_amazon_object=network
         )
+        if network:
+            self.response = self._prepare_network_response
 
+    @property
     def _prepare_network_response(self):
         """
         Prepare a network parsed response for the client
