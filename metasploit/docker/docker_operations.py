@@ -6,7 +6,7 @@ from metasploit.api.utils import choose_port_for_msfrpcd
 
 class DockerOperations(DockerServerInstanceOperations):
     def __init__(self, docker_server_id, docker_resource_id=None):
-        super(DockerOperations, self).__init__(amazon_resource_id=docker_server_id)
+        super(DockerOperations, self).__init__(instance_id=docker_server_id)
         self._docker_resource_id = docker_resource_id
 
     @property
@@ -33,7 +33,7 @@ class ContainerOperations(DockerOperations):
             ImageNotFound: in case the image was not found on the docker server.
             ApiError: In case the docker server returns an error.
         """
-        return self.get_docker_server_instance().docker.container_collection.create(
+        return self.docker_server.docker.container_collection.create(
             image=image, command=command, **kwargs
         )
 
@@ -54,7 +54,7 @@ class ContainerOperations(DockerOperations):
         """
         if "detach" not in kwargs:
             kwargs["detach"] = True
-        return self.get_docker_server_instance().docker.container_collection.run(image=image, **kwargs)
+        return self.docker_server.docker.container_collection.run(image=image, **kwargs)
 
     def run_container_with_msfrpcd_metasploit(self, containers_documents):
         """
@@ -103,7 +103,7 @@ class ContainerOperations(DockerOperations):
         Raises:
             ApiError: in case the docker server returns an error.
         """
-        return self.get_docker_server_instance().docker.container_collection.get(container_id=self.docker_resource_id)
+        return self.docker_server.docker.container_collection.get(container_id=self.docker_resource_id)
 
     def execute_command_in_container(self, command, **kwargs):
         """
@@ -164,7 +164,7 @@ class ImageOperations(DockerOperations):
         Raises:
             ApiError: If the server returns an error.
         """
-        return self.get_docker_server_instance().docker.image_collection.pull(repository=repository, tag=tag, **kwargs)
+        return self.docker_server.docker.image_collection.pull(repository=repository, tag=tag, **kwargs)
 
     def build_image(self, **kwargs):
         """
@@ -182,7 +182,7 @@ class ImageOperations(DockerOperations):
             docker.errors.APIError – If the server returns any other error.
             TypeError – If neither path nor fileobj is specified.
         """
-        return self.get_docker_server_instance().docker.image_collection.build(**kwargs)
+        return self.docker_server.docker.image_collection.build(**kwargs)
 
 
 class NetworkOperations(DockerOperations):
@@ -200,11 +200,4 @@ class NetworkOperations(DockerOperations):
         Returns:
             Network: a network object.
         """
-        return self.get_docker_server_instance().docker.network_collection.create(name=name, **kwargs)
-
-
-class DockerOperationManager(ContainerOperations, ImageOperations, NetworkOperations):
-    """
-    This is a class that will use to operate all of the docker operations
-    """
-    pass
+        return self.docker_server.docker.network_collection.create(name=name, **kwargs)

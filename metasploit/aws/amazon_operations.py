@@ -47,6 +47,14 @@ class SecurityGroupOperations(AmazonObjectOperations):
 
 class DockerServerInstanceOperations(AmazonObjectOperations):
 
+    def __init__(self, instance_id):
+        super(DockerServerInstanceOperations, self).__init__(amazon_resource_id=instance_id)
+        self._docker_server = self.get_docker_server_instance()
+
+    @property
+    def docker_server(self):
+        return self._docker_server
+
     @property
     def aws_instance_object(self):
         """

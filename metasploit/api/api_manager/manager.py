@@ -221,6 +221,14 @@ class ResourceOperation(object):
     def docker_document(self):
         return self.api_manager.db_operations_manager.docker_document
 
+    @property
+    def amazon_resource_id(self):
+        return self._api_manager.amazon_resource_id
+
+    @property
+    def docker_resource_id(self):
+        return self._api_manager.docker_resource_id
+
 
 class CreateAmazonResources(ResourceOperation):
 
@@ -273,12 +281,6 @@ class CreateAmazonResources(ResourceOperation):
 
 class CreateDockerResources(ResourceOperation):
 
-    def __init__(self, api_manager):
-        super(CreateDockerResources, self).__init__(api_manager=api_manager)
-        self.docker_operation_manager = docker_operations.DockerOperationManager(
-            docker_server_id=self.api_manager.amazon_resource_id
-        )
-
     @property
     @client_request_modifier(code=HttpCodes.CREATED)
     def create_container(self, req=None):
@@ -291,17 +293,19 @@ class CreateDockerResources(ResourceOperation):
         Returns:
             dict: a container document.
         """
-        container_response = self.api_manager.container_response(
-            http_status_code=HttpCodes.CREATED,
-            container=self.docker_operation_manager.create_container(
+        container = docker_operations.ContainerOperations(docker_server_id=self.amazon_resource_id).create_container(
                 image=req.pop("Image"),
                 command=req.pop("Command", None),
                 kwargs=req
             )
+
+        container_response = self.api_manager.container_response(
+            http_status_code=HttpCodes.CREATED,
+            container=container
         ).response
 
         self.api_manager.container_database_manager(
-            docker_server=self.docker_operation_manager.get_docker_server_instance(), response=container_response
+            docker_server=container.docker_server, response=container_response
         ).insert_container_document()
 
         return container_response
@@ -319,18 +323,16 @@ class CreateDockerResources(ResourceOperation):
             dict: an image document.
         """
         repository = req.pop("Repository")
-
-        image_response = self.api_manager.image_response(
-            http_status_code=HttpCodes.CREATED,
-            image=self.docker_operation_manager.pull_image(
+        image = docker_operations.ImageOperations(docker_server_id=self.amazon_resource_id).pull_image(
                 repository=repository,
                 tag=f"{repository}:latest",
                 **req
             )
-        ).response
+
+        image_response = self.api_manager.image_response(http_status_code=HttpCodes.CREATED, image=image).response
 
         self.api_manager.image_database_manager(
-            docker_server=self.docker_operation_manager.get_docker_server_instance(), response=image_response
+            docker_server=image.docker_server, response=image_response
         ).insert_image_document()
 
         return image_response
@@ -343,16 +345,19 @@ class CreateDockerResources(ResourceOperation):
         Returns:
             dict: a container document.
         """
+        msfrpcd_container = docker_operations.ContainerOperations(
+            docker_server_id=self.amazon_resource_id
+        ).run_container_with_msfrpcd_metasploit(
+            containers_documents=self.amazon_document[global_constants.DOCKER][global_constants.CONTAINERS]
+        )
+
         msfrpcd_container_response = self.api_manager.container_response(
             http_status_code=HttpCodes.CREATED,
-            container=self.docker_operation_manager.run_container_with_msfrpcd_metasploit(
-                containers_documents=self.amazon_document[global_constants.DOCKER][global_constants.CONTAINERS]
-            )
+            container=msfrpcd_container
         )
 
         self.api_manager.container_database_manager(
-            docker_server=self.docker_operation_manager.get_docker_server_instance(),
-            response=msfrpcd_container_response.response
+            docker_server=msfrpcd_container.docker_server, response=msfrpcd_container_response.response
         ).insert_container_document()
 
         return msfrpcd_container_response.make_response
@@ -385,7 +390,7 @@ class GetResource(ResourceOperation):
         return self.api_manager.resource_response(
             response=self.api_manager.docker_server_database_manager(
                 docker_server=aws_operations.DockerServerInstanceOperations(
-                    amazon_resource_id=self.api_manager.amazon_resource_id).get_docker_server_instance()
+                    instance_id=self.amazon_resource_id).docker_server
             ).amazon_document,
             http_status_code=HttpCodes.OK
         ).make_response
@@ -403,7 +408,7 @@ class GetResource(ResourceOperation):
         return self.api_manager.resource_response(
             response=self.api_manager.docker_server_database_manager(
                 docker_server=aws_operations.DockerServerInstanceOperations(
-                    amazon_resource_id=self.api_manager.amazon_resource_id).get_docker_server_instance()
+                    instance_id=self.amazon_resource_id).docker_server
             ).docker_document,
             http_status_code=HttpCodes.OK
         ).make_response
@@ -420,7 +425,8 @@ class DeleteResource(ResourceOperation):
             ApiResponse: an api response object.
         """
         aws_operations.DockerServerInstanceOperations(
-            amazon_resource_id=self.api_manager.amazon_resource_id).get_docker_server_instance().terminate()
+            instance_id=self.amazon_resource_id
+        ).get_docker_server_instance().terminate()
 
         self.api_manager.docker_server_database_manager.delete_docker_server_instance_document()
 
@@ -437,7 +443,7 @@ class DeleteResource(ResourceOperation):
             ApiResponse: an api response object.
         """
         aws_operations.SecurityGroupOperations(
-            amazon_resource_id=self.api_manager.amazon_resource_id
+            amazon_resource_id=self.amazon_resource_id
         ).security_group_object.delete()
 
         self.api_manager.security_group_database_manager.delete_security_group_document()
@@ -455,7 +461,7 @@ class DeleteResource(ResourceOperation):
             ApiResponse: an api response object.
         """
         docker_operations.ContainerOperations(
-            docker_server_id=self.api_manager.amazon_resource_id, docker_resource_id=self.api_manager.docker_resource_id
+            docker_server_id=self.amazon_resource_id, docker_resource_id=self.api_manager.docker_resource_id
         ).container.remove()
 
         self.api_manager.container_database_manager().delete_container_document()
