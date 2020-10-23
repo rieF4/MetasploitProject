@@ -114,6 +114,11 @@ class InsertDatabaseError(DatabaseOperationError):
         super().__init__(document=document, error_msg=error_msg)
 
 
+class UpdateDatabaseError(DatabaseOperationError):
+    def __init__(self, document, error_msg):
+        super().__init__(document=document, error_msg=error_msg)
+
+
 def choose_http_error_code(error):
     """
     Returns the HTTP error code according to the error exception type.

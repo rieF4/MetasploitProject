@@ -106,8 +106,9 @@ class SecurityGroupsApi(CollectionApi):
         """
         return ApiManager(
             collection_type=SecurityGroupsApi.security_group_collection,
-            resource_id=id,
-            type=global_constants.SECURITY_GROUP
+            single_amazon_document=True,
+            amazon_resource_id=id,
+            amazon_resource_type=global_constants.SECURITY_GROUP
         ).delete_resource.delete_security_group
 
     @staticmethod
@@ -144,8 +145,10 @@ class SecurityGroupsApi(CollectionApi):
         """
         return ApiManager(
             collection_type=SecurityGroupsApi.security_group_collection,
-            resource_id=id,
-            type=global_constants.SECURITY_GROUP
+            single_amazon_document=True,
+            client_request=request.json,
+            amazon_resource_id=id,
+            amazon_resource_type=global_constants.SECURITY_GROUP
         ).update_resource.modify_security_group_inbound_permissions
 
 
@@ -188,7 +191,6 @@ class InstancesApi(CollectionApi):
         """
         return ApiManager(
             collection_type=InstancesApi.instance_collection,
-            create_resource_flag=True,
             client_request=request.json
         ).create_amazon_resources.create_instance
 
@@ -205,9 +207,10 @@ class InstancesApi(CollectionApi):
         """
         return ApiManager(
             collection_type=InstancesApi.instance_collection,
-            type=global_constants.INSTANCES,
-            single_document=False
-        ).get_resources.amazon_resource
+            amazon_resource_type=global_constants.INSTANCES,
+            single_amazon_document=False,
+            collection_name=global_constants.INSTANCES
+        ).get_resources.all_docker_instance_servers
 
     @staticmethod
     def get_specific_instance_endpoint(id):
@@ -225,9 +228,10 @@ class InstancesApi(CollectionApi):
         """
         return ApiManager(
             collection_type=InstancesApi.instance_collection,
-            type=global_constants.INSTANCE,
-            resource_id=id,
-        ).get_resources.amazon_resource
+            amazon_resource_type=global_constants.INSTANCE,
+            amazon_resource_id=id,
+            single_amazon_document=True
+        ).get_resources.docker_server_instance_resource
 
     @staticmethod
     def delete_instance_endpoint(id):
@@ -245,8 +249,9 @@ class InstancesApi(CollectionApi):
         """
         return ApiManager(
             collection_type=InstancesApi.instance_collection,
-            resource_id=id,
-            type=global_constants.INSTANCE,
+            amazon_resource_id=id,
+            amazon_resource_type=global_constants.INSTANCE,
+            single_amazon_document=True
         ).delete_resource.delete_instance
 
 
@@ -440,7 +445,13 @@ class DockerImagesApi(CollectionApi):
             AmazonResourceNotFoundError: in case it's invalid instance ID.
             ApiError: in case docker server returns an error.
         """
-        # return create_update_resource(function=pull_instance_image, instance_id=id)
+        return ApiManager(
+            collection_type=InstancesApi.instance_collection,
+            amazon_resource_id=id,
+            client_request=request.json,
+            single_amazon_document=True,
+            amazon_resource_type=global_constants.INSTANCE,
+        ).create_docker_resources.pull_image
 
     @staticmethod
     def get_instance_images_endpoint(instance_id):

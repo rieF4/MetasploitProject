@@ -5,8 +5,10 @@ from metasploit.api.errors import (
     DeleteDatabaseError,
     InsertDatabaseError,
     AmazonResourceNotFoundError,
-    DockerResourceNotFoundError
+    DockerResourceNotFoundError,
+    UpdateDatabaseError
 )
+from metasploit.aws.amazon_operations import DockerServerInstanceOperations
 
 db_client = MongoClient(
     'mongodb+srv://Metasploit:FVDxbg312@metasploit.gdvxn.mongodb.net/metasploit?retryWrites=true&w=majority'
@@ -85,7 +87,12 @@ class DatabaseOperations(object):
             docker_resource_type (str): which type of docker document it is. e.g. Container, Image
 
         Returns:
-            tuple (dict, list): first argument is the amazon document(s), the second argument is the docker document(s).
+            tuple (dict/list(dict), dict/list(dict)): first argument is the amazon document(s),
+                the second argument is the docker document(s). In case it's a single amazon document is True
+                it will be dict, otherwise it will be a list of dictionaries. In case all_docker_documents is True,
+                it will be a list of dictionaries, otherwise dict.
+
+
 
         Raises:
             DockerResourceNotFoundError: in case the docker resource was not found in the DB.
@@ -125,6 +132,128 @@ class DatabaseOperations(object):
             else:
                 raise AmazonResourceNotFoundError(type=amazon_resource_type)
 
+    def delete_docker_document(self, docker_document_type):
+        """
+        Deletes a docker document from DB.
+
+        Args:
+            docker_document_type (str): document type, eg. "Containers", "Networks", "Images"
+
+        update example:
+
+            test.update_one(
+                filter={
+                    "_id": "i-086d96f9de57d095b"
+                },
+                update={
+                "$pull": {
+                    "Containers": {
+                        "_id": 2
+                    }
+                }
+            }
+        )
+
+        Remove container document that its ID is 2.
+
+
+        Raises:
+            UpdateDatabaseError: in case pulling docker document from the array has failed.
+
+        """
+        try:
+            self.collection_type.update_one(
+                filter={
+                    global_constants.ID: self._amazon_document[global_constants.ID]
+                },
+                update={
+                    global_constants.PULL: {
+                        docker_document_type: {
+                            global_constants.ID: self.docker_resource_id
+                        }
+                    }
+                }
+            )
+        except Exception as error:
+            raise UpdateDatabaseError(document=self.amazon_document, error_msg=error.__str__())
+
+    def add_docker_document(self, docker_document_type, new_docker_document):
+        """
+        Adds a docker document to the DB.
+
+        Args:
+            docker_document_type (str): document type, eg. "Containers", "Networks", "Images"
+            new_docker_document (dict): the new docker document.
+
+        new_docker_document examples:
+            {
+                "_id": 1,
+                "image": metasploit_image,
+                "name": Awesome,
+                "status": "running",
+                "ports": [55555, 55556]
+            }
+
+        """
+        try:
+            self.collection_type.update_one(
+                filter={
+                    global_constants.ID: self._amazon_document[global_constants.ID]
+                },
+                update={
+                    global_constants.ADD_TO_SET: {
+                        docker_document_type: {
+                            new_docker_document
+                        }
+                    }
+                }
+            )
+        except Exception as error:
+            raise UpdateDatabaseError(document=self.amazon_document, error_msg=error.__str__())
+
+    def update_docker_document(self, docker_document_type, docker_document_id, update):
+        """
+        Updates a docker document in the DB.
+
+        Args:
+            docker_document_type (str): document type, eg. "Containers", "Networks", "Images"
+            docker_document_id (str): the ID of the docker document.
+            update (dict): a dictionary that represents which values needs to be updated.
+
+        update examples:
+            {
+                "Containers.$.State": "stopped"
+            }
+
+            means update the State key to a "stopped" state.
+        """
+        try:
+            self.collection_type.update_one(
+                filter={
+                    global_constants.ID: self._amazon_document[global_constants.ID],
+                    f"{docker_document_type}.{global_constants.ID}": docker_document_id
+                },
+                update={
+                    global_constants.SET: {
+                        update
+                    }
+                }
+            )
+        except Exception as error:
+            raise UpdateDatabaseError(document=self.amazon_document, error_msg=error.__str__())
+
+    def insert_amazon_document(self, new_amazon_document):
+        """
+        Inserts a document into the DB.
+
+        Raises:
+            InsertDatabaseError: in case insertion to the DB fails.
+        """
+        try:
+            self.collection_type.insert_one(document=new_amazon_document)
+        except Exception as error:
+            raise InsertDatabaseError(document=new_amazon_document, error_msg=error.__str__())
+
     def delete_amazon_document(self):
         """
         Deletes a single amazon document from DB.
@@ -133,41 +262,37 @@ class DatabaseOperations(object):
             DeleteDatabaseError: in case delete operation failed in the DB.
         """
         try:
-            if isinstance(self._amazon_document, dict):
+            if isinstance(self.amazon_document, dict):
                 self.collection_type.delete_one(filter=self.amazon_document)
-            self.collection_type.delete_many(filter={})
+            else:
+                self.collection_type.delete_many(filter={})
         except Exception as error:
             raise DeleteDatabaseError(document=self.amazon_document, error_msg=error.__str__())
 
-    def delete_docker_document(self):
+    def update_amazon_document(self, update):
         """
-        Deletes a docker document(s) from DB.
+        Updates the amazon document
 
-        Raises:
-            DeleteDatabaseError: in case delete operation failed in the DB.
-        """
-        #  need to complete code
-        return
+        Args:
+            update (dict): a dictionary that represents which values needs to be updated.
 
-    def insert_amazon_document(self):
-        """
-        Inserts a document into the DB.
+        update examples:
 
-        Raises:
-            InsertDatabaseError: in case insertion to the DB fails.
+            update = {"IpPermissionsInbound": ip_permissions}
+
+            means update IpInboundPermission of a security group to a new ip permissions
         """
         try:
-            self.collection_type.insert_one(document=self.amazon_document)
+            self.collection_type.update_one(
+                filter={
+                    global_constants.ID: self.amazon_resource_id
+                },
+                update={
+                    global_constants.SET: update
+                }
+            )
         except Exception as error:
-            raise InsertDatabaseError(document=self.amazon_document, error_msg=error.__str__())
-
-    def update_amazon_document(self, updated_document):
-        """
-        Updates a document in the DB
-        """
-        self.delete_amazon_document()
-        self.amazon_document = updated_document
-        self.insert_amazon_document()
+            raise UpdateDatabaseError(document=self.amazon_document, error_msg=error.__str__())
 
     @property
     def collection_type(self):
@@ -206,13 +331,8 @@ class DatabaseOperations(object):
 
 class DatabaseManager(object):
 
-    def __init__(self, api_manager, response=None):
+    def __init__(self, api_manager):
         self._api_manager = api_manager
-        self._response = response
-
-    @property
-    def response(self):
-        return self._response
 
     @property
     def api_manager(self):
@@ -226,9 +346,14 @@ class DatabaseManager(object):
     def docker_document(self):
         return self.api_manager.db_operations_manager.docker_document
 
-    def insert_amazon_document(self):
-        self.api_manager.db_operations_manager.amazon_document = self.response
-        self.api_manager.db_operations_manager.insert_amazon_document()
+    def insert_amazon_document(self, new_amazon_document):
+        """
+        Inserts a new amazon document.
+
+        Args:
+            new_amazon_document (dict): a new amazon document to insert into the DB.
+        """
+        self.api_manager.db_operations_manager.insert_amazon_document(new_amazon_document=new_amazon_document)
 
     def delete_amazon_document(self):
         """
@@ -236,57 +361,71 @@ class DatabaseManager(object):
         """
         self.api_manager.db_operations_manager.delete_amazon_document()
 
-    def insert_docker_document(self, docker_document_type):
+    def update_amazon_document(self, update):
+        """
+        Updates an amazon document in the DB.
+
+        Args:
+             update (dict): a dictionary that represents which values needs to be updated.
+        """
+        self.api_manager.db_operations_manager.update_amazon_document(update=update)
+
+    def insert_docker_document(self, docker_document_type, new_docker_document):
         """
         Creates docker document in the DB.
 
         Args:
-            docker_document_type (str): type of docker document. e.g. Constants.Containers, Constants.Images
+            docker_document_type (str): docker document type, eg. "Containers", "Networks", "Images"
+            new_docker_document (dict): the new docker document.
         """
-        updated_instance_document = self.amazon_document
-        updated_instance_document[global_constants.DOCKER][docker_document_type].append(self.response)
-
-        self.api_manager.db_operations_manager.update_amazon_document(updated_document=updated_instance_document)
+        self.api_manager.db_operations_manager.add_docker_document(
+            docker_document_type=docker_document_type,
+            new_docker_document=new_docker_document
+        )
 
     def delete_docker_document(self, docker_document_type):
         """
         Deletes a docker server document(s) from the DB.
         """
-        if isinstance(self.docker_document, list):
-            amazon_doc = self.amazon_document
-            amazon_doc[global_constants.DOCKER][docker_document_type] = []
-            self.api_manager.db_operations_manager.update_amazon_document(updated_document=amazon_doc)
-        else:
+        self.api_manager.db_operations_manager.delete_docker_document(docker_document_type=docker_document_type)
 
-            docker_document = _find_specific_document(
-                docker_documents=self.amazon_document[global_constants.DOCKER][docker_document_type],
-                docker_resource_id=self.api_manager.docker_resource_id
-            )
-
-            updated_amazon_document = list(
-                filter(
-                    lambda docker_doc: docker_doc[global_constants.ID] != docker_document[global_constants.ID],
-                    self.amazon_document[global_constants.DOCKER][docker_document_type]
-                )
-            )
-            self.api_manager.db_operations_manager.update_amazon_document(updated_document=updated_amazon_document)
+    def update_docker_document(self, docker_document_type, docker_document_id, update):
+        """
+        Updates a docker document in the DB.
+        """
+        self.api_manager.db_operations_manager.update_docker_document(
+            docker_document_type=docker_document_type,
+            docker_document_id=docker_document_id,
+            update=update
+        )
 
 
 class DockerServerDatabaseManager(DatabaseManager):
 
-    def __init__(self, api_manager, docker_server=None, response=None):
-        super(DockerServerDatabaseManager, self).__init__(api_manager=api_manager, response=response)
-        self._docker_server = docker_server
+    def __init__(self, api_manager):
+        super(DockerServerDatabaseManager, self).__init__(api_manager=api_manager)
 
-        # every time that a container documents needs to be displayed to the client, it is important to update
-        # all the containers attributes because they may vary every second.
-        instances_documents = super().amazon_document
-        for instance_doc in instances_documents:
-            if instance_doc[global_constants.DOCKER][global_constants.CONTAINERS]:
-                instance_doc[global_constants.DOCKER][global_constants.CONTAINERS] = _update_container_docs_attrs(
-                    docker_server=self.docker_server, api_manager=self.api_manager
-                )
-                self.api_manager.db_operations_manager.update_amazon_document(updated_document=instance_doc)
+        # updates the container states
+        if isinstance(self.amazon_document, dict):
+            docker_server_id = self.api_manager.amazon_resource_id
+            self._update_container_state(docker_server_id=docker_server_id)
+        else:
+            from metasploit.aws.aws_access import aws_api
+
+            for ins in aws_api.resource.instances.all():
+                docker_server_id = ins.id
+                self._update_container_state(docker_server_id=docker_server_id)
+
+    def _update_container_state(self, docker_server_id):
+        """
+        Updates container states.
+        """
+        for container_id, state in _get_container_states_ids(docker_server_id=docker_server_id):
+            super().update_docker_document(
+                docker_document_type=global_constants.CONTAINERS,
+                docker_document_id=container_id,
+                update={"Containers.$.State": state}
+            )
 
     @property
     def get_docker_server_instance_document(self):
@@ -298,14 +437,14 @@ class DockerServerDatabaseManager(DatabaseManager):
         """
         return super().amazon_document
 
-    def insert_docker_server_document(self):
+    def insert_docker_server_document(self, new_docker_server_document):
         """
-        Creates instance document and inserts them to the DB.
+        Creates a docker server instance document and inserts them to the DB.
 
         Returns:
             dict: a new instance document.
         """
-        super().insert_amazon_document()
+        super().insert_amazon_document(new_amazon_document=new_docker_server_document)
 
     def delete_docker_server_instance_document(self):
         """
@@ -313,15 +452,8 @@ class DockerServerDatabaseManager(DatabaseManager):
         """
         super().delete_amazon_document()
 
-    @property
-    def docker_server(self):
-        return self._docker_server
-
 
 class SecurityGroupDatabaseManager(DatabaseManager):
-
-    def __init__(self, api_manager, security_group_response=None):
-        super(SecurityGroupDatabaseManager, self).__init__(api_manager=api_manager, response=security_group_response)
 
     @property
     def get_security_group_document(self):
@@ -330,11 +462,11 @@ class SecurityGroupDatabaseManager(DatabaseManager):
         """
         return super().amazon_document
 
-    def insert_security_group_document(self):
+    def insert_security_group_document(self, new_amazon_document):
         """
         Creates a security group document and inserts it into the DB.
         """
-        super().insert_amazon_document()
+        super().insert_amazon_document(new_amazon_document=new_amazon_document)
 
     def delete_security_group_document(self):
         """
@@ -342,13 +474,17 @@ class SecurityGroupDatabaseManager(DatabaseManager):
         """
         super().delete_amazon_document()
 
+    def update_security_group_document(self, update):
+        """
+        Updates a security group document.
+
+        Args:
+            update (dict): a dictionary that represents which values needs to be updated.
+        """
+        super().update_amazon_document(update=update)
+
 
 class ContainerDatabaseManager(DockerServerDatabaseManager):
-
-    def __init__(self, api_manager, docker_server, response=None):
-        super(ContainerDatabaseManager, self).__init__(
-            api_manager=api_manager, docker_server=docker_server, response=response
-        )
 
     @property
     def get_container_document(self):
@@ -357,11 +493,13 @@ class ContainerDatabaseManager(DockerServerDatabaseManager):
         """
         return super().docker_document
 
-    def insert_container_document(self):
+    def insert_container_document(self, new_container_document):
         """
         Creates container document and inserts it into the DB.
         """
-        super().insert_docker_document(docker_document_type=global_constants.CONTAINERS)
+        super().insert_docker_document(
+            docker_document_type=global_constants.CONTAINERS, new_docker_document=new_container_document
+        )
 
     def delete_container_document(self):
         """
@@ -372,11 +510,6 @@ class ContainerDatabaseManager(DockerServerDatabaseManager):
 
 class ImageDatabaseManager(DockerServerDatabaseManager):
 
-    def __init__(self, api_manager, docker_server, response=None):
-        super(ImageDatabaseManager, self).__init__(
-            api_manager=api_manager, docker_server=docker_server, response=response
-        )
-
     @property
     def get_image_document(self):
         """
@@ -384,11 +517,13 @@ class ImageDatabaseManager(DockerServerDatabaseManager):
         """
         return super().docker_document
 
-    def insert_image_document(self):
+    def insert_image_document(self, new_image_document):
         """
         Creates image document and inserts it into the DB.
         """
-        super().insert_docker_document(docker_document_type=global_constants.IMAGES)
+        super().insert_docker_document(
+            docker_document_type=global_constants.IMAGES, new_docker_document=new_image_document
+        )
 
     def delete_image_document(self):
         """
@@ -413,12 +548,12 @@ def _find_specific_document(docker_documents, docker_resource_id):
     return {}
 
 
-def _update_container_docs_attrs(docker_server, api_manager):
+def _update_container_docs_attrs(api_manager, docker_server_id):
     """
     Updates the container(s) attributes that belongs to the instance.
 
     Args:
-        docker_server (DockerServerInstance): docker server instance object.
+        docker_server_id (str): docker server instance ID.
         api_manager (ApiManager): api manager object.
 
     Returns:
@@ -427,9 +562,122 @@ def _update_container_docs_attrs(docker_server, api_manager):
 
     container_documents = []
 
-    containers = docker_server.docker.get_container_collection().list(all=True)
+    docker_server = DockerServerInstanceOperations(instance_id=docker_server_id).docker_server
+    containers = docker_server.docker.container_collection.list(all=True)
 
     for container in containers:
         container_documents.append(api_manager.container_response(container=container).response)
 
     return container_documents
+
+
+def _get_container_states_ids(docker_server_id):
+    """
+    Yields a container states and id's.
+
+    Args:
+        docker_server_id (str): docker server ID.
+
+    Yields:
+        tuple(str, str): a container id and state. etc. (1234, "running"), (3243, "stopped"), (54363, "exited")
+    """
+    docker_server = DockerServerInstanceOperations(instance_id=docker_server_id).docker_server
+    containers = docker_server.docker.container_collection.list(all=True)
+    for container in containers:
+        yield container.id, container.status
+
+
+"""
+Given this array how to update operation on containers
+"""
+
+# d = {
+#     "Containers": [
+#         {
+#             "_id": 1,
+#             "state": "running"
+#         },
+#         {
+#             "_id": 2,
+#             "state": "stopped"
+#         }
+#     ],
+#     "Images": [],
+#     "Networks": [],
+#     "IpParameters": {
+#         "PrivateDNSName": "ip-172-31-32-241.us-east-2.compute.internal",
+#         "PrivateIpAddress": "172.31.32.241",
+#         "PublicDNSName": "ec2-18-220-31-187.us-east-2.compute.amazonaws.com",
+#         "PublicIpAddress": "18.220.31.187"
+#       },
+#     "KeyName": "default_key_pair_name",
+#     "SecurityGroups": [
+#         {
+#           "GroupId": "sg-0cde419d7de10fff7",
+#           "GroupName": "zzz"
+#         }
+#       ],
+#     "State": {
+#         "Code": 16,
+#         "Name": "running"
+#     },
+#     "_id": "i-086d96f9de57d095b"
+#     }
+#
+#
+# test = DatabaseCollections.INSTANCES
+
+
+"""
+How to remove a container from DB
+"""
+# test.update_one(
+#     filter={
+#         "_id": "i-086d96f9de57d095b"
+#     },
+#     update={
+#         "$pull": {
+#             "Containers": {
+#                 "_id": 2
+#             }
+#         }
+#     }
+# )
+
+
+"""
+Add a container to DB example
+"""
+# test.update_one(
+#     filter={
+#         "_id": "i-086d96f9de57d095b"
+#     },
+#     update={
+#         "$addToSet": {
+#             "Containers": {
+#                 "_id": 3,
+#                 "state": "running"
+#             }
+#         }
+#     }
+# )
+
+
+"""
+Update containers state in DB example
+"""
+# ids = [i['_id'] for i in d["Containers"]]
+# print(ids)
+#
+# for i in ids:
+#     test.update_one(
+#         filter={
+#             "_id": "i-086d96f9de57d095b",
+#             "Containers._id": i
+#         },
+#         update={
+#             "$set": {
+#                 "Containers.$.state": "stopped"
+#             }
+#         }
+#     )

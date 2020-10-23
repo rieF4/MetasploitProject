@@ -5,7 +5,7 @@ from metasploit.constants import (
 )
 
 
-DEFAULT_SECURITY_GROUP_ID = 'sg-08604b8d820a35de6'
+DEFAULT_SECURITY_GROUP_ID = 'sg-0cde419d7de10fff7'
 DEFAULT_CPU_TYPE = 't2.micro'
 DEFAULT_IMAGE_ID = 'ami-016b213e65284e9c9'
 DEFAULT_PAIR_KEY_NAME = 'default_key_pair_name'

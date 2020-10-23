@@ -37,7 +37,7 @@ class SecurityGroupOperations(AmazonObjectOperations):
             req (dict): the client api request.
 
         Returns:
-            dict: updated security group permissions.
+            dict: the new ip inbound permissions.
         """
         security_group_obj = self.security_group_object
         security_group_obj.authorize_ingress(**req)
@@ -47,9 +47,10 @@ class SecurityGroupOperations(AmazonObjectOperations):
 
 class DockerServerInstanceOperations(AmazonObjectOperations):
 
-    def __init__(self, instance_id):
+    def __init__(self, instance_id=None):
         super(DockerServerInstanceOperations, self).__init__(amazon_resource_id=instance_id)
-        self._docker_server = self.get_docker_server_instance()
+        if instance_id:
+            self._docker_server = self.get_docker_server_instance()
 
     @property
     def docker_server(self):

@@ -79,8 +79,9 @@ class SecurityGroupResponse(ResourceResponse):
             docker_amazon_object=security_group
         )
         if security_group:
-            self.response = self._prepare_security_group_response()
+            self.response = self._prepare_security_group_response
 
+    @property
     def _prepare_security_group_response(self):
         """
         Create a security group parsed response for the client.
