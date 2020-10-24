@@ -104,7 +104,7 @@ class DatabaseOperations(object):
                 if not all_docker_documents and not single_docker_document:
                     return amazon_document, {}
 
-                docker_documents = amazon_document[global_constants.DOCKER][docker_document_type]
+                docker_documents = amazon_document[docker_document_type]
 
                 if all_docker_documents:
                     if docker_documents and not single_docker_document:
@@ -175,6 +175,7 @@ class DatabaseOperations(object):
                 }
             )
         except Exception as error:
+            print("problem in delete docker document")
             raise UpdateDatabaseError(document=self.amazon_document, error_msg=error.__str__())
 
     def add_docker_document(self, docker_document_type, new_docker_document):
@@ -198,20 +199,19 @@ class DatabaseOperations(object):
         try:
             self.collection_type.update_one(
                 filter={
-                    global_constants.ID: self._amazon_document[global_constants.ID]
+                    global_constants.ID: self.amazon_document[global_constants.ID]
                 },
                 update={
                     global_constants.ADD_TO_SET: {
-                        docker_document_type: {
-                            new_docker_document
-                        }
+                        docker_document_type: new_docker_document
                     }
                 }
             )
         except Exception as error:
+            print("problem in add docker document")
             raise UpdateDatabaseError(document=self.amazon_document, error_msg=error.__str__())
 
-    def update_docker_document(self, docker_document_type, docker_document_id, update):
+    def update_docker_document(self, docker_document_type, docker_document_id, update, docker_server_id):
         """
         Updates a docker document in the DB.
 
@@ -228,18 +228,27 @@ class DatabaseOperations(object):
             means update the State key to a "stopped" state.
         """
         try:
+            if global_constants.INSTANCES in self.amazon_document:
+                for ins_doc in self.amazon_document[global_constants.INSTANCES]:
+                    if ins_doc[global_constants.ID] == docker_server_id:
+                        amazon_doc = ins_doc[global_constants.ID]
+                        break
+            else:
+                amazon_doc = self.amazon_document[global_constants.ID]
+
+            # need to find a way if all documents needs to be updated how to extract the correct ID
+
             self.collection_type.update_one(
                 filter={
-                    global_constants.ID: self._amazon_document[global_constants.ID],
+                    global_constants.ID: amazon_doc,
                     f"{docker_document_type}.{global_constants.ID}": docker_document_id
                 },
                 update={
-                    global_constants.SET: {
-                        update
-                    }
+                    global_constants.SET: update
                 }
             )
         except Exception as error:
+            print("problem in update docker document")
             raise UpdateDatabaseError(document=self.amazon_document, error_msg=error.__str__())
 
     def insert_amazon_document(self, new_amazon_document):
@@ -389,42 +398,50 @@ class DatabaseManager(object):
         """
         self.api_manager.db_operations_manager.delete_docker_document(docker_document_type=docker_document_type)
 
-    def update_docker_document(self, docker_document_type, docker_document_id, update):
+    def update_docker_document(self, docker_document_type, docker_document_id, update, docker_server_id):
         """
         Updates a docker document in the DB.
         """
         self.api_manager.db_operations_manager.update_docker_document(
             docker_document_type=docker_document_type,
             docker_document_id=docker_document_id,
-            update=update
+            update=update,
+            docker_server_id=docker_server_id
         )
 
 
 class DockerServerDatabaseManager(DatabaseManager):
 
-    def __init__(self, api_manager):
+    def __init__(self, api_manager, is_update_required):
         super(DockerServerDatabaseManager, self).__init__(api_manager=api_manager)
 
         # updates the container states
-        if isinstance(self.amazon_document, dict):
-            docker_server_id = self.api_manager.amazon_resource_id
-            self._update_container_state(docker_server_id=docker_server_id)
-        else:
-            from metasploit.aws.aws_access import aws_api
-
-            for ins in aws_api.resource.instances.all():
-                docker_server_id = ins.id
-                self._update_container_state(docker_server_id=docker_server_id)
+        if is_update_required:
+            if global_constants.INSTANCES not in self.amazon_document:
+                if self.amazon_document[global_constants.CONTAINERS]:
+                    docker_server_id = self.api_manager.amazon_resource_id
+                    print(docker_server_id)
+                    self._update_container_state(docker_server_id=docker_server_id)
+            elif self.amazon_document[global_constants.INSTANCES]:
+                for instance_document in self.amazon_document[global_constants.INSTANCES]:
+                    if instance_document[global_constants.CONTAINERS]:
+                        self._update_container_state(
+                            docker_server_id=instance_document[global_constants.ID]
+                        )
 
     def _update_container_state(self, docker_server_id):
         """
         Updates container states.
+
+        Args:
+            docker_server_id (str): docker server ID.
         """
         for container_id, state in _get_container_states_ids(docker_server_id=docker_server_id):
             super().update_docker_document(
                 docker_document_type=global_constants.CONTAINERS,
                 docker_document_id=container_id,
-                update={"Containers.$.State": state}
+                update={"Containers.$.status": state},
+                docker_server_id=docker_server_id
             )
 
     @property
@@ -521,6 +538,7 @@ class ImageDatabaseManager(DockerServerDatabaseManager):
         """
         Creates image document and inserts it into the DB.
         """
+        print("entered into insert image")
         super().insert_docker_document(
             docker_document_type=global_constants.IMAGES, new_docker_document=new_image_document
         )

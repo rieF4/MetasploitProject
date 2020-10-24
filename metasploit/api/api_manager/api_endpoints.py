@@ -210,7 +210,7 @@ class InstancesApi(CollectionApi):
             amazon_resource_type=global_constants.INSTANCES,
             single_amazon_document=False,
             collection_name=global_constants.INSTANCES
-        ).get_resources.all_docker_instance_servers
+        ).get_resources.docker_server_instance_resource
 
     @staticmethod
     def get_specific_instance_endpoint(id):
@@ -284,10 +284,10 @@ class ContainersApi(CollectionApi):
         """
         return ApiManager(
             collection_type=InstancesApi.instance_collection,
-            type=global_constants.INSTANCE,
-            resource_id=id,
+            amazon_resource_id=id,
             client_request=request.json,
-        ).create_amazon_resources.create_container
+            amazon_resource_type=global_constants.INSTANCE
+        ).create_docker_resources.create_container
 
     @staticmethod
     def start_container_endpoint(instance_id, container_id):
@@ -305,7 +305,15 @@ class ContainersApi(CollectionApi):
             AmazonResourceNotFoundError: in case the instance ID is not valid.
             DockerResourceNotFoundError: in case there aren't any available containers.
         """
-        # return start_container(instance_id=instance_id, container_id=container_id)
+        return ApiManager(
+            collection_type=InstancesApi.instance_collection,
+            amazon_resource_id=instance_id,
+            docker_resource_id=container_id,
+            single_docker_document=True,
+            docker_resource_type=global_constants.CONTAINER,
+            amazon_resource_type=global_constants.INSTANCE,
+            docker_document_type=global_constants.CONTAINERS
+        ).update_resource.start_container
 
     @staticmethod
     def get_all_instance_containers_endpoint(id):
@@ -324,11 +332,12 @@ class ContainersApi(CollectionApi):
         """
         return ApiManager(
             collection_type=InstancesApi.instance_collection,
-            resource_id=id,
-            type=global_constants.INSTANCE,
-            collection_name=global_constants.INSTANCES,
-            single_document=False
-        ).get_resources.get_docker_resource(document_type=global_constants.CONTAINERS)
+            amazon_resource_id=id,
+            docker_resource_type=global_constants.CONTAINERS,
+            docker_document_type=global_constants.CONTAINERS,
+            amazon_resource_type=global_constants.INSTANCE,
+            all_docker_documents=True
+        ).get_resources.docker_resource
 
     @staticmethod
     def get_instance_container_endpoint(instance_id, container_id):
@@ -348,10 +357,13 @@ class ContainersApi(CollectionApi):
         """
         return ApiManager(
             collection_type=InstancesApi.instance_collection,
-            type=global_constants.INSTANCE,
-            resource_id=instance_id,
-            sub_resource_id=container_id,
-        ).get_resources.get_specific_sub_resource(document_type=global_constants.CONTAINERS)
+            amazon_resource_id=instance_id,
+            docker_resource_id=container_id,
+            single_docker_document=True,
+            docker_resource_type=global_constants.CONTAINER,
+            amazon_resource_type=global_constants.INSTANCE,
+            docker_document_type=global_constants.CONTAINERS
+        ).get_resources.docker_resource
 
     @staticmethod
     def get_all_instances_containers_endpoint():
@@ -384,7 +396,15 @@ class ContainersApi(CollectionApi):
             DockerResourceNotFoundError: in case there aren't any available containers.
             ApiError: in case the docker server returns an error.
         """
-        # return delete_container(instance_id=instance_id, container_id=container_id)
+        return ApiManager(
+            collection_type=InstancesApi.instance_collection,
+            amazon_resource_id=instance_id,
+            docker_resource_id=container_id,
+            single_docker_document=True,
+            docker_resource_type=global_constants.CONTAINER,
+            amazon_resource_type=global_constants.INSTANCE,
+            docker_document_type=global_constants.CONTAINERS
+        ).delete_resource.delete_container
 
     @staticmethod
     @validate_json_request("Command")
@@ -414,7 +434,11 @@ class ContainersApi(CollectionApi):
         Args:
              instance_id (str): instance ID.
         """
-        # return run_container_with_metasploit_daemon_through_api(instance_id=instance_id)
+        return ApiManager(
+            collection_type=InstancesApi.instance_collection,
+            amazon_resource_id=instance_id,
+            amazon_resource_type=global_constants.INSTANCE,
+        ).create_docker_resources.run_metasploit_container
 
 
 class DockerImagesApi(CollectionApi):

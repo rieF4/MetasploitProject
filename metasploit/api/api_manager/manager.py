@@ -3,7 +3,8 @@ from metasploit.api.database import (
     DockerServerDatabaseManager,
     SecurityGroupDatabaseManager,
     ContainerDatabaseManager,
-    ImageDatabaseManager
+    ImageDatabaseManager,
+    DatabaseManager
 )
 
 from metasploit import constants as global_constants
@@ -127,11 +128,17 @@ class ApiManager(object):
         """
         return UpdateResource(self)
 
-    def docker_server_database_manager(self):
+    def database_manager(self):
+        """
+        Get database manager object.
+        """
+        return DatabaseManager(self)
+
+    def docker_server_database_manager(self, is_update_required=True):
         """
         Get docker server database manager object.
         """
-        return DockerServerDatabaseManager(self)
+        return DockerServerDatabaseManager(self, is_update_required)
 
     def security_group_database_manager(self):
         """
@@ -139,17 +146,17 @@ class ApiManager(object):
         """
         return SecurityGroupDatabaseManager(self)
 
-    def container_database_manager(self):
+    def container_database_manager(self, is_update_required=True):
         """
         Get container database manager object.
         """
-        return ContainerDatabaseManager(self)
+        return ContainerDatabaseManager(self, is_update_required)
 
-    def image_database_manager(self):
+    def image_database_manager(self, is_update_required=True):
         """
         Get image database manager object.
         """
-        return ImageDatabaseManager(self)
+        return ImageDatabaseManager(self, is_update_required)
 
     def docker_server_response(self, http_status_code, docker_server=None, response=None):
         """
@@ -249,7 +256,7 @@ class CreateAmazonResources(ResourceOperation):
             docker_server=aws_operations.create_instance(kwargs=req)
         ).response
 
-        self.api_manager.docker_server_database_manager().insert_docker_server_document(
+        self.api_manager.docker_server_database_manager(is_update_required=False).insert_docker_server_document(
             new_docker_server_document=docker_server_response
         )
 
@@ -346,16 +353,16 @@ class CreateDockerResources(ResourceOperation):
         msfrpcd_container = docker_operations.ContainerOperations(
             docker_server_id=self.amazon_resource_id
         ).run_container_with_msfrpcd_metasploit(
-            containers_documents=self.amazon_document[global_constants.DOCKER][global_constants.CONTAINERS]
+            containers_documents=self.amazon_document[global_constants.CONTAINERS]
         )
 
         msfrpcd_container_response = self.api_manager.container_response(
             http_status_code=HttpCodes.CREATED,
             container=msfrpcd_container
-        ).response
+        )
 
         self.api_manager.container_database_manager().insert_container_document(
-            new_container_document=msfrpcd_container_response
+            new_container_document=msfrpcd_container_response.response
         )
 
         return msfrpcd_container_response.make_response
@@ -420,7 +427,9 @@ class DeleteResource(ResourceOperation):
         """
         aws_operations.DockerServerInstanceOperations(instance_id=self.amazon_resource_id).docker_server.terminate()
 
-        self.api_manager.docker_server_database_manager().delete_docker_server_instance_document()
+        self.api_manager.docker_server_database_manager(
+            is_update_required=False
+        ).delete_docker_server_instance_document()
 
         return self.api_manager.docker_server_response(
             http_status_code=HttpCodes.NO_CONTENT, response=''
@@ -497,11 +506,11 @@ class UpdateResource(ResourceOperation):
             docker_server_id=self.amazon_resource_id, docker_resource_id=self.docker_resource_id
         ).container
 
-        if container.state != "running":
+        if container.status != "running":
             container.start()
 
         self.api_manager.container_database_manager()
 
         return self.api_manager.container_response(
-            http_status_code=HttpCodes.OK, response=self.amazon_document
+            http_status_code=HttpCodes.OK, response=self.docker_document
         ).make_response

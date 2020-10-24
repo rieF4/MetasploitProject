@@ -54,6 +54,7 @@ class ContainerOperations(DockerOperations):
         """
         if "detach" not in kwargs:
             kwargs["detach"] = True
+        print(kwargs)
         return self.docker_server.docker.container_collection.run(image=image, **kwargs)
 
     def run_container_with_msfrpcd_metasploit(self, containers_documents):
@@ -76,8 +77,7 @@ class ContainerOperations(DockerOperations):
             "stdin_open": True,
             "tty": True,
             "ports": {port: port},
-            "detach": True,
-            "network": True
+            "detach": True
         }
 
         container = self.run_container(image="phocean/msf", kwargs=kwargs)

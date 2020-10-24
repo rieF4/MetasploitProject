@@ -129,11 +129,9 @@ class DockerInstanceResponse(ResourceResponse):
             "SecurityGroups": self.docker_amazon_object.security_groups,
             "State": self.docker_amazon_object.state,
             "KeyName": self.docker_amazon_object.key_name,
-            "Docker": {
-                "Containers": [],
-                "Images": [],
-                "Networks": []
-            },
+            "Containers": [],
+            "Images": [],
+            "Networks": []
         }
 
 

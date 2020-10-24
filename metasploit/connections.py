@@ -75,12 +75,12 @@ class Metasploit(Connection):
     Attributes:
         _metasploit_client (MsfRpcClient): msfrpc client object.
     """
-    def __init__(self, server, password=123456, port=55553):
+    def __init__(self, server, password='123456', port=55553):
         """
         Initialize a connection to msfrpc daemon of metasploit.
 
         Args:
-            server (str): server IP.
+            server (str): public IP/DNS of docker server instance.
             password (str): password that msfrpc daemon was deployed with.
             port (int): the port that msfrpc listens to.
         """
@@ -90,7 +90,8 @@ class Metasploit(Connection):
     def metasploit_client(self):
         return self._metasploit_client
 
-    def get_exploits(self):
+    @property
+    def exploits(self):
         """
         Get all the available exploits in metasploit.
 

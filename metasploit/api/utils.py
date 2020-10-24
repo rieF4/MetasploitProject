@@ -25,12 +25,15 @@ def choose_port_for_msfrpcd(containers_document):
 
 
 def get_all_used_port_in_instance(containers_document):
-    all_containers_ports = [container_document["ports"] for container_document in containers_document]
-    used_ports = []
-    for container_port_details in all_containers_ports:
-        for port in container_port_details.keys():
-            used_ports.append(port)
-    return used_ports
+    if containers_document:
+        all_containers_ports = [container_document["ports"] for container_document in containers_document]
+        used_ports = []
+        for container_port_details in all_containers_ports:
+            for port in container_port_details.keys():
+                used_ports.append(port)
+        return used_ports
+    else:
+        return []
 
 
 def check_if_image_already_exists(image_document, tag_to_check):
