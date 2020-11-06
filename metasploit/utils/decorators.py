@@ -14,6 +14,7 @@ from metasploit.api.errors import (
     BadJsonInput,
     choose_http_error_code
 )
+from metasploit.connections import Metasploit
 
 
 def singleton(cls):
@@ -125,3 +126,44 @@ def client_request_modifier(code):
 
         return client_request_wrapper
     return client_request_decorator
+
+
+def exploit_request_modifier(execute_module_func):
+
+    def wrapper(self):
+
+        for target, exploit_params in self.api_manager.client_request.items():
+            try:
+                metasploit_connection = Metasploit(server=target, port=exploit_params['Port'])
+
+                module_name = exploit_params['ModuleName']
+                payloads = exploit_params['Payloads']
+                options = exploit_params['Options']
+                module_type = exploit_params['ModuleType']
+
+                # check_if_module_is_supported(
+                #     module_name=module_name, module_type=module_type, metasploit_connection=metasploit_connection
+                # )
+
+                module = metasploit_connection.modules.use(mtype=module_type, mname=module_name)
+                required_options = module.missing_required
+
+                # check_required_options_for_module(
+                #     required_params=required_options, options=options.keys(), module_name=module_name
+                # )
+
+                execute_module_func(
+                    self=self,
+                    target=target,
+                    module_name=module_name,
+                    payloads=payloads,
+                    options=options,
+                    connection=metasploit_connection,
+                    module_type=module_type
+                )
+            except Exception:
+                pass
+
+
+
+    return wrapper

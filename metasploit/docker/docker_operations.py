@@ -77,7 +77,8 @@ class ContainerOperations(DockerOperations):
             "stdin_open": True,
             "tty": True,
             "ports": {port: port},
-            "detach": True
+            "detach": True,
+            "network": "metasploitable_network"
         }
 
         container = self.run_container(image="phocean/msf", kwargs=kwargs)
@@ -201,3 +202,9 @@ class NetworkOperations(DockerOperations):
             Network: a network object.
         """
         return self.docker_server.docker.network_collection.create(name=name, **kwargs)
+
+    def get_network(self):
+        """
+        Get network object
+        """
+        return self.docker_server.docker.network_collection.get(network_id=self.docker_resource_id)

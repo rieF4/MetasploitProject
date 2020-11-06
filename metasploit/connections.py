@@ -91,6 +91,14 @@ class Metasploit(Connection):
         return self._metasploit_client
 
     @property
+    def modules(self):
+        return self.metasploit_client.modules
+
+    @property
+    def auxiliaries(self):
+        return self.modules.auxiliary
+
+    @property
     def exploits(self):
         """
         Get all the available exploits in metasploit.
@@ -98,4 +106,4 @@ class Metasploit(Connection):
         Returns:
            list(str): a list of strings representing all the available exploits on metasploit
         """
-        return self.metasploit_client.modules.exploits
+        return self.modules.exploits

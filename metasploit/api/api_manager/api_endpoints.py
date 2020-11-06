@@ -493,3 +493,20 @@ class DockerImagesApi(CollectionApi):
             AmazonResourceNotFoundError: in case the instance was not found.
         """
         # return get_all_instance_images_from_database(instance_id=instance_id)
+
+
+class DockerNetworksApi(CollectionApi):
+
+    @staticmethod
+    @validate_json_request("name")
+    def create_network_endpoint(instance_id):
+        """
+        the endpoint function to create a docker network over the docker server.
+        """
+        return ApiManager(
+            collection_type=InstancesApi.instance_collection,
+            amazon_resource_id=instance_id,
+            client_request=request.json,
+            single_amazon_document=True,
+            amazon_resource_type=global_constants.INSTANCE,
+        ).create_docker_resources.create_docker_network

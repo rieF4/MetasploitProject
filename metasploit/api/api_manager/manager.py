@@ -4,7 +4,8 @@ from metasploit.api.database import (
     SecurityGroupDatabaseManager,
     ContainerDatabaseManager,
     ImageDatabaseManager,
-    DatabaseManager
+    DatabaseManager,
+    NetworkDatabaseManager
 )
 
 from metasploit import constants as global_constants
@@ -24,7 +25,8 @@ from metasploit.api.response import (
     ErrorResponse,
     ContainerResponse,
     ImageResponse,
-    ResourceResponse
+    ResourceResponse,
+    NetworkResponse
 )
 
 
@@ -158,6 +160,12 @@ class ApiManager(object):
         """
         return ImageDatabaseManager(self, is_update_required)
 
+    def network_database_manager(self, is_update_required=True):
+        """
+        Get network database manager object.
+        """
+        return NetworkDatabaseManager(self, is_update_required=is_update_required)
+
     def docker_server_response(self, http_status_code, docker_server=None, response=None):
         """
         Get docker instance response object.
@@ -187,6 +195,12 @@ class ApiManager(object):
         return ImageResponse(
             self, http_status_code=http_status_code, image=image, response=response
         )
+
+    def network_response(self, http_status_code=HttpCodes.OK, network=None, response=None):
+        """
+        Get network response object.
+        """
+        return NetworkResponse(self, http_status_code=http_status_code, network=network, response=response)
 
     def error_response(self, error_msg, http_status_code, req=None, path=None):
         """
@@ -352,9 +366,7 @@ class CreateDockerResources(ResourceOperation):
         """
         msfrpcd_container = docker_operations.ContainerOperations(
             docker_server_id=self.amazon_resource_id
-        ).run_container_with_msfrpcd_metasploit(
-            containers_documents=self.amazon_document[global_constants.CONTAINERS]
-        )
+        ).run_container_with_msfrpcd_metasploit(containers_documents=self.amazon_document[global_constants.CONTAINERS])
 
         msfrpcd_container_response = self.api_manager.container_response(
             http_status_code=HttpCodes.CREATED,
@@ -366,6 +378,32 @@ class CreateDockerResources(ResourceOperation):
         )
 
         return msfrpcd_container_response.make_response
+
+    @property
+    @client_request_modifier(code=HttpCodes.CREATED)
+    def create_docker_network(self, req=None):
+        """
+        Creates a docker network over the docker server instance.
+
+        Args:
+            req (dict): the client request.
+
+        Returns:
+            dict: a network document.
+        """
+        network_name = req.pop("name")
+
+        network = docker_operations.NetworkOperations(docker_server_id=self.amazon_resource_id).create_network(
+            network_name, req
+        )
+
+        network_response = self.api_manager.network_response(
+            http_status_code=HttpCodes.CREATED, network=network
+        ).response
+
+        self.api_manager.network_database_manager().insert_network_document(network_response)
+
+        return network_response
 
 
 class GetResource(ResourceOperation):
@@ -514,3 +552,51 @@ class UpdateResource(ResourceOperation):
         return self.api_manager.container_response(
             http_status_code=HttpCodes.OK, response=self.docker_document
         ).make_response
+
+    @client_request_modifier(code=HttpCodes.OK)
+    def run_exploit(
+            self, target=None, module_name=None, payloads=None, options=None, connection=None, module_type=None
+    ):
+        """
+        run exploits over a metasploit container with msfrpc daemon connected.
+
+        Example of exploits running request where the key is the target host and the values are exploit's params:
+
+        exploits_requests = {
+            "10.10.10.10": {
+                "ModuleType": 'exploit',
+                "RpcPort": 50000,
+                "ModuleName": "aix/local/ibstat_path",
+                "Payloads": [
+                    'cmd/unix/bind_perl',
+                    'cmd/unix/bind_perl_ipv6',
+                    'cmd/unix/reverse_perl',
+                    'cmd/unix/reverse_perl_ssl'
+                ],
+                "Options": {
+                    'SESSION': "value1",
+                    'WritableDir': "value2"
+                }
+            },
+            "9.9.9.9": {
+                "ModuleType": 'exploit',
+                "RpcPort": 50001,
+                "ModuleName": "aix/rpc_cmsd_opcode21",
+                "Payloads": [
+                    'aix/ppc/shell_bind_tcp',
+                    'aix/ppc/shell_reverse_tcp',
+                    'generic/custom',
+                    'generic/shell_bind_tcp',
+                    'generic/shell_reverse_tcp'
+                ],
+                "Options": {
+                    'RHOSTS': "value1",
+                    'RPORT': "value2",
+                    'SSLVERSION': "value3",
+                    'ConnectTimeout': "value4",
+                    'TIMEOUT': "value5"
+                }
+            }
+        }
+        """
+

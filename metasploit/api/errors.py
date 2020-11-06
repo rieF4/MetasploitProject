@@ -81,9 +81,20 @@ class DuplicateImageError(DuplicateDockerResourceError):
         super().__init__(resource=resource)
 
 
-class VulnerabilityNotSupported(ApiException):
-    def __init__(self, vulnerability_type):
-        msg = f"Vulnerability {vulnerability_type} is not supported."
+class ModuleNotSupportedError(ApiException):
+    def __init__(self, module_type, module_name=None):
+        if module_name:
+            msg = f"module {module_name} is not supported under module type {module_type}"
+        else:
+            msg = f"module type {module_type} is not a valid type"
+        super().__init__(msg)
+
+
+class PayloadNotSupportedError(ApiException):
+    def __init__(self, unsupported_payloads):
+        msg = ""
+        for payload in unsupported_payloads:
+            msg += f"Payload {payload} is not supported. "
         super().__init__(msg)
 
 
@@ -117,6 +128,19 @@ class InsertDatabaseError(DatabaseOperationError):
 class UpdateDatabaseError(DatabaseOperationError):
     def __init__(self, document, error_msg):
         super().__init__(document=document, error_msg=error_msg)
+
+
+class ModuleOptionsError(ApiException):
+
+    def __init__(self, options, module_name):
+        str_options = ""
+        for o in options:
+            str_options += o
+        msg = f'The following {str_options} are missing options for {module_name}'
+        super().__init__(msg)
+
+
+
 
 
 def choose_http_error_code(error):

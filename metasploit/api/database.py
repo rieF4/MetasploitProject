@@ -550,6 +550,30 @@ class ImageDatabaseManager(DockerServerDatabaseManager):
         super().delete_docker_document(docker_document_type=global_constants.IMAGES)
 
 
+class NetworkDatabaseManager(DockerServerDatabaseManager):
+
+    @property
+    def get_network_document(self):
+        """
+        Get network document(s) from the DB.
+        """
+        return super().docker_document
+
+    def insert_network_document(self, new_network_document):
+        """
+        Creates image document and inserts it into the DB.
+        """
+        super().insert_docker_document(
+            docker_document_type=global_constants.NETWORKS, new_docker_document=new_network_document
+        )
+
+    def delete_network_document(self):
+        """
+        Deletes image document from the DB.
+        """
+        super().delete_docker_document(docker_document_type=global_constants.NETWORKS)
+
+
 def _find_specific_document(docker_documents, docker_resource_id):
     """
     Finds a docker document with the specified ID.
