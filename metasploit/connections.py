@@ -1,5 +1,6 @@
 import paramiko
 
+from pymetasploit3 import msfrpc
 from pymetasploit3.msfrpc import MsfRpcClient
 
 
@@ -85,6 +86,7 @@ class Metasploit(Connection):
             port (int): the port that msfrpc listens to.
         """
         self._metasploit_client = MsfRpcClient(password=password, server=server, port=port)
+        self._host_console = self._console
 
     @property
     def metasploit_client(self):
@@ -107,3 +109,11 @@ class Metasploit(Connection):
            list(str): a list of strings representing all the available exploits on metasploit
         """
         return self.modules.exploits
+
+    @property
+    def _console(self):
+        return msfrpc.MsfConsole(rpc=self.metasploit_client)
+
+    @property
+    def host_console(self):
+        return self._host_console

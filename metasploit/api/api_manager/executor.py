@@ -1,4 +1,3 @@
-
 from .flask_wrapper import FlaskAppWrapper
 from metasploit.api.utils import (
     HttpMethods
@@ -19,15 +18,35 @@ from .api_endpoints import (
 
 from metasploit.api.database import DatabaseCollections
 
+from pymetasploit3.msfconsole import MsfRpcConsole
 
-# from metasploit.connections import Metasploit
+from metasploit.connections import Metasploit
 #
-# m = Metasploit(server='18.219.135.199', port=50000)
+# global global_positive_out
+# global_positive_out = list()
+# global global_console_status
+# global_console_status = False
+#
+#
+# def read_console(console_data):
+#     global global_console_status
+#     global_console_status = console_data['busy']
+#     if '[+]' in console_data['data']:
+#         sigdata = console_data['data'].rstrip().split('\n')
+#         for line in sigdata:
+#             if '[+]' in line:
+#                 global_positive_out.append(line)
+#
+#
+# c = MsfRpcConsole(rpc=m.metasploit_client, cb=read_console)
+
+
+# m = Metasploit(server='3.129.12.196', port=50000)
 # target_host = '172.18.0.3'
 # result = []
 # exploit_number = 0
 # num_payloads = 0
-# for e in m.exploits:
+# for e in m.exploits[250:1000]:
 #     try:
 #         exploit_number += 1
 #         print(exploit_number)
@@ -137,7 +156,6 @@ Update containers state in DB example
 #             }
 #         }
 #     )
-
 
 
 flask_wrapper = FlaskAppWrapper()

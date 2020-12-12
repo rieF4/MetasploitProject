@@ -140,9 +140,6 @@ class ModuleOptionsError(ApiException):
         super().__init__(msg)
 
 
-
-
-
 def choose_http_error_code(error):
     """
     Returns the HTTP error code according to the error exception type.

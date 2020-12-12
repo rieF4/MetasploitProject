@@ -15,7 +15,7 @@ def check_required_options_for_module(required_params, options, module_name):
         module_name (str): module name.
 
     Raises:
-        ModuleOptionsError: in case the required options for the modul were not filled correctly by the client.
+        ModuleOptionsError: in case the required options for the module were not filled correctly by the client.
     """
     not_in_requirements = []
     for option in options:
