@@ -131,7 +131,8 @@ class DockerInstanceResponse(ResourceResponse):
             "KeyName": self.docker_amazon_object.key_name,
             "Containers": [],
             "Images": [],
-            "Networks": []
+            "Networks": [],
+            "Metasploit": []
         }
 
 

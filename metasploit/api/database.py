@@ -195,6 +195,8 @@ class DatabaseOperations(object):
                 "ports": [55555, 55556]
             }
 
+        Raises:
+            UpdateDatabaseError: in case updating the DB with a new docker document fails.
         """
         try:
             self.collection_type.update_one(
@@ -211,6 +213,31 @@ class DatabaseOperations(object):
             print("problem in add docker document")
             raise UpdateDatabaseError(document=self.amazon_document, error_msg=error.__str__())
 
+    def add_metasploit_document(self, metasploit_document):
+        """
+        Adds a new metasploit document to the DB.
+
+        Args:
+            metasploit_document (str): new metasploit document.
+
+        Raises:
+            UpdateDatabaseError: in case updating the DB with a new metasploit document fails.
+        """
+        try:
+            self.collection_type.update_one(
+                filter={
+                    global_constants.ID: self.amazon_document[global_constants.ID]
+                },
+                update={
+                    global_constants.ADD_TO_SET: {
+                        "Metasploit": metasploit_document
+                    }
+                }
+            )
+        except Exception as error:
+            print("problem in add metasploit document")
+            raise UpdateDatabaseError(document=self.amazon_document, error_msg=error.__str__())
+
     def update_docker_document(self, docker_document_type, docker_document_id, update, docker_server_id):
         """
         Updates a docker document in the DB.
@@ -219,6 +246,7 @@ class DatabaseOperations(object):
             docker_document_type (str): document type, eg. "Containers", "Networks", "Images"
             docker_document_id (str): the ID of the docker document.
             update (dict): a dictionary that represents which values needs to be updated.
+            docker_server_id (str): docker server ID.
 
         update examples:
             {
@@ -409,6 +437,15 @@ class DatabaseManager(object):
             docker_server_id=docker_server_id
         )
 
+    def insert_metasploit_document(self, metasploit_document):
+        """
+        inserts a new metasploit document in the DB.
+
+        Args:
+            metasploit_document (dict): a new metasploit document.
+        """
+        self.api_manager.db_operations_manager.add_metasploit_document(metasploit_document=metasploit_document)
+
 
 class DockerServerDatabaseManager(DatabaseManager):
 
@@ -538,7 +575,6 @@ class ImageDatabaseManager(DockerServerDatabaseManager):
         """
         Creates image document and inserts it into the DB.
         """
-        print("entered into insert image")
         super().insert_docker_document(
             docker_document_type=global_constants.IMAGES, new_docker_document=new_image_document
         )
@@ -574,12 +610,32 @@ class NetworkDatabaseManager(DockerServerDatabaseManager):
         super().delete_docker_document(docker_document_type=global_constants.NETWORKS)
 
 
+class MetasploitDataBaseManager(DatabaseManager):
+
+    @property
+    def get_all_metasploit_documents(self):
+        """
+        Get metasploit documents from DB.
+        """
+        return super().amazon_document['Metasploit']
+
+    def insert_metasploit_document(self, new_metasploit_document):
+        """
+        Inserts a metasploit document into the DB.
+
+        Args:
+            new_metasploit_document (dict): new metasploit document.
+        """
+        super().insert_metasploit_document(metasploit_document=new_metasploit_document)
+
+
 def _find_specific_document(docker_documents, docker_resource_id):
     """
     Finds a docker document with the specified ID.
 
     Args:
         docker_documents (dict): documents form.
+        docker_resource_id (str): docker resource ID.
 
     Returns:
         dict: a docker document if found, empty dict otherwise.
@@ -595,8 +651,8 @@ def _update_container_docs_attrs(api_manager, docker_server_id):
     Updates the container(s) attributes that belongs to the instance.
 
     Args:
-        docker_server_id (str): docker server instance ID.
         api_manager (ApiManager): api manager object.
+        docker_server_id (str): docker server instance ID.
 
     Returns:
         list(dict): a list of dictionaries that composes the container updated documents.

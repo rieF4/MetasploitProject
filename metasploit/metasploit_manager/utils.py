@@ -11,14 +11,14 @@ def check_required_options_for_module(required_params, options, module_name):
 
     Args:
         required_params (list): all the required parameters for the executed module (exploit, auxiliary, etc)
-        options (list): all the parameters that were filled by the client for the module.
+        options (dict): all the parameters that were filled by the client for the module.
         module_name (str): module name.
 
     Raises:
         ModuleOptionsError: in case the required options for the module were not filled correctly by the client.
     """
     not_in_requirements = []
-    for option in options:
+    for option in options.keys():
         if option not in required_params:
             not_in_requirements.append(option)
     if not_in_requirements:
