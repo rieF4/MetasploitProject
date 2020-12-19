@@ -35,7 +35,30 @@ class FlaskAppWrapper(object):
         """
         url_error = {
             "Error": f"The given url {request.base_url} is invalid ",
-            "AvailableUrls": "In progress"
+            "AvailableUrls": [
+                    '/SecurityGroups/Get',
+                    '/SecurityGroups/Get/<id>',
+                    '/SecurityGroups/Create',
+                    '/SecurityGroups/Delete/<id>',
+                    '/SecurityGroups/<id>/UpdateInboundPermissions',
+                    '/DockerServerInstances/Create',
+                    '/DockerServerInstances/Get',
+                    '/DockerServerInstances/Get/<id>',
+                    '/DockerServerInstances/Delete/<id>',
+                    '/DockerServerInstances/<id>/CreateContainers',
+                    '/DockerServerInstances/<id>/Containers/Get',
+                    '/DockerServerInstances/<instance_id>/Containers/Get/<container_id>',
+                    '/DockerServerInstances/Containers/Get',
+                    '/DockerServerInstances/<instance_id>/Containers/Delete/<container_id>',
+                    '/DockerServerInstances/<instance_id>/Containers/Start/<container_id>',
+                    '/DockerServerInstances/<id>/Images/Pull',
+                    '/DockerServerInstances/<instance_id>/Images/Get',
+                    '/DockerServerInstances/<instance_id>/Containers/ExecuteCommand/<container_id>',
+                    '/DockerServerInstances/<instance_id>/Containers/CreateMetasploitContainer',
+                    '/DockerServerInstances/<instance_id>/Networks/Create',
+                    '/DockerServerInstances/<instance_id>/Metasploit/RunExploit',
+                    '/DockerServerInstances/<instance_id>/Metasploit/ScanOpenPorts'
+            ]
         }
 
         return jsonify(url_error), 404
