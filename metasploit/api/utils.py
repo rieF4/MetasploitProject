@@ -71,7 +71,7 @@ def validate_request_type(client_request):
     """
     try:
         if not isinstance(client_request, dict):
-            return False, "Request type is not a dictionary form."
+            return False, "Request type is not a json form."
         return True, 'Success'
     except (BadRequest, TypeError, AttributeError) as err:
         return False, err.__str__()

@@ -7,7 +7,8 @@ from .api_endpoints import (
     InstancesApi,
     ContainersApi,
     DockerImagesApi,
-    DockerNetworksApi
+    DockerNetworksApi,
+    MetasploitController
 )
 
 # import metasploit.aws.aws_access as aws_acc
@@ -41,121 +42,23 @@ from metasploit.connections import Metasploit
 # c = MsfRpcConsole(rpc=m.metasploit_client, cb=read_console)
 
 
-# m = Metasploit(server='3.129.12.196', port=50000)
+# print("something")
+# m = Metasploit(server='18.189.194.219', port=50000)
 # target_host = '172.18.0.3'
 # result = []
-# exploit_number = 0
-# num_payloads = 0
-# for e in m.exploits[250:1000]:
+# for e in m.exploits[300:500]:
 #     try:
-#         exploit_number += 1
-#         print(exploit_number)
+#         print(f"sessions {m.metasploit_client.sessions.list}")
 #         exploit = m.metasploit_client.modules.use('exploit', mname=e)
-#         num_payloads += len(exploit.targetpayloads())
 #         if 'RHOSTS' in exploit.options:
 #             exploit['RHOSTS'] = target_host
 #             for p in exploit.targetpayloads():
-#                 print(p)
 #                 result.append(exploit.execute(payload=p))
+#
 #     except Exception as e:
 #         print(e)
 #
 # print(m.exploits)
-
-"""
-Given this array how to update operation on containers
-"""
-
-# d = {
-#     "Containers": [
-#         {
-#             "_id": 1,
-#             "state": "running"
-#         },
-#         {
-#             "_id": 2,
-#             "state": "stopped"
-#         }
-#     ],
-#     "Images": [],
-#     "Networks": [],
-#     "IpParameters": {
-#         "PrivateDNSName": "ip-172-31-32-241.us-east-2.compute.internal",
-#         "PrivateIpAddress": "172.31.32.241",
-#         "PublicDNSName": "ec2-18-220-31-187.us-east-2.compute.amazonaws.com",
-#         "PublicIpAddress": "18.220.31.187"
-#       },
-#     "KeyName": "default_key_pair_name",
-#     "SecurityGroups": [
-#         {
-#           "GroupId": "sg-0cde419d7de10fff7",
-#           "GroupName": "zzz"
-#         }
-#       ],
-#     "State": {
-#         "Code": 16,
-#         "Name": "running"
-#     },
-#     "_id": "i-086d96f9de57d095b"
-#     }
-#
-#
-# test = DatabaseCollections.INSTANCES
-
-
-"""
-How to remove a container from DB
-"""
-# test.update_one(
-#     filter={
-#         "_id": "i-086d96f9de57d095b"
-#     },
-#     update={
-#         "$pull": {
-#             "Containers": {
-#                 "_id": 2
-#             }
-#         }
-#     }
-# )
-
-
-"""
-Add a container to DB example
-"""
-# test.update_one(
-#     filter={
-#         "_id": "i-086d96f9de57d095b"
-#     },
-#     update={
-#         "$addToSet": {
-#             "Containers": {
-#                 "_id": 3,
-#                 "state": "running"
-#             }
-#         }
-#     }
-# )
-
-
-"""
-Update containers state in DB example
-"""
-# ids = [i['_id'] for i in d["Containers"]]
-# print(ids)
-#
-# for i in ids:
-#     test.update_one(
-#         filter={
-#             "_id": "i-086d96f9de57d095b",
-#             "Containers._id": i
-#         },
-#         update={
-#             "$set": {
-#                 "Containers.$.state": "stopped"
-#             }
-#         }
-#     )
 
 
 flask_wrapper = FlaskAppWrapper()
@@ -278,6 +181,18 @@ flask_wrapper.add_endpoints(
         '/DockerServerInstances/<instance_id>/Networks/Create',
         'DockerNetworksApi.create_network_endpoint',
         DockerNetworksApi.create_network_endpoint,
+        [HttpMethods.POST]
+    ),
+    (
+        '/DockerServerInstances/<instance_id>/Metasploit/RunExploit',
+        'MetasploitController.run_exploit',
+        MetasploitController.run_exploit,
+        [HttpMethods.POST]
+    ),
+    (
+        '/DockerServerInstances/<instance_id>/Metasploit/ScanOpenPorts',
+        'MetasploitController.scan_ports',
+        MetasploitController.scan_ports,
         [HttpMethods.POST]
     )
 )

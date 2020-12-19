@@ -1,4 +1,5 @@
 import re
+import time
 
 from metasploit.connections import Metasploit
 from . import utils
@@ -48,7 +49,7 @@ class ModuleExecution(object):
             module_type=module_type,
             metasploit_connection=self.metasploit_connection
         )
-        return self.metasploit_connection.modules.use(mtype=module_name, mname=module_type)
+        return self.metasploit_connection.modules.use(mtype=module_type, mname=module_name)
 
 
 class ExploitExecution(ModuleExecution):
@@ -147,9 +148,17 @@ class ExploitExecution(ModuleExecution):
             exploit_job = exploit.execute(payload=payload)
             exploit_payload_json = {}
 
+            # need to add here a sampler to
+            time.sleep(5)
+            print("slept for 5 seconds")
+
             for session_num, session_details in self.metasploit_connection.metasploit_client.sessions.list.items():
 
+                print(session_num)
+                print(session_details)
+
                 if exploit_name in session_details['via_exploit'] and payload in session_details['via_payload']:
+
                     exploit_payload_json[_session] = session_details
                     shell = self.metasploit_connection.metasploit_client.sessions.session(sid=session_num)
 
@@ -170,6 +179,7 @@ class ExploitExecution(ModuleExecution):
 
 class AuxiliaryExecution(ModuleExecution):
 
+    @property
     def port_scanning(self):
         """
         Scan all the open ports on the target host.
@@ -192,6 +202,8 @@ class AuxiliaryExecution(ModuleExecution):
                 output = console.read()
                 if not output['busy']:
                     console_busy = False
+                print(output['data'])
+                if cmd == 'run':
+                    self.metasploit_connection.destory_console()
+                    return re.findall(pattern=f"{self.target_host}:[0-9]+", string=output['data'])
 
-            if cmd == 'run':
-                return re.findall(pattern=f"{self.target_host}:[0-9]+", string=output['data'])

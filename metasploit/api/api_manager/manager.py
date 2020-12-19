@@ -114,6 +114,10 @@ class ApiManager(object):
         return CreateDockerResources(self)
 
     @property
+    def create_metasploit_resource(self):
+        return CreateMetasploitResource(self)
+
+    @property
     def get_resources(self):
         """
         Get GetResource object that manages all Get API operations.
@@ -419,6 +423,7 @@ class CreateDockerResources(ResourceOperation):
 
 class CreateMetasploitResource(ResourceOperation):
 
+    @property
     @client_request_modifier(code=HttpCodes.OK)
     def run_exploit(self, req=None):
         """
@@ -430,8 +435,8 @@ class CreateMetasploitResource(ResourceOperation):
             "1": {
                 "target": '10.10.10.10',
                 "module_type": 'exploit',
-                "rpc_port": 50000,
-                "module_name": "aix/local/ibstat_path",
+                "rpc_port": 50000,      # optional value
+                "exploit_name": "aix/local/ibstat_path",
                 "payloads": [
                     'cmd/unix/bind_perl',
                     'cmd/unix/bind_perl_ipv6',
@@ -446,7 +451,7 @@ class CreateMetasploitResource(ResourceOperation):
             "2": {
                 "target": '10.10.10.10',
                 "module_type": 'exploit',
-                "rpc_port": 50001,
+                "rpc_port": 50001,     # optional value
                 "exploit_name": "aix/rpc_cmsd_opcode21",
                 "payloads": [
                     'aix/ppc/shell_bind_tcp',
@@ -466,9 +471,14 @@ class CreateMetasploitResource(ResourceOperation):
         }
         """
         target_host = req.pop("target")
+        rpc_port = req.pop("rpc_port", None)
 
         all_payload_exploit_results = module_executor.ExploitExecution(
-            target_host=target_host, source_host=self.amazon_resource_id, port=req.pop("rpc_port")
+            target_host=target_host,
+            source_host=docker_operations.DockerServerInstanceOperations(
+                instance_id=self.amazon_resource_id
+            ).docker_server.public_ip_address,
+            port=rpc_port if rpc_port else 50000
         ).execute_exploit(**req)
 
         for payload_res in all_payload_exploit_results:
@@ -477,6 +487,34 @@ class CreateMetasploitResource(ResourceOperation):
             )
 
         return all_payload_exploit_results
+
+    @property
+    @client_request_modifier(code=HttpCodes.OK)
+    def port_scanner(self, req=None):
+        """
+        Gets all the open ports of a target host
+
+        Examples:
+        {
+            "1": {
+                "target": "172.2.3.1",
+                "rpc_port": 50000     # optional value
+            },
+            "2": {
+                "target": "172.2.3.2",
+                "rpc_port":50001     # optional value
+            }
+        }
+        """
+        rpc_port = req.pop("rpc_port", None)
+
+        return module_executor.AuxiliaryExecution(
+            target_host=req.pop("target"),
+            source_host=docker_operations.DockerServerInstanceOperations(
+                instance_id=self.amazon_resource_id
+            ).docker_server.public_ip_address,
+            port=rpc_port if rpc_port else 50000
+        ).port_scanning
 
 
 class GetResource(ResourceOperation):

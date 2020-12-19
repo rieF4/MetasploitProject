@@ -510,3 +510,30 @@ class DockerNetworksApi(CollectionApi):
             single_amazon_document=True,
             amazon_resource_type=global_constants.INSTANCE,
         ).create_docker_resources.create_docker_network
+
+
+class MetasploitController(CollectionApi):
+
+    @staticmethod
+    @validate_json_request("target", "module_type", "exploit_name", "payloads")
+    def run_exploit(instance_id):
+
+        return ApiManager(
+            collection_type=InstancesApi.instance_collection,
+            amazon_resource_id=instance_id,
+            client_request=request.json,
+            single_amazon_document=True,
+            amazon_resource_type=global_constants.INSTANCE
+        ).create_metasploit_resource.run_exploit
+
+    @staticmethod
+    @validate_json_request("target")
+    def scan_ports(instance_id):
+
+        return ApiManager(
+            collection_type=InstancesApi.instance_collection,
+            amazon_resource_id=instance_id,
+            client_request=request.json,
+            single_amazon_document=True,
+            amazon_resource_type=global_constants.INSTANCE,
+        ).create_metasploit_resource.port_scanner
