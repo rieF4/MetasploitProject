@@ -158,3 +158,12 @@ def choose_http_error_code(error):
         return HttpCodes.BAD_REQUEST
     elif isinstance(error, APIError):
         return HttpCodes.INTERNAL_SERVER_ERROR
+
+
+class TimeoutExpiredError(ApiException):
+
+    def __init__(self, msg):
+        self.msg = msg
+
+    def __str__(self):
+        return self.msg

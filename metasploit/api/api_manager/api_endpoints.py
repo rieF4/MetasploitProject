@@ -9,14 +9,14 @@ from metasploit.utils.decorators import validate_json_request
 from .manager import ApiManager
 
 
-class CollectionApi(object):
+class ControllerApi(object):
     """
     Base class for all the collection API classes
     """
     pass
 
 
-class SecurityGroupsApi(CollectionApi):
+class SecurityGroupsController(ControllerApi):
 
     security_group_collection = DatabaseCollections.SECURITY_GROUPS
 
@@ -32,7 +32,7 @@ class SecurityGroupsApi(CollectionApi):
             SecurityGroupNotFoundError: in case there is not a security groups.
         """
         return ApiManager(
-            collection_type=SecurityGroupsApi.security_group_collection,
+            collection_type=SecurityGroupsController.security_group_collection,
             single_amazon_document=False,
             collection_name=global_constants.SECURITY_GROUPS,
             amazon_resource_type=global_constants.SECURITY_GROUPS
@@ -53,7 +53,7 @@ class SecurityGroupsApi(CollectionApi):
             SecurityGroupNotFoundError: in case there is not a security group with the ID.
         """
         return ApiManager(
-            collection_type=SecurityGroupsApi.security_group_collection,
+            collection_type=SecurityGroupsController.security_group_collection,
             single_amazon_document=True,
             amazon_resource_type=global_constants.SECURITY_GROUP,
             amazon_resource_id=id
@@ -86,7 +86,7 @@ class SecurityGroupsApi(CollectionApi):
             ClientError: in case there is a duplicate security group that is already exist.
         """
         return ApiManager(
-            collection_type=SecurityGroupsApi.security_group_collection,
+            collection_type=SecurityGroupsController.security_group_collection,
             client_request=request.json
         ).create_amazon_resources.create_security_group
 
@@ -105,7 +105,7 @@ class SecurityGroupsApi(CollectionApi):
             SecurityGroupNotFoundError: in case there is not a security group with the ID.
         """
         return ApiManager(
-            collection_type=SecurityGroupsApi.security_group_collection,
+            collection_type=SecurityGroupsController.security_group_collection,
             single_amazon_document=True,
             amazon_resource_id=id,
             amazon_resource_type=global_constants.SECURITY_GROUP
@@ -144,7 +144,7 @@ class SecurityGroupsApi(CollectionApi):
             ClientError: in case there is the requested inbound permissions already exist.
         """
         return ApiManager(
-            collection_type=SecurityGroupsApi.security_group_collection,
+            collection_type=SecurityGroupsController.security_group_collection,
             single_amazon_document=True,
             client_request=request.json,
             amazon_resource_id=id,
@@ -152,7 +152,7 @@ class SecurityGroupsApi(CollectionApi):
         ).update_resource.modify_security_group_inbound_permissions
 
 
-class InstancesApi(CollectionApi):
+class InstancesController(ControllerApi):
 
     instance_collection = DatabaseCollections.INSTANCES
 
@@ -190,7 +190,7 @@ class InstancesApi(CollectionApi):
             ParamValidationError: in case the parameters by the client to create instances are not valid.
         """
         return ApiManager(
-            collection_type=InstancesApi.instance_collection,
+            collection_type=InstancesController.instance_collection,
             client_request=request.json
         ).create_amazon_resources.create_instance
 
@@ -206,7 +206,7 @@ class InstancesApi(CollectionApi):
             AmazonResourceNotFoundError: in case there are not instances.
         """
         return ApiManager(
-            collection_type=InstancesApi.instance_collection,
+            collection_type=InstancesController.instance_collection,
             amazon_resource_type=global_constants.INSTANCES,
             single_amazon_document=False,
             collection_name=global_constants.INSTANCES
@@ -227,7 +227,7 @@ class InstancesApi(CollectionApi):
             AmazonResourceNotFoundError: in case there is not an instance with the ID.
         """
         return ApiManager(
-            collection_type=InstancesApi.instance_collection,
+            collection_type=InstancesController.instance_collection,
             amazon_resource_type=global_constants.INSTANCE,
             amazon_resource_id=id,
             single_amazon_document=True
@@ -248,72 +248,14 @@ class InstancesApi(CollectionApi):
             AmazonResourceNotFoundError: in case there is not an instance with the ID.
         """
         return ApiManager(
-            collection_type=InstancesApi.instance_collection,
+            collection_type=InstancesController.instance_collection,
             amazon_resource_id=id,
             amazon_resource_type=global_constants.INSTANCE,
             single_amazon_document=True
         ).delete_resource.delete_instance
 
 
-class ContainersApi(CollectionApi):
-
-    @staticmethod
-    @validate_json_request("Image")
-    def create_containers_endpoint(id):
-        """
-        Create containers by instance ID. Containers will be created over the instance with the specified ID.
-
-        Args:
-            id (str): instance ID.
-
-        Returns:
-            ApiResponse: an api response object.
-
-        Examples:
-            {
-                "1": {
-                    "Image": "ubuntu",
-                    "Command": "sleep 300"
-                }
-            }
-
-        Raises:
-            ImageNotFound: in case the image was not found on the docker server.
-            ApiError: in case the docker server returns an error.
-            TypeError: in case the request doesn't have the required arguments.
-        """
-        return ApiManager(
-            collection_type=InstancesApi.instance_collection,
-            amazon_resource_id=id,
-            client_request=request.json,
-            amazon_resource_type=global_constants.INSTANCE
-        ).create_docker_resources.create_container
-
-    @staticmethod
-    def start_container_endpoint(instance_id, container_id):
-        """
-        Start a container in the instance.
-
-        Args:
-            instance_id (str): instance ID.
-            container_id (str): container ID.
-
-        Returns:
-            ApiResponse: an api response object.
-
-        Raises:
-            AmazonResourceNotFoundError: in case the instance ID is not valid.
-            DockerResourceNotFoundError: in case there aren't any available containers.
-        """
-        return ApiManager(
-            collection_type=InstancesApi.instance_collection,
-            amazon_resource_id=instance_id,
-            docker_resource_id=container_id,
-            single_docker_document=True,
-            docker_resource_type=global_constants.CONTAINER,
-            amazon_resource_type=global_constants.INSTANCE,
-            docker_document_type=global_constants.CONTAINERS
-        ).update_resource.start_container
+class ContainersController(ControllerApi):
 
     @staticmethod
     def get_all_instance_containers_endpoint(id):
@@ -331,7 +273,7 @@ class ContainersApi(CollectionApi):
             DockerResourceNotFoundError: in case there aren't any available containers.
         """
         return ApiManager(
-            collection_type=InstancesApi.instance_collection,
+            collection_type=InstancesController.instance_collection,
             amazon_resource_id=id,
             docker_resource_type=global_constants.CONTAINERS,
             docker_document_type=global_constants.CONTAINERS,
@@ -356,7 +298,7 @@ class ContainersApi(CollectionApi):
             DockerResourceNotFoundError: in case there aren't any available containers.
         """
         return ApiManager(
-            collection_type=InstancesApi.instance_collection,
+            collection_type=InstancesController.instance_collection,
             amazon_resource_id=instance_id,
             docker_resource_id=container_id,
             single_docker_document=True,
@@ -364,20 +306,6 @@ class ContainersApi(CollectionApi):
             amazon_resource_type=global_constants.INSTANCE,
             docker_document_type=global_constants.CONTAINERS
         ).get_resources.docker_resource
-
-    @staticmethod
-    def get_all_instances_containers_endpoint():
-        """
-        Container endpoint to get all the containers of all the instances from the DB.
-
-        Returns:
-            ApiResponse: an api response object.
-
-        Raises:
-            AmazonResourceNotFoundError: in case the instance ID is not valid.
-            DockerResourceNotFoundError: in case there aren't any available containers.
-        """
-        # return get_all_instances_containers_from_database()
 
     @staticmethod
     def delete_container_endpoint(instance_id, container_id):
@@ -397,7 +325,7 @@ class ContainersApi(CollectionApi):
             ApiError: in case the docker server returns an error.
         """
         return ApiManager(
-            collection_type=InstancesApi.instance_collection,
+            collection_type=InstancesController.instance_collection,
             amazon_resource_id=instance_id,
             docker_resource_id=container_id,
             single_docker_document=True,
@@ -405,26 +333,6 @@ class ContainersApi(CollectionApi):
             amazon_resource_type=global_constants.INSTANCE,
             docker_document_type=global_constants.CONTAINERS
         ).delete_resource.delete_container
-
-    @staticmethod
-    @validate_json_request("Command")
-    def execute_command_endpoint(instance_id, container_id):
-        """
-        Executes a command in the container endpoint, similar to "Docker exec" command.
-
-        Args:
-            instance_id (str): instance ID.
-            container_id (str): container ID.
-
-        Returns:
-            ApiResponse: an api response object.
-        """
-        # return create_update_resource(
-        #     function=execute_command_in_container_through_api,
-        #     code=HttpCodes.OK,
-        #     instance_id=instance_id,
-        #     container_id=container_id
-        # )
 
     @staticmethod
     def run_container_with_metasploit_daemon_endpoint(instance_id):
@@ -435,13 +343,13 @@ class ContainersApi(CollectionApi):
              instance_id (str): instance ID.
         """
         return ApiManager(
-            collection_type=InstancesApi.instance_collection,
+            collection_type=InstancesController.instance_collection,
             amazon_resource_id=instance_id,
             amazon_resource_type=global_constants.INSTANCE,
         ).create_docker_resources.run_metasploit_container
 
 
-class DockerImagesApi(CollectionApi):
+class DockerImagesController(ControllerApi):
 
     @staticmethod
     @validate_json_request("Repository")
@@ -470,56 +378,22 @@ class DockerImagesApi(CollectionApi):
             ApiError: in case docker server returns an error.
         """
         return ApiManager(
-            collection_type=InstancesApi.instance_collection,
+            collection_type=InstancesController.instance_collection,
             amazon_resource_id=id,
             client_request=request.json,
             single_amazon_document=True,
             amazon_resource_type=global_constants.INSTANCE,
         ).create_docker_resources.pull_image
 
-    @staticmethod
-    def get_instance_images_endpoint(instance_id):
-        """
-        Get all instance docker images by instance ID.
 
-        Args:
-            instance_id (str): instance ID.
-
-        Returns:
-            ApiResponse: an api response object.
-
-        Raises:
-            ImageNotFoundError: in case there aren't any images available.
-            AmazonResourceNotFoundError: in case the instance was not found.
-        """
-        # return get_all_instance_images_from_database(instance_id=instance_id)
-
-
-class DockerNetworksApi(CollectionApi):
-
-    @staticmethod
-    @validate_json_request("name")
-    def create_network_endpoint(instance_id):
-        """
-        the endpoint function to create a docker network over the docker server.
-        """
-        return ApiManager(
-            collection_type=InstancesApi.instance_collection,
-            amazon_resource_id=instance_id,
-            client_request=request.json,
-            single_amazon_document=True,
-            amazon_resource_type=global_constants.INSTANCE,
-        ).create_docker_resources.create_docker_network
-
-
-class MetasploitController(CollectionApi):
+class MetasploitController(ControllerApi):
 
     @staticmethod
     @validate_json_request("target", "module_type", "exploit_name", "payloads")
     def run_exploit(instance_id):
 
         return ApiManager(
-            collection_type=InstancesApi.instance_collection,
+            collection_type=InstancesController.instance_collection,
             amazon_resource_id=instance_id,
             client_request=request.json,
             single_amazon_document=True,
@@ -531,7 +405,7 @@ class MetasploitController(CollectionApi):
     def scan_ports(instance_id):
 
         return ApiManager(
-            collection_type=InstancesApi.instance_collection,
+            collection_type=InstancesController.instance_collection,
             amazon_resource_id=instance_id,
             client_request=request.json,
             single_amazon_document=True,

@@ -77,8 +77,7 @@ class ContainerOperations(DockerOperations):
             "stdin_open": True,
             "tty": True,
             "ports": {port: port},
-            "detach": True,
-            "network": "metasploitable_network"
+            "detach": True
         }
 
         container = self.run_container(image="phocean/msf", kwargs=kwargs)
@@ -184,27 +183,3 @@ class ImageOperations(DockerOperations):
             TypeError – If neither path nor fileobj is specified.
         """
         return self.docker_server.docker.image_collection.build(**kwargs)
-
-
-class NetworkOperations(DockerOperations):
-
-    def create_network(self, name, kwargs):
-        """
-        Creates docker network for the containers over an instance. Similar to the ``docker network create``.
-
-        Args:
-            name (str): the name of the network that will be created.
-
-            Keyword arguments:
-                see create params - https://docker-py.readthedocs.io/en/stable/networks.html
-
-        Returns:
-            Network: a network object.
-        """
-        return self.docker_server.docker.network_collection.create(name=name, **kwargs)
-
-    def get_network(self):
-        """
-        Get network object
-        """
-        return self.docker_server.docker.network_collection.get(network_id=self.docker_resource_id)

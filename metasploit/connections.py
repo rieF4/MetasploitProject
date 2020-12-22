@@ -115,7 +115,7 @@ class Metasploit(Connection):
         return msfrpc.MsfConsole(rpc=self.metasploit_client)
 
     def destory_console(self):
-        return self.host_console.destroy()
+        self.host_console.destroy()
 
     @property
     def host_console(self):

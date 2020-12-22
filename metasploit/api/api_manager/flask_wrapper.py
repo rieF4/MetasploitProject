@@ -45,23 +45,17 @@ class FlaskAppWrapper(object):
                     '/DockerServerInstances/Get',
                     '/DockerServerInstances/Get/<id>',
                     '/DockerServerInstances/Delete/<id>',
-                    '/DockerServerInstances/<id>/CreateContainers',
                     '/DockerServerInstances/<id>/Containers/Get',
                     '/DockerServerInstances/<instance_id>/Containers/Get/<container_id>',
-                    '/DockerServerInstances/Containers/Get',
                     '/DockerServerInstances/<instance_id>/Containers/Delete/<container_id>',
-                    '/DockerServerInstances/<instance_id>/Containers/Start/<container_id>',
                     '/DockerServerInstances/<id>/Images/Pull',
-                    '/DockerServerInstances/<instance_id>/Images/Get',
-                    '/DockerServerInstances/<instance_id>/Containers/ExecuteCommand/<container_id>',
                     '/DockerServerInstances/<instance_id>/Containers/CreateMetasploitContainer',
-                    '/DockerServerInstances/<instance_id>/Networks/Create',
                     '/DockerServerInstances/<instance_id>/Metasploit/RunExploit',
                     '/DockerServerInstances/<instance_id>/Metasploit/ScanOpenPorts'
             ]
         }
 
-        return jsonify(url_error), 404
+        return jsonify(url_error), HttpCodes.NOT_FOUND
 
     @app.errorhandler(HttpCodes.BAD_REQUEST)
     def method_not_allowed(self):
@@ -70,7 +64,7 @@ class FlaskAppWrapper(object):
             "AvailableMethods": "In progress"
         }
 
-        return jsonify(method_not_allowed_err), 400
+        return jsonify(method_not_allowed_err), HttpCodes.BAD_REQUEST
 
     def get_app(self):
         """
@@ -101,7 +95,7 @@ class FlaskAppWrapper(object):
         Examples:
              add_url_rules_params = [
             (
-                '/SecurityGroupsApi/Get',
+                '/SecurityGroupsController/Get',
                 'SecurityGroup.get_security_groups_endpoint',
                 SecurityGroup.get_security_groups_endpoint,
                 [HttpMethods.GET]

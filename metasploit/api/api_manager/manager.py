@@ -319,35 +319,6 @@ class CreateDockerResources(ResourceOperation):
 
     @property
     @client_request_modifier(code=HttpCodes.CREATED)
-    def create_container(self, req=None):
-        """
-        Creates a container over a docker server instance in AWS and inserts it in to the DB.
-
-        Args:
-            req (dict): the request from the client.
-
-        Returns:
-            dict: a container document.
-        """
-        container = docker_operations.ContainerOperations(docker_server_id=self.amazon_resource_id).create_container(
-            image=req.pop("Image"),
-            command=req.pop("Command", None),
-            kwargs=req
-        )
-
-        container_response = self.api_manager.container_response(
-            http_status_code=HttpCodes.CREATED,
-            container=container
-        ).response
-
-        self.api_manager.container_database_manager().insert_container_document(
-            new_container_document=container_response
-        )
-
-        return container_response
-
-    @property
-    @client_request_modifier(code=HttpCodes.CREATED)
     def pull_image(self, req=None):
         """
         Pulls an image in a docker server instance in AWS and inserts it in to the DB.
@@ -612,7 +583,7 @@ class DeleteResource(ResourceOperation):
         """
         docker_operations.ContainerOperations(
             docker_server_id=self.amazon_resource_id, docker_resource_id=self.api_manager.docker_resource_id
-        ).container.remove()
+        ).container.remove(force=True)
 
         self.api_manager.container_database_manager().delete_container_document()
 
@@ -645,21 +616,3 @@ class UpdateResource(ResourceOperation):
 
         security_group_response = self.amazon_document
         return security_group_response
-
-    @property
-    def start_container(self):
-        """
-        Start a container that is in a "stopped" state
-        """
-        container = docker_operations.ContainerOperations(
-            docker_server_id=self.amazon_resource_id, docker_resource_id=self.docker_resource_id
-        ).container
-
-        if container.status != "running":
-            container.start()
-
-        self.api_manager.container_database_manager()
-
-        return self.api_manager.container_response(
-            http_status_code=HttpCodes.OK, response=self.docker_document
-        ).make_response

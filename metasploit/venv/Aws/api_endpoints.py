@@ -79,7 +79,7 @@ class FlaskAppWrapper(object):
         Examples:
              add_url_rules_params = [
             (
-                '/SecurityGroupsApi/Get',
+                '/SecurityGroupsController/Get',
                 'SecurityGroup.get_security_groups_endpoint',
                 SecurityGroup.get_security_groups_endpoint,
                 [HttpMethods.GET]
@@ -606,115 +606,115 @@ if __name__ == "__main__":
     flask_wrapper.add_endpoints(
         (
             '/SecurityGroups/Get',
-            'SecurityGroupsApi.get_security_groups_endpoint',
+            'SecurityGroupsController.get_security_groups_endpoint',
             SecurityGroupsApi.get_security_groups_endpoint,
             [HttpMethods.GET]
         ),
         (
             '/SecurityGroups/Get/<id>',
-            'SecurityGroupsApi.get_specific_security_group_endpoint',
+            'SecurityGroupsController.get_specific_security_group_endpoint',
             SecurityGroupsApi.get_specific_security_group_endpoint,
             [HttpMethods.GET]
         ),
         (
             '/SecurityGroups/Create',
-            'SecurityGroupsApi.create_security_groups_endpoint',
+            'SecurityGroupsController.create_security_groups_endpoint',
             SecurityGroupsApi.create_security_groups_endpoint,
             [HttpMethods.POST]
         ),
         (
             '/SecurityGroups/Delete/<id>',
-            'SecurityGroupsApi.delete_specific_security_group_endpoint',
+            'SecurityGroupsController.delete_specific_security_group_endpoint',
             SecurityGroupsApi.delete_specific_security_group_endpoint,
             [HttpMethods.DELETE]
         ),
         (
             '/SecurityGroups/<id>/UpdateInboundPermissions',
-            'SecurityGroupsApi.modify_security_group_inbound_permissions_endpoint',
+            'SecurityGroupsController.modify_security_group_inbound_permissions_endpoint',
             SecurityGroupsApi.modify_security_group_inbound_permissions_endpoint,
             [HttpMethods.PATCH]
         ),
         (
             '/DockerServerInstances/Create',
-            'InstancesApi.create_instances_endpoint',
+            'InstancesController.create_instances_endpoint',
             InstancesApi.create_instances_endpoint,
             [HttpMethods.POST]
         ),
         (
             '/DockerServerInstances/Get',
-            'InstancesApi.get_all_instances_endpoint',
+            'InstancesController.get_all_instances_endpoint',
             InstancesApi.get_all_instances_endpoint,
             [HttpMethods.GET]
         ),
         (
             '/DockerServerInstances/Get/<id>',
-            'InstancesApi.get_specific_instance_endpoint',
+            'InstancesController.get_specific_instance_endpoint',
             InstancesApi.get_specific_instance_endpoint,
             [HttpMethods.GET]
         ),
         (
             '/DockerServerInstances/Delete/<id>',
-            'InstancesApi.delete_instance_endpoint',
+            'InstancesController.delete_instance_endpoint',
             InstancesApi.delete_instance_endpoint,
             [HttpMethods.DELETE]
         ),
         (
             '/DockerServerInstances/<id>/CreateContainers',
-            'ContainersApi.create_containers_endpoint',
+            'ContainersController.create_containers_endpoint',
             ContainersApi.create_containers_endpoint,
             [HttpMethods.POST]
         ),
         (
             '/DockerServerInstances/<id>/Containers/Get',
-            'ContainersApi.get_all_instance_containers_endpoint',
+            'ContainersController.get_all_instance_containers_endpoint',
             ContainersApi.get_all_instance_containers_endpoint,
             [HttpMethods.GET]
         ),
         (
             '/DockerServerInstances/<instance_id>/Containers/Get/<container_id>',
-            'ContainersApi.get_instance_container_endpoint',
+            'ContainersController.get_instance_container_endpoint',
             ContainersApi.get_instance_container_endpoint,
             [HttpMethods.GET]
         ),
         (
             '/DockerServerInstances/Containers/Get',
-            'ContainersApi.get_all_instances_containers_endpoint',
+            'ContainersController.get_all_instances_containers_endpoint',
             ContainersApi.get_all_instances_containers_endpoint,
             [HttpMethods.GET]
         ),
         (
             '/DockerServerInstances/<instance_id>/Containers/Delete/<container_id>',
-            'ContainersApi.delete_container_endpoint',
+            'ContainersController.delete_container_endpoint',
             ContainersApi.delete_container_endpoint,
             [HttpMethods.DELETE]
         ),
         (
             '/DockerServerInstances/<instance_id>/Containers/Start/<container_id>',
-            'ContainersApi.start_container_endpoint',
+            'ContainersController.start_container_endpoint',
             ContainersApi.start_container_endpoint,
             [HttpMethods.PATCH],
         ),
         (
             '/DockerServerInstances/<id>/Images/Pull',
-            'DockerImagesApi.pull_instance_images_endpoint',
+            'DockerImagesController.pull_instance_images_endpoint',
             DockerImagesApi.pull_instance_images_endpoint,
             [HttpMethods.POST]
         ),
         (
             '/DockerServerInstances/<instance_id>/Images/Get',
-            'DockerImagesApi.get_instance_images_endpoint',
+            'DockerImagesController.get_instance_images_endpoint',
             DockerImagesApi.get_instance_images_endpoint,
             [HttpMethods.GET]
         ),
         (
             '/DockerServerInstances/<instance_id>/Containers/ExecuteCommand/<container_id>',
-            'ContainersApi.execute_command_endpoint',
+            'ContainersController.execute_command_endpoint',
             ContainersApi.execute_command_endpoint,
             [HttpMethods.PATCH]
         ),
         (
             '/DockerServerInstances/<instance_id>/Containers/CreateMetasploitContainer',
-            'ContainersApi.run_container_with_metasploit_daemon_endpoint',
+            'ContainersController.run_container_with_metasploit_daemon_endpoint',
             ContainersApi.run_container_with_metasploit_daemon_endpoint,
             [HttpMethods.POST]
         )

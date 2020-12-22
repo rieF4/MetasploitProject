@@ -148,9 +148,7 @@ class ExploitExecution(ModuleExecution):
             exploit_job = exploit.execute(payload=payload)
             exploit_payload_json = {}
 
-            # need to add here a sampler to
             time.sleep(5)
-            print("slept for 5 seconds")
 
             for session_num, session_details in self.metasploit_connection.metasploit_client.sessions.list.items():
 
@@ -199,6 +197,7 @@ class AuxiliaryExecution(ModuleExecution):
             console.write(command=cmd)
 
             while console_busy:
+                time.sleep(10)
                 output = console.read()
                 if not output['busy']:
                     console_busy = False

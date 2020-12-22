@@ -1,9 +1,11 @@
+import time
 from metasploit import constants as global_constants
 
 from .errors import (
     BadRequest,
     PortNotFoundError,
-    DuplicateImageError
+    DuplicateImageError,
+    TimeoutExpiredError
 )
 
 
@@ -108,3 +110,52 @@ class HttpMethods:
     PUT = 'PUT'
     DELETE = 'DELETE'
     PATCH = 'PATCH'
+
+
+class TimeoutSampler(object):
+
+    def __init__(self, timeout, sleep, func, *func_args, **func_kwargs):
+        self.timeout = timeout
+        ''' Timeout in seconds. '''
+        self.sleep = sleep
+        ''' Sleep interval seconds. '''
+
+        self.func = func
+        ''' A function to sample. '''
+        self.func_args = func_args
+        ''' Args for func. '''
+        self.func_kwargs = func_kwargs
+        ''' Kwargs for func. '''
+
+        self.start_time = None
+        ''' Time of starting the sampling. '''
+        self.last_sample_time = None
+        ''' Time of last sample. '''
+
+    def __iter__(self):
+        if self.start_time is None:
+            self.start_time = time.time()
+        while True:
+            self.last_sample_time = time.time()
+            yield self.func(*self.func_args, **self.func_kwargs)
+            if self.timeout < (time.time() - self.start_time):
+                raise TimeoutExpiredError(msg=f"Timeout occurred sampling {self.func.__name__}")
+            time.sleep(self.sleep)
+
+    def iterate_over_func_results(self, result):
+        """
+        Samples the function and in case the function gets the desired result (True or False).
+
+        Args:
+            result (bool): expected result from the function.
+
+        Raises:
+            TimeoutExpiredError: in case the timeout was reached
+        """
+        try:
+            for res in self:
+                if result == res:
+                    return True
+        except TimeoutExpiredError as err:
+            print(err)
+            return False
