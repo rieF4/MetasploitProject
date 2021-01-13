@@ -57,14 +57,14 @@ class FlaskAppWrapper(object):
 
         return jsonify(url_error), HttpCodes.NOT_FOUND
 
-    @app.errorhandler(HttpCodes.BAD_REQUEST)
+    @app.errorhandler(HttpCodes.METHOD_NOT_ALLOWED)
     def method_not_allowed(self):
         method_not_allowed_err = {
             "Error": f"Method {request.method} is not allowed in URL {request.base_url}",
             "AvailableMethods": "In progress"
         }
 
-        return jsonify(method_not_allowed_err), HttpCodes.BAD_REQUEST
+        return jsonify(method_not_allowed_err), HttpCodes.METHOD_NOT_ALLOWED
 
     def get_app(self):
         """

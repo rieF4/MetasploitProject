@@ -1,7 +1,9 @@
 import re
+import nmap
 import time
 
 from metasploit.connections import Metasploit
+from metasploit.api import utils as global_utils
 from . import utils
 
 
@@ -148,7 +150,7 @@ class ExploitExecution(ModuleExecution):
             exploit_job = exploit.execute(payload=payload)
             exploit_payload_json = {}
 
-            time.sleep(5)
+            time.sleep(7)
 
             for session_num, session_details in self.metasploit_connection.metasploit_client.sessions.list.items():
 
@@ -206,3 +208,37 @@ class AuxiliaryExecution(ModuleExecution):
                     self.metasploit_connection.destory_console()
                     return re.findall(pattern=f"{self.target_host}:[0-9]+", string=output['data'])
 
+    @property
+    def db_nmap_vulnerabilites(self):
+
+        console = self.metasploit_connection.host_console
+
+        console_busy = True
+        console.write(command=f'db_nmap -v --script vuln {self.target_host}')
+
+        while console_busy:
+            time.sleep(10)
+            console_output = console.read()
+            print(console_output['data'])
+            if not console_output['busy']:
+                self.metasploit_connection.destory_console()
+                return console_output['data']
+        return ""
+
+    @property
+    def local_nmap_show_vulnerabilites(self):
+
+        nmap_obj = nmap.PortScanner()
+        vulnerabilities_found = {}
+
+        nmap_script_scan_res = nmap_obj.scan(hosts=self.target_host, arguments='-v --script vuln')
+
+        if nmap_script_scan_res['nmap']['scaninfo']['error']:
+            return {}
+
+        for tcp_ports_result in nmap_script_scan_res['scan'][self.target_host]['tcp'].values():
+            cur_vuln_script_result = tcp_ports_result['script']
+            for vuln_name, vuln_details in cur_vuln_script_result.items():
+                if 'ERROR' not in vuln_details:
+                    vulnerabilities_found[vuln_name] = global_utils.remove_trailing_spaces(string=vuln_details)
+        return vulnerabilities_found

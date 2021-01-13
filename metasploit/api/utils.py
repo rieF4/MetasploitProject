@@ -159,3 +159,19 @@ class TimeoutSampler(object):
         except TimeoutExpiredError as err:
             print(err)
             return False
+
+
+def remove_trailing_spaces(string):
+    """
+    Removes trailing spaces from a string
+
+    Args:
+        string (str): a string to remove spaces from.
+
+    Returns:
+        str: a string without trailing spaces
+    """
+    if isinstance(string, str):
+        string.replace("\n", "")
+        return "".join(string.split())
+    return ""
