@@ -243,7 +243,7 @@ class DatabaseOperations(object):
         try:
             self.collection_type.update_one(
                 filter={
-                    global_constants.ID: amazon_document,
+                    global_constants.ID: amazon_document[global_constants.ID],
                     f"{docker_document_type}s.{global_constants.ID}": docker_document_id
                 },
                 update={

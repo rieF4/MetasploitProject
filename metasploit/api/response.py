@@ -93,6 +93,7 @@ def create_new_response(obj, response_type='Instance'):
             "Metasploit": []
         }
     elif response_type == 'Container':
+        obj.reload()
         return {
             "_id": obj.id,
             "image": obj.image.tags,

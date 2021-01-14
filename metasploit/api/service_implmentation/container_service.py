@@ -1,5 +1,4 @@
 from metasploit.api.interfaces.services import ContainerService
-from metasploit.api.interfaces.services import DockerServerService
 from metasploit.api.database import (
     DatabaseOperations,
     DatabaseCollections
@@ -11,6 +10,7 @@ from metasploit.api.errors import (
     UpdateDatabaseError,
     ContainerCommandFailure
 )
+from metasploit.utils.decorators import update_containers_status
 from metasploit.api import response
 
 
@@ -33,6 +33,7 @@ class ContainerServiceImplementation(ContainerService):
     def delete_one(self, *args, **kwargs):
         return self.delete_container(instance_id=kwargs.get("instance_id"), container_id=kwargs.get("container_id"))
 
+    @update_containers_status
     def get_container(self, instance_id, container_id):
         """
         Gets a container from the DB.
@@ -55,6 +56,7 @@ class ContainerServiceImplementation(ContainerService):
                 error_msg=str(err), http_error_code=response.HttpCodes.NOT_FOUND
             ).make_response
 
+    @update_containers_status
     def get_all_containers(self, instance_id):
         """
         Gets all containers from the DB.
@@ -116,10 +118,14 @@ class ContainerServiceImplementation(ContainerService):
             ApiResponse: parsed ApiResponse obj with the container document(s) in case of success.
         """
         try:
+            ContainerOperations(
+                docker_server_id=instance_id, docker_resource_id=container_id
+            ).container.remove(force=True)
+
             self.database.delete_docker_document(
                 amazon_resource_id=instance_id, docker_resource_id=container_id, docker_document_type=self.type
             )
-            return response.ApiResponse(response='', http_status_code=response.HttpCodes.NO_CONTENT)
+            return response.ApiResponse(response='', http_status_code=response.HttpCodes.NO_CONTENT).make_response
         except UpdateDatabaseError as err:
             return response.ErrorResponse(
                 error_msg=str(err), http_error_code=response.HttpCodes.INTERNAL_SERVER_ERROR

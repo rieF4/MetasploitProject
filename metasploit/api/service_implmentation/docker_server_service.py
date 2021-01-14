@@ -47,6 +47,7 @@ class DockerServerServiceImplementation(DockerServerService):
                 error_msg=str(err), http_error_code=response.HttpCodes.NOT_FOUND
             ).make_response
 
+
     def get_all_docker_servers(self):
         """
         Gets all available docker servers from the DB.
