@@ -9,8 +9,8 @@ class Docker(Connection):
     This class attempts to connect to a specified docker server.
 
     Attributes:
-        _docker_client (DockerClient): The docker client object can be used to maintain docker operations.
-        _api_client (APIClient): The low level API object for docker.
+        _docker_client (DockerClient): The docker client obj can be used to maintain docker operations.
+        _api_client (APIClient): The low level API obj for docker.
     """
 
     def __init__(self, protocol, docker_server_ip, docker_port):
@@ -50,40 +50,40 @@ class Docker(Connection):
     @property
     def container_collection(self):
         """
-        Get a container collection object.
+        Get a container collection obj.
 
         Returns:
-            ContainerCollection: a container collection object.
+            ContainerCollection: a container collection obj.
         """
         return self._docker_client.containers
 
     @property
     def network_collection(self):
         """
-        Get a network collection object.
+        Get a network collection obj.
 
         Returns:
-            NetworkCollection: a network collection object.
+            NetworkCollection: a network collection obj.
         """
         return self._docker_client.networks
 
     @property
     def image_collection(self):
         """
-        Get an image collection object.
+        Get an image collection obj.
 
         Returns:
-            ImageCollection: a image collection object.
+            ImageCollection: a image collection obj.
         """
         return self._docker_client.images
 
     @property
     def config_collection(self):
         """
-        Get a config collection object.
+        Get a config collection obj.
 
         Returns:
-            ConfigCollection: a config collection object.
+            ConfigCollection: a config collection obj.
 
         """
         return self._docker_client.configs

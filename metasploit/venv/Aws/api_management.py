@@ -36,7 +36,7 @@ def client_request_modifier(code):
             Executes the function that handles a client request
 
             Args:
-                self (ResourceOperation): the object reference as self. e.g. CreateAmazonResources, UpdateResource.
+                self (ResourceOperation): the obj reference as self. e.g. CreateAmazonResources, UpdateResource.
             """
             response = {}
 
@@ -134,52 +134,52 @@ class ApiManager(object):
     @property
     def create_resources(self):
         """
-        Get CreateAmazonResources object that manages all create API operations.
+        Get CreateAmazonResources obj that manages all create API operations.
         """
         return CreateResource(self)
 
     @property
     def get_resources(self):
         """
-        Get GetResource object that manages all Get API operations.
+        Get GetResource obj that manages all Get API operations.
         """
         return GetResource(self)
 
     @property
     def delete_resource(self):
         """
-        Get DeleteResource object that manages all Delete API operations.
+        Get DeleteResource obj that manages all Delete API operations.
         """
         return DeleteResource(self)
 
     @property
     def update_resource(self):
         """
-        Get UpdateResource object that manages all Update API operations.
+        Get UpdateResource obj that manages all Update API operations.
         """
         return UpdateResource(self)
 
     def docker_server_database_manager(self, docker_server=None):
         """
-        Get docker server database manager object.
+        Get docker server database manager obj.
         """
         return DockerServerDatabaseManager(self, docker_server=docker_server)
 
     def security_group_database_manager(self, security_group=None):
         """
-        Get security group database manager object.
+        Get security group database manager obj.
         """
         return SecurityGroupDatabaseManager(self, security_group=security_group)
 
     def container_database_manager(self, docker_server=None, container=None):
         """
-        Get container database manager object.
+        Get container database manager obj.
         """
         return ContainerDatabaseManager(self, docker_server=docker_server, container=container)
 
     def image_database_manager(self, docker_server=None, image=None):
         """
-        Get image database manager object.
+        Get image database manager obj.
         """
         return ImageDatabaseManager(self, docker_server=docker_server, image=image)
 
@@ -189,7 +189,7 @@ class ResourceOperation(object):
     a base class for all operations in the API.
 
     Attributes:
-        api_manager (ApiManager): api manager object.
+        api_manager (ApiManager): api manager obj.
     """
     def __init__(self, api_manager):
         self._api_manager = api_manager
@@ -197,7 +197,7 @@ class ResourceOperation(object):
     @property
     def api_manager(self):
         """
-        Get ApiManager object.
+        Get ApiManager obj.
         """
         return self._api_manager
 
@@ -330,7 +330,7 @@ class GetResource(ResourceOperation):
         Get a resource(s) from the DB.
 
         Returns:
-            ApiResponse: an api response object.
+            ApiResponse: an api response obj.
         """
         return ApiResponse(response=self.api_manager.db_manager.document, http_status_code=HttpCodes.OK)
         # need to think of a way how to update container document
@@ -343,7 +343,7 @@ class GetResource(ResourceOperation):
             document_type (str): document type. eg. Constants.Containers/Constants.Images
 
         Returns:
-            ApiResponse: an api response object.
+            ApiResponse: an api response obj.
         """
         return ApiResponse(
             response=self.api_manager.db_manager.document[Constants.DOCKER][document_type],
@@ -355,7 +355,7 @@ class GetResource(ResourceOperation):
         Get a specific sub resource from the DB of an instance such as container, image or network.
 
         Returns:
-            ApiResponse: an api response object.
+            ApiResponse: an api response obj.
         """
         # documents = self.api_manager.db_manager.document[Constants.DOCKER][document_type]
         # return ApiResponse(
@@ -372,7 +372,7 @@ class DeleteResource(ResourceOperation):
         Deletes an instance from AWS and from the DB.
 
         Returns:
-            ApiResponse: an api response object.
+            ApiResponse: an api response obj.
         """
         Aws_Api_Functions.get_docker_server_instance(id=self.api_manager.amazon_resource_id).terminate()
         self.api_manager.db_manager.delete_amazon_document()
@@ -384,7 +384,7 @@ class DeleteResource(ResourceOperation):
         Deletes a security group from AWS and from the DB.
 
         Returns:
-            ApiResponse: an api response object.
+            ApiResponse: an api response obj.
         """
         Aws_Api_Functions.get_security_group_object(id=self.api_manager.amazon_resource_id)
         self.api_manager.db_manager.delete_amazon_document()
@@ -396,7 +396,7 @@ class DeleteResource(ResourceOperation):
         Deletes a container with docker sdk and remove it from the DB.
 
         Returns:
-            ApiResponse: an api response object.
+            ApiResponse: an api response obj.
         """
         Docker_Utils.get_container(
             instance_id=self.api_manager.amazon_resource_id, container_id=self.api_manager.docker_resource_id

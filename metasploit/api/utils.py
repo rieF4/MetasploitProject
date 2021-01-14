@@ -79,29 +79,23 @@ def validate_request_type(client_request):
         return False, err.__str__()
 
 
-def validate_api_request_arguments(api_requests, expected_args):
+def validate_api_request_arguments(api_request, expected_args):
     """
     Validates that the api request from the client has valid arguments for the api function that was used.
 
     Args:
-        api_requests (dict): a dictionary that composes the api requests from the client.
+        api_request (dict): a dictionary that composes the api request from the client.
         expected_args (list(str)): a list containing all the arguments that should be checked.
 
     Returns:
-        tuple (dict, bool): a dictionary with arguments that aren't valid if exists and False,
-        otherwise, otherwise dict with empty lists as values and True.
+        list: a list with arguments that aren't valid if exists, empty list otherwise
     """
-    bad_inputs = {}
-    is_valid_argument = True
+    bad_inputs = []
 
-    for key, api_req in api_requests.items():
-        bad_inputs[key] = []
-        for expected_arg in expected_args:
-            if expected_arg not in api_req:
-                is_valid_argument = False
-                bad_inputs[key].append(expected_arg)
-
-    return bad_inputs, is_valid_argument
+    for expected_arg in expected_args:
+        if expected_arg not in api_request:
+            bad_inputs.append(expected_arg)
+    return bad_inputs
 
 
 class HttpMethods:

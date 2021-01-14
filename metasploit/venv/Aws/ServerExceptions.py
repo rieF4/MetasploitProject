@@ -105,7 +105,7 @@ def choose_http_error_code(error):
     Returns the HTTP error code according to the error exception type.
 
     Args:
-        error (Exception): an exception object.
+        error (Exception): an exception obj.
 
     Returns:
         int: a http error code. (400's, 500's)

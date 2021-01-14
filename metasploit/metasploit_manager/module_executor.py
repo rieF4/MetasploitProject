@@ -27,7 +27,7 @@ class ModuleExecution(object):
     @property
     def metasploit_connection(self):
         """
-        Returns the metasploit connection object.
+        Returns the metasploit connection obj.
         """
         return self._metasploit_connection
 
@@ -44,7 +44,7 @@ class ModuleExecution(object):
             module_type (str): module type.
 
         Returns:
-            MsfModule: a msfmodule object. e.g. ExploitModule, AuxiliaryModule, PayloadModule.
+            MsfModule: a msfmodule obj. e.g. ExploitModule, AuxiliaryModule, PayloadModule.
         """
         utils.check_if_module_is_supported(
             module_name=module_name,
@@ -86,7 +86,7 @@ class ExploitExecution(ModuleExecution):
         Run the exploit with the payloads and build the json for the client.
 
         Args:
-            exploit (ExploitModule): exploit module object.
+            exploit (ExploitModule): exploit module obj.
             exploit_name (str): exploit name.
             payloads (list(str)): all the payloads requested by the client.
 
@@ -175,6 +175,33 @@ class ExploitExecution(ModuleExecution):
                 exploit_payload_json["target"] = self.target_host
                 json_exploit_list_with_each_payload.append(exploit_payload_json)
         return json_exploit_list_with_each_payload
+
+    def exploit_information(self, exploit_name, module_type='exploit'):
+        """
+        Gets detailed information about an exploit.
+
+        Args:
+            exploit_name (str): exploit name.
+            module_type (str): module type, defaults to 'exploit'.
+
+        Returns:
+            dict: details information about the exploit.
+        """
+        exploit = super().execute_module(module_name=exploit_name, module_type=module_type)
+
+        return {
+            "name": exploit.name,
+            "description": exploit.description,
+            "payloads": exploit.payloads,
+            "options": exploit.options,
+            "filledOptions": exploit.runoptions,
+            "requiredOptions": exploit.required,
+            "platform": exploit.platform,
+            "rank": exploit.rank,
+            "privileged": exploit.privileged,
+            "stance": exploit.stance,
+            "references": exploit.references
+        }
 
 
 class AuxiliaryExecution(ModuleExecution):

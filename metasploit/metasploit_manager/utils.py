@@ -32,7 +32,7 @@ def check_if_module_is_supported(module_name, module_type, metasploit_connection
     Args:
         module_name (str): module name to be executed. e.g. 'aix/local/ibstat_path'
         module_type (str): module type that module name belong to. e.g. 'exploit'
-        metasploit_connection (Metasploit): the metasploit object.
+        metasploit_connection (Metasploit): the metasploit obj.
 
     Raises:
         ModuleNotSupportedError: in case module type or name are invalid parameters.

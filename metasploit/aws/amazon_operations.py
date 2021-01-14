@@ -22,10 +22,10 @@ class SecurityGroupOperations(AmazonObjectOperations):
     @property
     def security_group_object(self):
         """
-        Returns the security group object by the security group ID.
+        Returns the security group obj by the security group ID.
 
         Returns:
-            SecurityGroup: a security group object if found.
+            SecurityGroup: a security group obj if found.
         """
         return aws_api.resource.SecurityGroup(self.amazon_resource_id)
 
@@ -59,10 +59,10 @@ class DockerServerInstanceOperations(AmazonObjectOperations):
     @property
     def aws_instance_object(self):
         """
-        Get the AWS instance object by its ID.
+        Get the AWS instance obj by its ID.
 
         Returns:
-            Aws.Instance: an AWS instance object if found
+            Aws.Instance: an AWS instance obj if found
 
         Raises:
             ClientError: in case there isn't an instance with the ID.
@@ -71,13 +71,13 @@ class DockerServerInstanceOperations(AmazonObjectOperations):
 
     def get_docker_server_instance(self, ssh_flag=False):
         """
-        Get the docker server instance object.
+        Get the docker server instance obj.
 
         Args:
             ssh_flag (bool): True if ssh connection needs to be deployed, False otherwise.
 
         Returns:
-            DockerServerInstance: a docker server instance object if exits, None otherwise.
+            DockerServerInstance: a docker server instance obj if exits, None otherwise.
         """
         return DockerServerInstance(instance_obj=self.aws_instance_object, ssh_flag=ssh_flag)
 
@@ -108,7 +108,7 @@ def create_security_group(kwargs):
                 DryRun=True|False
 
         Returns:
-            SecurityGroup: a security group object if created.
+            SecurityGroup: a security group obj if created.
 
         Raises:
             ParamValidationError: in case kwargs params are not valid to create a new security group.
@@ -119,7 +119,7 @@ def create_security_group(kwargs):
     ).security_group_object
 
 
-def create_instance(kwargs):
+def create_instance(**kwargs):
     """
     Args:
         kwargs (dict) - The API post request to create the instance.
@@ -134,10 +134,10 @@ def create_instance(kwargs):
             SecurityGroupIds=['group_id']
 
         instance = self._resource.create_instances(**kwargs)
-        The get API call is an instance object
+        The get API call is an instance obj
 
     Returns:
-        DockerServerInstance: docker server instance object if successful
+        DockerServerInstance: docker server instance obj if successful
     Raises:
         ParamValidationError: in case kwargs params are not valid to create a new instance.
     """

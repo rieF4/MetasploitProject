@@ -11,30 +11,11 @@ from .api_endpoints import (
 )
 
 
-def str_to_dict(string):
-    """
-    Args:
-        string (str):
-    """
-    d = {}
-    lst =  string.split()
-    for l in lst:
-        if ":" in l:
-            d[l]
+from metasploit.connections import Metasploit
 
-import queue
-queue.LifoQueue
-
-s = 'VULNERABLE: Apache byterange filter DoS State: VULNERABLE IDs: BID:49303 CVE:CVE-2011-3192 The Apache web server is vulnerable to a denial of service attack when numerous overlapping byte ranges are requested. Disclosure date: 2011-08-19 References: https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2011-3192 https://www.securityfocus.com/bid/49303 https://seclists.org/fulldisclosure/2011/Aug/175 https://www.tenable.com/plugins/nessus/55976'
-r = str_to_dict(string=s)
-print()
-
-
-# from metasploit.connections import Metasploit
-#
-# source_host = '3.17.4.62'
+# source_host = '18.218.217.142'
 # m = Metasploit(server=source_host, port=50000)
-# target_host = '172.17.0.3'
+# target_host = 'google.co.il'
 # result = []
 # for e in m.exploits[300:500]:
 #     try:
@@ -144,7 +125,7 @@ flask_wrapper.add_endpoints(
         [HttpMethods.POST]
     ),
     (
-        '/DockerServerInstances/<instance_id>/Metasploit/ScanOpenPorts',
+        '/DockerServerInstances/<instance_id>/Metasploit/<target>/ScanOpenPorts',
         'MetasploitController.scan_ports',
         MetasploitController.scan_ports,
         [HttpMethods.POST]

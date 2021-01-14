@@ -16,7 +16,7 @@ class DockerServerInstance(object):
     This class represents an instance in AWS with a docker server configured.
 
     Attributes:
-        _instance_obj (Aws.Instance): a aws instance object.
+        _instance_obj (Aws.Instance): a aws instance obj.
         _commands (list(Command)): a list of all the _commands that were executed on this instance.
         _ssh (SSH): a SSH client that opens a connection to the instance.
         _docker (Docker): a docker class that represents docker-container over an instance.
@@ -25,7 +25,7 @@ class DockerServerInstance(object):
     def __init__(self, instance_obj, ssh_flag=False, init_docker_server_flag=False):
         """
         Args:
-            instance_obj (Aws.Instance): Aws instance object.
+            instance_obj (Aws.Instance): Aws instance obj.
             ssh_flag (bool): indicate if the instance requires a SSH connection.
             True to open connection, False otherwise.
             init_docker_server_flag (bool): indicate if the instance needs to be configured with a docker server.
@@ -156,10 +156,7 @@ class DockerServerInstance(object):
                     for command in commands:
                         stdin, stdout, stderr = self._ssh.get_client().exec_command(command=command, timeout=10)
                         exit_cmd_status = stdout.channel.recv_exit_status()
-                        if not exit_cmd_status:  # means the command was successful - similar to echo $?
-                            cmd_details = self.Command(stdin=stdin, stdout=stdout, stderr=stderr, command=command)
-                            self._commands.append(cmd_details)
-                        else:
+                        if exit_cmd_status:  # means the command was not successful - similar to echo $?
                             ssh_flag = False
                             raise CommandFailureError(
                                 cmd=command, instance_id=self.instance_id
@@ -213,36 +210,3 @@ class DockerServerInstance(object):
         self.execute_shell_commands(
             commands=aws_constants.RELOAD_DOCKER_DAEMON
         )
-
-    class Command:
-        """
-        This class represents a command that was sent through SSH AWS
-
-        Attributes:
-            stdin (paramiko.channel.ChannelStdinFile) - The stdin of the running command
-            stdout (paramiko.channel.ChannelFile) - The stdout of the running command
-            stderr (paramiko.channel.ChannelStderrFile) - The stderr of the running command
-            command (str) - The command name that was executed
-
-        stdout and stderr can be treated as python files, if you want to print all the out put according to lines:
-            for line in stdout.read().splitlines():
-                print(line)
-        """
-
-        def __init__(self, stdin, stdout, stderr, command):
-            self._stdin = stdin
-            self._stdout = stdout
-            self._stderr = stderr
-            self._command = command
-
-        def get_stdin(self):
-            return self._stdin
-
-        def get_stdout(self):
-            return self._stdout
-
-        def get_stderr(self):
-            return self._stderr
-
-        def get_executed_command_name(self):
-            return self._command

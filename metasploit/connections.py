@@ -74,7 +74,7 @@ class Metasploit(Connection):
     Class that represents a connection to msfrpc daemon of metasploit.
 
     Attributes:
-        _metasploit_client (MsfRpcClient): msfrpc client object.
+        _metasploit_client (MsfRpcClient): msfrpc client obj.
     """
     def __init__(self, server, password='123456', port=55553):
         """

@@ -14,20 +14,8 @@ from metasploit.api.errors import (
     BadJsonInput,
     choose_http_error_code
 )
-from metasploit.connections import Metasploit
-
-
-def singleton(cls):
-    """
-    Make a class a Singleton class (only one instance)
-    """
-    @functools.wraps(cls)
-    def wrapper_singleton(*args, **kwargs):
-        if not wrapper_singleton.instance:
-            wrapper_singleton.instance = cls(*args, **kwargs)
-        return wrapper_singleton.instance
-    wrapper_singleton.instance = None
-    return wrapper_singleton
+from metasploit.aws.amazon_operations import DockerServerInstanceOperations
+from metasploit import constants as global_const
 
 
 def validate_json_request(*expected_args):
@@ -54,7 +42,7 @@ def validate_json_request(*expected_args):
                 kwargs (dict): function arguments.
 
             Returns:
-                ApiResponse: an api response object.
+                ApiResponse: an api response obj.
 
             Raises:
                 BadJsonInput: in case the parameters for the json request are not valid.
@@ -64,20 +52,45 @@ def validate_json_request(*expected_args):
             type_validation, msg = validate_request_type(client_request=request.json)
             if not type_validation:
                 return ErrorResponse(
-                    api_manager=None, error_msg=msg, http_error_code=HttpCodes.BAD_REQUEST, req=request.json
+                    error_msg=msg, http_error_code=HttpCodes.BAD_REQUEST, req=request.json
                 ).make_response
 
-            bad_inputs, is_valid_argument = validate_api_request_arguments(
-                api_requests=request.json, expected_args=expected_args
+            bad_inputs = validate_api_request_arguments(
+                api_request=request.json, expected_args=expected_args
             )
-
-            if not is_valid_argument:
+            if bad_inputs:
                 raise BadJsonInput(bad_inputs=bad_inputs)
 
             return api_func(*args, **kwargs)
 
         return wrapper_validate_json
     return decorator_validate_json
+
+
+def update_containers_status(func):
+
+    def wrapper(self):
+
+        database = self.database
+
+        instance_documents = database.get_all_amazon_documents()
+
+        for document in instance_documents:
+            docker_server_instance = DockerServerInstanceOperations(instance_id=document[global_const.ID]).docker_server
+            containers = docker_server_instance.docker.container_collection.list(all=True)
+
+            for container in containers:
+                for container_document in document["Containers"]:
+                    if container.id == container_document[global_const.ID]:
+                        if container.status != container_document["status"]:
+                            database.update_docker_document(
+                                docker_document_type="Container",
+                                docker_document_id=container.id,
+                                update={"Containers.$.status": container.status},
+                                docker_server_id=document[global_const.ID]
+                            )
+        func(self)
+    return wrapper
 
 
 def client_request_modifier(code):
@@ -99,7 +112,7 @@ def client_request_modifier(code):
             Executes the function that handles a client request
 
             Args:
-                self (ResourceOperation): the object reference as self. e.g. CreateAmazonResources, UpdateResource.
+                self (ResourceOperation): the obj reference as self. e.g. CreateAmazonResources, UpdateResource.
             """
             response = {}
 
@@ -126,44 +139,3 @@ def client_request_modifier(code):
 
         return client_request_wrapper
     return client_request_decorator
-
-
-def exploit_request_modifier(execute_module_func):
-
-    def wrapper(self):
-
-        for target, exploit_params in self.api_manager.client_request.items():
-            try:
-                metasploit_connection = Metasploit(server=target, port=exploit_params['Port'])
-
-                module_name = exploit_params['ModuleName']
-                payloads = exploit_params['Payloads']
-                options = exploit_params['Options']
-                module_type = exploit_params['ModuleType']
-
-                # check_if_module_is_supported(
-                #     module_name=module_name, module_type=module_type, metasploit_connection=metasploit_connection
-                # )
-
-                module = metasploit_connection.modules.use(mtype=module_type, mname=module_name)
-                required_options = module.missing_required
-
-                # check_required_options_for_module(
-                #     required_params=required_options, options=options.keys(), module_name=module_name
-                # )
-
-                execute_module_func(
-                    self=self,
-                    target=target,
-                    module_name=module_name,
-                    payloads=payloads,
-                    options=options,
-                    connection=metasploit_connection,
-                    module_type=module_type
-                )
-            except Exception:
-                pass
-
-
-
-    return wrapper

@@ -155,7 +155,7 @@ class SecurityGroupsApi(CollectionApi):
         Security group endpoint that gets all the security groups available in the DB.
 
         Returns:
-            ApiResponse: an api response object.
+            ApiResponse: an api response obj.
 
          Raises:
             SecurityGroupNotFoundError: in case there is not a security groups.
@@ -177,7 +177,7 @@ class SecurityGroupsApi(CollectionApi):
             id (str): security group ID.
 
         Returns:
-            ApiResponse: an api response object.
+            ApiResponse: an api response obj.
 
         Raises:
             SecurityGroupNotFoundError: in case there is not a security group with the ID.
@@ -208,7 +208,7 @@ class SecurityGroupsApi(CollectionApi):
         }
 
         Returns:
-            ApiResponse: an api response object.
+            ApiResponse: an api response obj.
 
         Raises:
             ParamValidationError: in case the parameters by the client to create security groups are not valid.
@@ -230,7 +230,7 @@ class SecurityGroupsApi(CollectionApi):
             id (str): security group ID.
 
         Returns:
-            ApiResponse: an api response object.
+            ApiResponse: an api response obj.
 
         Raises:
             SecurityGroupNotFoundError: in case there is not a security group with the ID.
@@ -267,7 +267,7 @@ class SecurityGroupsApi(CollectionApi):
             id (str): security group ID.
 
         Returns:
-            ApiResponse: an api response object.
+            ApiResponse: an api response obj.
 
         Raises:
             SecurityGroupNotFoundError: in case there is not a security group with the ID.
@@ -312,7 +312,7 @@ class InstancesApi(CollectionApi):
         }
 
         Returns:
-            ApiResponse: an api response object.
+            ApiResponse: an api response obj.
 
         Raises:
             ParamValidationError: in case the parameters by the client to create instances are not valid.
@@ -330,7 +330,7 @@ class InstancesApi(CollectionApi):
         Instance endpoint the get all the available instances from the DB.
 
         Returns:
-            ApiResponse: an api response object.
+            ApiResponse: an api response obj.
 
         Raises:
             AmazonResourceNotFoundError: in case there are not instances.
@@ -351,7 +351,7 @@ class InstancesApi(CollectionApi):
             id (str): instance id.
 
         Returns:
-            ApiResponse: an api response object.
+            ApiResponse: an api response obj.
 
         Raises:
             AmazonResourceNotFoundError: in case there is not an instance with the ID.
@@ -372,7 +372,7 @@ class InstancesApi(CollectionApi):
             id (str): instance id.
 
         Returns:
-            ApiResponse: an api response object.
+            ApiResponse: an api response obj.
 
         Raises:
             AmazonResourceNotFoundError: in case there is not an instance with the ID.
@@ -396,7 +396,7 @@ class ContainersApi(CollectionApi):
             id (str): instance ID.
 
         Returns:
-            ApiResponse: an api response object.
+            ApiResponse: an api response obj.
 
         Examples:
             {
@@ -429,7 +429,7 @@ class ContainersApi(CollectionApi):
             container_id (str): container ID.
 
         Returns:
-            ApiResponse: an api response object.
+            ApiResponse: an api response obj.
 
         Raises:
             AmazonResourceNotFoundError: in case the instance ID is not valid.
@@ -447,7 +447,7 @@ class ContainersApi(CollectionApi):
             id (str): instance ID.
 
         Returns:
-            ApiResponse: an api response object.
+            ApiResponse: an api response obj.
 
         Raises:
             AmazonResourceNotFoundError: in case the instance ID is not valid.
@@ -472,7 +472,7 @@ class ContainersApi(CollectionApi):
             container_id (str): container ID.
 
         Returns:
-            ApiResponse: an api response object.
+            ApiResponse: an api response obj.
 
         Raises:
             AmazonResourceNotFoundError: in case the instance ID is not valid.
@@ -492,7 +492,7 @@ class ContainersApi(CollectionApi):
         Container endpoint to get all the containers of all the instances from the DB.
 
         Returns:
-            ApiResponse: an api response object.
+            ApiResponse: an api response obj.
 
         Raises:
             AmazonResourceNotFoundError: in case the instance ID is not valid.
@@ -511,7 +511,7 @@ class ContainersApi(CollectionApi):
             container_id (str): container ID.
 
         Returns:
-            ApiResponse: an api response object.
+            ApiResponse: an api response obj.
 
         Raises:
             AmazonResourceNotFoundError: in case the instance ID is not valid.
@@ -531,7 +531,7 @@ class ContainersApi(CollectionApi):
             container_id (str): container ID.
 
         Returns:
-            ApiResponse: an api response object.
+            ApiResponse: an api response obj.
         """
         # return create_update_resource(
         #     function=execute_command_in_container_through_api,
@@ -574,7 +574,7 @@ class DockerImagesApi(CollectionApi):
             id (str): instance ID.
 
         Returns:
-            ApiResponse: an api response object.
+            ApiResponse: an api response obj.
 
         Raises:
             AmazonResourceNotFoundError: in case it's invalid instance ID.
@@ -592,7 +592,7 @@ class DockerImagesApi(CollectionApi):
             instance_id (str): instance ID.
 
         Returns:
-            ApiResponse: an api response object.
+            ApiResponse: an api response obj.
 
         Raises:
             ImageNotFoundError: in case there aren't any images available.

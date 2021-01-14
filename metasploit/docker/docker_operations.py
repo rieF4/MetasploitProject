@@ -27,7 +27,7 @@ class ContainerOperations(DockerOperations):
                             https://docker-py.readthedocs.io/en/stable/containers.html#container-objects
 
         Returns:
-            Container: a container object if created successfully.
+            Container: a container obj if created successfully.
 
         Raises:
             ImageNotFound: in case the image was not found on the docker server.
@@ -46,7 +46,7 @@ class ContainerOperations(DockerOperations):
             kwargs (dict): https://docker-py.readthedocs.io/en/stable/containers.html#container-objects
 
             Returns:
-                Container: a container object if created successfully.
+                Container: a container obj if created successfully.
 
             Raises:
                 ImageNotFound: in case the image was not found on the docker server.
@@ -65,7 +65,7 @@ class ContainerOperations(DockerOperations):
             containers_documents (dict): all of the the containers documents of the instance.
 
         Returns:
-            Container: a container object with msfrpcd deployed.
+            Container: a container obj with msfrpcd deployed.
 
         Raises:
             ContainerCommandFailure: in case the command fails to be executed on the container.
@@ -95,10 +95,10 @@ class ContainerOperations(DockerOperations):
     @property
     def container(self):
         """
-        Get container object by instance and container IDs.
+        Get container obj by instance and container IDs.
 
         Returns:
-            Container: a container object if found.
+            Container: a container obj if found.
 
         Raises:
             ApiError: in case the docker server returns an error.
@@ -132,7 +132,7 @@ class ContainerOperations(DockerOperations):
                 exit_code: (int): Exit code for the executed command or None if either stream or socket is True.
                 output: (generator, bytes, or tuple):
                     If stream=True, a generator yielding response chunks.
-                    If socket=True, a socket object for the connection.
+                    If socket=True, a socket obj for the connection.
                     If demux=True, a tuple of two bytes: stdout and stderr.
                     A bytestring containing response data otherwise.
 
@@ -174,7 +174,7 @@ class ImageOperations(DockerOperations):
             https://docker-py.readthedocs.io/en/stable/images.html#
 
         Returns:
-            tuple (Image, Generator): The first item is the Image object for
+            tuple (Image, Generator): The first item is the Image obj for
             the image that was build. The second item is a generator of the build logs as JSON-decoded objects.
 
         Raises:

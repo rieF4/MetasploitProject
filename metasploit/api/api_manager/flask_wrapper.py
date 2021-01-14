@@ -149,5 +149,5 @@ class EndpointAction(object):
         except (ApiException, DockerException, Boto3Error) as err:
             http_error = choose_http_error_code(error=err)
             return ErrorResponse(
-                api_manager=None, error_msg=err.__str__(), http_error_code=http_error, req=request.json, path=request.base_url
+                error_msg=err.__str__(), http_error_code=http_error, req=request.json, path=request.base_url
             ).make_response

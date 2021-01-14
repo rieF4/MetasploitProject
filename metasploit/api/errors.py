@@ -49,16 +49,14 @@ class ResourceNotFoundError(ApiException):
     This class represents an exception for a resource that was not found in the DB.
     """
     def __init__(self, type, id=None):
-        if id:
-            msg = f"{type} with ID {id} was not found"
-        else:
-            msg = f"{type} were not found."
+        msg = f"{type} with ID {id} was not found"
         super().__init__(msg)
 
 
 class AmazonResourceNotFoundError(ResourceNotFoundError):
     def __init__(self, type, id=None):
         super().__init__(type=type, id=id)
+
 
 
 class DockerResourceNotFoundError(ResourceNotFoundError):
@@ -100,13 +98,12 @@ class PayloadNotSupportedError(ApiException):
 
 class BadJsonInput(ApiException):
     def __init__(self, bad_inputs):
-        d = {}
-        for key, inputs in bad_inputs.items():
-            if inputs:
-                d[key] = ""
-                for input in inputs:
-                    d[key] += f"Missing required parameter: {input}. "
-        super().__init__(d)
+
+        bad_inputs_msg = []
+
+        for input in bad_inputs:
+            bad_inputs_msg.append(f"Missing required parameter: {input}.")
+        super().__init__(bad_inputs_msg)
 
 
 class DatabaseOperationError(ApiException):
@@ -145,7 +142,7 @@ def choose_http_error_code(error):
     Returns the HTTP error code according to the error exception type.
 
     Args:
-        error (Exception): an exception object.
+        error (Exception): an exception obj.
 
     Returns:
         int: a http error code. (400's, 500's)
