@@ -191,7 +191,6 @@ class InstancesController(ControllerApi):
         """
         return Service(class_type=DockerServerServiceImplementation).get_all()
 
-
     @staticmethod
     def get_specific_instance_endpoint(id):
         """

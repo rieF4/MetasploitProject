@@ -16,15 +16,32 @@ class ApiException(Exception):
     """
     A base class for all api exceptions.
     """
-    error_code = 400
+    def __init__(self, error_msg, error_code):
+
+        self.error_msg = error_msg
+        self.error_code = error_code
+
+        super().__init__(error_msg)
+
+    def __str__(self):
+
+        if self._is_client_error():
+            return f"{self.error_code} Client error: {self.error_msg}"
+        elif self._is_server_error():
+            return f"{self.error_code} Server error: {self.error_msg}"
+
+    def _is_client_error(self):
+        return 400 <= self.error_code < 500
+
+    def _is_server_error(self):
+        return 500 <= self.error_code < 600
 
 
 class PortNotFoundError(ApiException):
 
-    code = 404
-
-    def __init__(self, msg):
-        super().__init__(msg)
+    def __init__(self, error_code=HttpCodes.INTERNAL_SERVER_ERROR):
+        error_msg = "Unable to find available port to start a metasploit based container"
+        super().__init__(error_msg=error_msg, error_code=error_code)
 
 
 class CommandFailureError(ApiException):
@@ -35,109 +52,108 @@ class CommandFailureError(ApiException):
          cmd (str) - the command that was executed over the instance
          instance_id (str) - the instance id that this command was executed on
     """
-    def __init__(self, cmd, instance_id):
+    def __init__(self, cmd, instance_id, error_code=HttpCodes.INTERNAL_SERVER_ERROR):
         msg = f"The following command {cmd} has failed over the instance {instance_id}!"
-        super().__init__(msg)
+        super().__init__(error_msg=msg, error_code=error_code)
 
 
 class ContainerCommandFailure(ApiException):
+
     def __init__(self, error_code, output, cmd, container_id):
         output = output.decode('utf-8')
-        msg = f"the following {cmd} failed on container {container_id}, error code:{error_code}, output: {output}"
-        super().__init__(msg)
+        msg = f"the following {cmd} failed on container {container_id}, output: {output}"
+        super().__init__(error_msg=msg, error_code=error_code)
 
 
 class ResourceNotFoundError(ApiException):
     """
     This class represents an exception for a resource that was not found in the DB.
     """
-    def __init__(self, type, id=None):
+    def __init__(self, type, id, error_code=HttpCodes.NOT_FOUND):
         msg = f"{type} with ID {id} was not found"
-        super().__init__(msg)
+        super().__init__(error_msg=msg, error_code=error_code)
 
 
 class AmazonResourceNotFoundError(ResourceNotFoundError):
-    def __init__(self, type, id=None):
-        super().__init__(type=type, id=id)
-
+    pass
 
 
 class DockerResourceNotFoundError(ResourceNotFoundError):
-    def __init__(self, type, id=None):
-        super().__init__(type=type, id=id)
+    pass
 
 
 class DuplicateDockerResourceError(ApiException):
     """
     This class represents an exception for a resource that already exists in the DB.
     """
-    def __init__(self, resource):
+    def __init__(self, resource, error_code=HttpCodes.DUPLICATE):
         msg = f"{resource} already exists"
-        super().__init__(msg)
+        super().__init__(error_msg=msg, error_code=error_code)
 
 
 class DuplicateImageError(DuplicateDockerResourceError):
-
-    def __init__(self, resource):
-        super().__init__(resource=resource)
+    pass
 
 
 class ModuleNotSupportedError(ApiException):
-    def __init__(self, module_type, module_name=None):
+
+    def __init__(self, module_type, module_name=None, error_code=HttpCodes.BAD_REQUEST):
         if module_name:
             msg = f"module {module_name} is not supported under module type {module_type}"
         else:
             msg = f"module type {module_type} is not a valid type"
-        super().__init__(msg)
+        super().__init__(error_msg=msg, error_code=error_code)
 
 
 class PayloadNotSupportedError(ApiException):
-    def __init__(self, unsupported_payloads):
+
+    def __init__(self, unsupported_payloads, error_code=HttpCodes.BAD_REQUEST):
         msg = ""
         for payload in unsupported_payloads:
             msg += f"Payload {payload} is not supported. "
-        super().__init__(msg)
+        super().__init__(error_msg=msg, error_code=error_code)
 
 
 class BadJsonInput(ApiException):
-    def __init__(self, bad_inputs):
 
-        bad_inputs_msg = []
+    def __init__(self, bad_inputs, error_code=HttpCodes.BAD_REQUEST):
+
+        msg = ""
 
         for input in bad_inputs:
-            bad_inputs_msg.append(f"Missing required parameter: {input}.")
-        super().__init__(bad_inputs_msg)
+            msg += f"Missing required parameter: {input}  "
+        super().__init__(error_msg=msg, error_code=error_code)
 
 
 class DatabaseOperationError(ApiException):
-    def __init__(self, document, error_msg):
+
+    def __init__(self, document, error_msg, error_code=HttpCodes.INTERNAL_SERVER_ERROR):
         msg = f"{error_msg}, document: {document}"
-        super().__init__(msg)
+        super().__init__(error_msg=msg, error_code=error_code)
 
 
 class DeleteDatabaseError(DatabaseOperationError):
-    def __init__(self, document, error_msg):
-        super().__init__(document=document, error_msg=error_msg)
+    pass
 
 
 class InsertDatabaseError(DatabaseOperationError):
-    def __init__(self, document, error_msg):
-        super().__init__(document=document, error_msg=error_msg)
+    pass
 
 
 class UpdateDatabaseError(DatabaseOperationError):
-    def __init__(self, document, error_msg):
-        super().__init__(document=document, error_msg=error_msg)
+    pass
 
 
 class ModuleOptionsError(ApiException):
 
-    def __init__(self, options, module_name):
+    def __init__(self, options, module_name, error_code=HttpCodes.BAD_REQUEST):
+
         str_options = ""
+
         for o in options:
-            str_options += o
-        msg = f'The following {str_options} are missing options for {module_name}'
-        super().__init__(msg)
+            str_options += f"{o} "
+        msg = f'The following required options {str_options} are missing options for {module_name}'
+        super().__init__(error_msg=msg, error_code=error_code)
 
 
 def choose_http_error_code(error):
@@ -162,8 +178,8 @@ def choose_http_error_code(error):
 
 class TimeoutExpiredError(ApiException):
 
-    def __init__(self, msg):
-        self.msg = msg
+    def __init__(self, error_msg):
+        self.msg = error_msg
 
     def __str__(self):
         return self.msg

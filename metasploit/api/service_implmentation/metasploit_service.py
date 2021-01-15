@@ -2,7 +2,8 @@ from metasploit.api.interfaces.services import MetasploitService
 from metasploit.api.database import DatabaseOperations, DatabaseCollections
 from metasploit.aws.amazon_operations import DockerServerInstanceOperations
 from metasploit.metasploit_manager import module_executor
-from metasploit.api import response
+from metasploit.api.response import HttpCodes
+from metasploit.utils.decorators import response_decorator
 
 
 class MetasploitServiceImplementation(MetasploitService):
@@ -19,9 +20,18 @@ class MetasploitServiceImplementation(MetasploitService):
     def info(self, *args, **kwargs):
         return self.get_exploit_info(*args, **kwargs)
 
+    @response_decorator(code=HttpCodes.OK)
     def run_exploit(self, instance_id, exploit_request, target):
         """
         run exploits over a metasploit container with msfrpc daemon connected.
+
+        Args:
+            instance_id (str): instance ID.
+            exploit_request (dict): exploit details from the client.
+            target (str): target host to run the exploit on.
+
+        Returns:
+            list(dict): a list with all the successful payloads.
 
         Example of exploits running request where the key is the target host and the values are exploit's params:
 
@@ -60,7 +70,6 @@ class MetasploitServiceImplementation(MetasploitService):
             }
         }
         """
-
         all_payload_exploit_results = module_executor.ExploitExecution(
             target_host=target,
             source_host=DockerServerInstanceOperations(instance_id=instance_id).docker_server.public_ip_address,
@@ -72,25 +81,26 @@ class MetasploitServiceImplementation(MetasploitService):
 
         return all_payload_exploit_results
 
+    @response_decorator(code=HttpCodes.OK)
     def scan_all_ports(self, instance_id, target):
         """
-        Gets all the open ports of a target host
+        Gets all the open ports of a target host.
 
         Args:
             instance_id (str): instance ID.
             target (str): target host to scan.
 
         Returns:
-            ApiResponse: api response composed of a list with the open ports, if no open ports then empty list.
+            list(str): a list of all the open ports in case found, empty list otherwise.
         """
-        return response.ApiResponse(
-            response=module_executor.AuxiliaryExecution(
+
+        return module_executor.AuxiliaryExecution(
                 target_host=target,
                 source_host=DockerServerInstanceOperations(instance_id=instance_id).docker_server.public_ip_address,
                 port=50000
             ).port_scanning
-        ).make_response
 
+    @response_decorator(code=HttpCodes.OK)
     def get_exploit_info(self, instance_id, exploit_name):
         """
         Gets massive information about an exploit by it's name
@@ -100,12 +110,10 @@ class MetasploitServiceImplementation(MetasploitService):
             exploit_name (str): exploit name.
 
         Returns:
-            ApiResponse: api response composed of a dict with the exploit information.
+            dict: all the information about the exploit.
         """
-        return response.ApiResponse(
-            response=module_executor.ExploitExecution(
+        return module_executor.ExploitExecution(
                 target_host='',
                 source_host=DockerServerInstanceOperations(instance_id=instance_id).docker_server.public_ip_address,
                 port=50000
             ).exploit_information(exploit_name=exploit_name.replace(" ", "/"))
-        ).make_response

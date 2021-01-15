@@ -133,7 +133,7 @@ class TimeoutSampler(object):
             self.last_sample_time = time.time()
             yield self.func(*self.func_args, **self.func_kwargs)
             if self.timeout < (time.time() - self.start_time):
-                raise TimeoutExpiredError(msg=f"Timeout occurred sampling {self.func.__name__}")
+                raise TimeoutExpiredError(error_msg=f"Timeout occurred sampling {self.func.__name__}")
             time.sleep(self.sleep)
 
     def iterate_over_func_results(self, result):

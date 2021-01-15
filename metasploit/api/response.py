@@ -86,10 +86,8 @@ def create_new_response(obj, response_type='Instance'):
             },
             "SecurityGroups": obj.security_groups,
             "State": obj.state,
-            "KeyName": obj.key_name,
             "Containers": [],
             "Images": [],
-            "Networks": [],
             "Metasploit": []
         }
     elif response_type == 'Container':

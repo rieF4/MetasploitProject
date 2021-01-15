@@ -36,23 +36,23 @@ class FlaskAppWrapper(object):
         url_error = {
             "Error": f"The given url {request.base_url} is invalid ",
             "AvailableUrls": [
-                    '/SecurityGroups/Get',
-                    '/SecurityGroups/Get/<id>',
-                    '/SecurityGroups/Create',
-                    '/SecurityGroups/Delete/<id>',
-                    '/SecurityGroups/<id>/UpdateInboundPermissions',
-                    '/DockerServerInstances/Create',
-                    '/DockerServerInstances/Get',
-                    '/DockerServerInstances/Get/<id>',
-                    '/DockerServerInstances/Delete/<id>',
-                    '/DockerServerInstances/<id>/Containers/Get',
-                    '/DockerServerInstances/<instance_id>/Containers/Get/<container_id>',
-                    '/DockerServerInstances/<instance_id>/Containers/Delete/<container_id>',
-                    '/DockerServerInstances/<id>/Images/Pull',
-                    '/DockerServerInstances/<instance_id>/Containers/CreateMetasploitContainer',
-                    '/DockerServerInstances/<instance_id>/Metasploit/<target>/RunExploit',
-                    '/DockerServerInstances/<instance_id>/Metasploit/<target>/ScanOpenPorts',
-                    '/DockerServerInstances/<instance_id>/Metasploit/<exploit_name>/ExploitInfo'
+                '/SecurityGroups/Get',
+                '/SecurityGroups/Get/<id>',
+                '/SecurityGroups/Create',
+                '/SecurityGroups/Delete/<id>',
+                '/SecurityGroups/<id>/UpdateInboundPermissions',
+                '/DockerServerInstances/Create',
+                '/DockerServerInstances/Get',
+                '/DockerServerInstances/Get/<id>',
+                '/DockerServerInstances/Delete/<id>',
+                '/DockerServerInstances/<id>/Containers/Get',
+                '/DockerServerInstances/<instance_id>/Containers/Get/<container_id>',
+                '/DockerServerInstances/<instance_id>/Containers/Delete/<container_id>',
+                '/DockerServerInstances/<id>/Images/Pull',
+                '/DockerServerInstances/<instance_id>/Containers/CreateMetasploitContainer',
+                '/DockerServerInstances/<instance_id>/Metasploit/<target>/RunExploit',
+                '/DockerServerInstances/<instance_id>/Metasploit/<target>/ScanOpenPorts',
+                '/DockerServerInstances/<instance_id>/Metasploit/<exploit_name>/ExploitInfo'
             ]
         }
 
@@ -148,7 +148,6 @@ class EndpointAction(object):
         try:
             return self.function(*args, **kwargs)
         except (ApiException, DockerException, Boto3Error) as err:
-            http_error = choose_http_error_code(error=err)
             return ErrorResponse(
-                error_msg=err.__str__(), http_error_code=http_error, req=request.json, path=request.base_url
+                error_msg=str(err), http_error_code=err.error_code, req=request.json, path=request.base_url
             ).make_response

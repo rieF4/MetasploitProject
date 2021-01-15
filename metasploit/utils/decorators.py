@@ -16,6 +16,8 @@ from metasploit.api.errors import (
 )
 from metasploit.aws.amazon_operations import DockerServerInstanceOperations
 from metasploit import constants as global_const
+from metasploit.api.errors import ApiException
+from metasploit.api import response
 
 
 def validate_json_request(*expected_args):
@@ -94,6 +96,40 @@ def update_containers_status(func):
         return func(self, **kwargs)
     return wrapper
 
+
+def response_decorator(code):
+    """
+    Decorator to execute all the API services implementations and parse a valid response to them.
+
+    Args:
+        code (int): http code that should indicate about success.
+    """
+    def first_wrapper(func):
+        """
+        wrapper to get the service function.
+
+        Args:
+            func (Function): a function object representing the API service function.
+        """
+        def second_wrapper(*args, **kwargs):
+            """
+
+            Args:
+                args: function args
+                kwargs: function kwargs
+
+            Returns:
+                Response: flask api response.
+            """
+            try:
+                return response.ApiResponse(response=func(*args, **kwargs), http_status_code=code).make_response
+            except ApiException as exc:
+                return response.ErrorResponse(
+                    error_msg=str(exc), http_error_code=exc.error_code, req=request.json, path=request.base_url
+                ).make_response
+
+        return second_wrapper
+    return first_wrapper
 
 
 def client_request_modifier(code):
