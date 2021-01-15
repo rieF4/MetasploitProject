@@ -12,12 +12,15 @@ from metasploit.api.response import (
 )
 from metasploit.api.errors import (
     BadJsonInput,
+    InvalidInputTypeError,
     choose_http_error_code
 )
 from metasploit.aws.amazon_operations import DockerServerInstanceOperations
 from metasploit import constants as global_const
-from metasploit.api.errors import ApiException
-from metasploit.api import response
+from metasploit.api.errors import (
+    ApiException,
+    AmazonResourceNotFoundError
+)
 
 
 def validate_json_request(*expected_args):
@@ -51,11 +54,9 @@ def validate_json_request(*expected_args):
                 ResourceNotFoundError: in case the requested resource was not found.
             """
 
-            type_validation, msg = validate_request_type(client_request=request.json)
+            type_validation = validate_request_type(client_request=request.json)
             if not type_validation:
-                return ErrorResponse(
-                    error_msg=msg, http_error_code=HttpCodes.BAD_REQUEST, req=request.json
-                ).make_response
+                raise InvalidInputTypeError()
 
             bad_inputs = validate_api_request_arguments(
                 api_request=request.json, expected_args=expected_args
@@ -122,9 +123,9 @@ def response_decorator(code):
                 Response: flask api response.
             """
             try:
-                return response.ApiResponse(response=func(*args, **kwargs), http_status_code=code).make_response
+                return ApiResponse(response=func(*args, **kwargs), http_status_code=code).make_response
             except ApiException as exc:
-                return response.ErrorResponse(
+                return ErrorResponse(
                     error_msg=str(exc), http_error_code=exc.error_code, req=request.json, path=request.base_url
                 ).make_response
 
@@ -132,49 +133,17 @@ def response_decorator(code):
     return first_wrapper
 
 
-def client_request_modifier(code):
+def verify_instance_exists(func):
     """
-    Decorator for all API requests that were made by the client that requires data from client.
+    Verify if instance exists before executing the function
 
     Args:
-        code (HttpCodes): HTTP code to return in case of success.
+        func (Function): function to decorate.
     """
-    def client_request_decorator(api_func):
-        """
-        a decorator for an API function.
+    def wrapper(self, *args, **kwargs):
 
-        Args:
-            api_func (Function): the api function that gets decorated.
-        """
-        def client_request_wrapper(self):
-            """
-            Executes the function that handles a client request
-
-            Args:
-                self (ResourceOperation): the obj reference as self. e.g. CreateAmazonResources, UpdateResource.
-            """
-            response = {}
-
-            http_status_code = code
-            is_valid = False
-            is_error = False
-
-            for key, req in self.api_manager.client_request.items():
-                try:
-                    response[key] = api_func(self=self, req=req)
-                    is_valid = True
-                except Exception as err:
-                    print(err.__str__())
-                    http_status_code = choose_http_error_code(error=err)
-                    response[key] = ErrorResponse(
-                        api_manager=self.api_manager, error_msg=err.__str__(), http_error_code=http_status_code, req=req
-                    ).response
-                    is_error = True
-
-            if is_valid and is_error:
-                http_status_code = HttpCodes.MULTI_STATUS
-
-            return ApiResponse(response=response, http_status_code=http_status_code).make_response
-
-        return client_request_wrapper
-    return client_request_decorator
+        instance_id = kwargs.get("instance_id")
+        if not self.database.get_amazon_document(resource_id=instance_id):
+            raise AmazonResourceNotFoundError(type=self.type, id=instance_id)
+        return func(self, *args, **kwargs)
+    return wrapper

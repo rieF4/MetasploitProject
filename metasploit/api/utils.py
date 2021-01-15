@@ -5,7 +5,8 @@ from .errors import (
     BadRequest,
     PortNotFoundError,
     DuplicateImageError,
-    TimeoutExpiredError
+    TimeoutExpiredError,
+    InvalidInputTypeError
 )
 
 
@@ -65,18 +66,13 @@ def validate_request_type(client_request):
     Returns:
         tuple(bool, str): a tuple that indicates if the request type is ok. (True, 'Success') for a valid request type,
         otherwise, (False, err)
-
-    Raises:
-         BadRequest:
-         TypeError:
-         AttributeError:
     """
     try:
         if not isinstance(client_request, dict):
-            return False, "Request type is not a json form."
-        return True, 'Success'
-    except (BadRequest, TypeError, AttributeError) as err:
-        return False, err.__str__()
+            return False
+        return True
+    except (BadRequest, TypeError, AttributeError):
+        raise InvalidInputTypeError()
 
 
 def validate_api_request_arguments(api_request, expected_args):

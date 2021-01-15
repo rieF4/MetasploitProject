@@ -155,10 +155,7 @@ class SecurityGroupsController(ControllerApi):
 
 class InstancesController(ControllerApi):
 
-    instance_collection = DatabaseCollections.INSTANCES
-
     @staticmethod
-    @validate_json_request("ImageId", "InstanceType")
     def create_instances_endpoint():
         """
         Create a dynamic amount of instances over AWS.
@@ -335,7 +332,6 @@ class DockerImagesController(ControllerApi):
 class MetasploitController(ControllerApi):
 
     @staticmethod
-    @validate_json_request("module_type", "exploit_name", "payloads")
     def run_exploit(instance_id, target):
         return Service(class_type=MetasploitServiceImplementation).run(
             instance_id=instance_id, exploit_request=request.json, target=target

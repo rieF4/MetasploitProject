@@ -3,7 +3,11 @@ from metasploit.api.database import DatabaseOperations, DatabaseCollections
 from metasploit.aws.amazon_operations import DockerServerInstanceOperations
 from metasploit.metasploit_manager import module_executor
 from metasploit.api.response import HttpCodes
-from metasploit.utils.decorators import response_decorator
+from metasploit.utils.decorators import (
+    response_decorator,
+    verify_instance_exists,
+    validate_json_request
+)
 
 
 class MetasploitServiceImplementation(MetasploitService):
@@ -21,6 +25,8 @@ class MetasploitServiceImplementation(MetasploitService):
         return self.get_exploit_info(*args, **kwargs)
 
     @response_decorator(code=HttpCodes.OK)
+    @validate_json_request("module_type", "exploit_name", "payloads")
+    @verify_instance_exists
     def run_exploit(self, instance_id, exploit_request, target):
         """
         run exploits over a metasploit container with msfrpc daemon connected.
@@ -82,6 +88,7 @@ class MetasploitServiceImplementation(MetasploitService):
         return all_payload_exploit_results
 
     @response_decorator(code=HttpCodes.OK)
+    @verify_instance_exists
     def scan_all_ports(self, instance_id, target):
         """
         Gets all the open ports of a target host.
@@ -101,6 +108,7 @@ class MetasploitServiceImplementation(MetasploitService):
             ).port_scanning
 
     @response_decorator(code=HttpCodes.OK)
+    @verify_instance_exists
     def get_exploit_info(self, instance_id, exploit_name):
         """
         Gets massive information about an exploit by it's name

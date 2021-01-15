@@ -37,6 +37,19 @@ class ApiException(Exception):
         return 500 <= self.error_code < 600
 
 
+class GeneralConnectionError(ApiException):
+
+    def __init__(self, error_msg, error_code=HttpCodes.SERVICE_UNAVAILABLE):
+        super().__init__(error_msg=error_msg, error_code=error_code)
+
+
+class MsfrpcdConnectionError(GeneralConnectionError):
+
+    def __init__(self, host, port, error_code=HttpCodes.SERVICE_UNAVAILABLE):
+        error_msg = f"Failed to setup connection to msfrpc daemon at {host} using port {port}"
+        super().__init__(error_msg=error_msg, error_code=error_code)
+
+
 class PortNotFoundError(ApiException):
 
     def __init__(self, error_code=HttpCodes.INTERNAL_SERVER_ERROR):
@@ -114,12 +127,17 @@ class PayloadNotSupportedError(ApiException):
         super().__init__(error_msg=msg, error_code=error_code)
 
 
+class InvalidInputTypeError(ApiException):
+
+    def __init__(self, error_code=HttpCodes.BAD_REQUEST):
+        msg = "The input type is invalid!"
+        super().__init__(error_msg=msg, error_code=error_code)
+
+
 class BadJsonInput(ApiException):
 
     def __init__(self, bad_inputs, error_code=HttpCodes.BAD_REQUEST):
-
         msg = ""
-
         for input in bad_inputs:
             msg += f"Missing required parameter: {input}  "
         super().__init__(error_msg=msg, error_code=error_code)

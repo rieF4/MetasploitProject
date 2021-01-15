@@ -8,7 +8,10 @@ from metasploit.api.response import (
     HttpCodes,
     create_new_response
 )
-from metasploit.utils.decorators import response_decorator
+from metasploit.utils.decorators import (
+    response_decorator,
+    validate_json_request
+)
 
 
 class DockerServerServiceImplementation(DockerServerService):
@@ -54,6 +57,7 @@ class DockerServerServiceImplementation(DockerServerService):
         return self.database.get_all_amazon_documents()
 
     @response_decorator(code=HttpCodes.OK)
+    @validate_json_request("ImageId", "InstanceType")
     def create_docker_server(self, docker_server_json):
         """
         Creates a docker server
@@ -94,6 +98,6 @@ class DockerServerServiceImplementation(DockerServerService):
         Args:
             instance_id (str): instance ID.
         """
-        DockerServerInstanceOperations(instance_id=instance_id).docker_server.terminate()
         self.database.delete_amazon_document(resource_id=instance_id, type=self.type)
+        DockerServerInstanceOperations(instance_id=instance_id).docker_server.terminate()
         return ''

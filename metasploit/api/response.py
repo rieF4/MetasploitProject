@@ -15,6 +15,7 @@ class HttpCodes(object):
     METHOD_NOT_ALLOWED = 405
     DUPLICATE = 409
     INTERNAL_SERVER_ERROR = 500
+    SERVICE_UNAVAILABLE = 503
 
 
 class ApiResponse(object):

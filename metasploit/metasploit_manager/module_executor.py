@@ -5,6 +5,10 @@ import time
 from metasploit.connections import Metasploit
 from metasploit.api import utils as global_utils
 from . import utils
+from requests.adapters import ConnectionError
+from metasploit.api.errors import MsfrpcdConnectionError
+
+from metasploit.api.response import HttpCodes
 
 
 class ModuleExecution(object):
@@ -22,7 +26,11 @@ class ModuleExecution(object):
         """
         self._target_host = target_host
         self._source_host = source_host
-        self._metasploit_connection = Metasploit(server=source_host, port=port)
+
+        try:
+            self._metasploit_connection = Metasploit(server=source_host, port=port)
+        except ConnectionError:
+            raise MsfrpcdConnectionError(host=source_host, port=port, error_code=HttpCodes.SERVICE_UNAVAILABLE)
 
     @property
     def metasploit_connection(self):

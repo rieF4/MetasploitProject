@@ -5,10 +5,7 @@ from metasploit.api.response import (
     HttpCodes,
     ErrorResponse
 )
-from metasploit.api.errors import (
-    ApiException,
-    choose_http_error_code
-)
+from metasploit.api.errors import choose_http_error_code
 from boto3.exceptions import Boto3Error
 from docker.errors import DockerException
 
@@ -60,12 +57,22 @@ class FlaskAppWrapper(object):
 
     @app.errorhandler(HttpCodes.METHOD_NOT_ALLOWED)
     def method_not_allowed(self):
+        
         method_not_allowed_err = {
             "Error": f"Method {request.method} is not allowed in URL {request.base_url}",
             "AvailableMethods": "In progress"
         }
 
         return jsonify(method_not_allowed_err), HttpCodes.METHOD_NOT_ALLOWED
+
+    @app.errorhandler(HttpCodes.BAD_REQUEST)
+    def bad_request(self):
+
+        bad_request_error = {
+            "Error": "Invalid data type!!"
+        }
+
+        return jsonify(bad_request_error), HttpCodes.BAD_REQUEST
 
     def get_app(self):
         """
@@ -129,7 +136,9 @@ class EndpointAction(object):
     def __init__(self, function):
         """
         Create the endpoint by specifying which action we want the endpoint to perform, at each call.
-        function (Function): The function to execute on endpoint call.
+
+        Args:
+            function (Function): The function to execute on endpoint call.
         """
         self.function = function
 
@@ -147,7 +156,8 @@ class EndpointAction(object):
         # Perform the function
         try:
             return self.function(*args, **kwargs)
-        except (ApiException, DockerException, Boto3Error) as err:
+        except (DockerException, Boto3Error) as err:
+            error_code = choose_http_error_code(error=err)
             return ErrorResponse(
-                error_msg=str(err), http_error_code=err.error_code, req=request.json, path=request.base_url
+                error_msg=str(err), http_error_code=error_code, req=request.json, path=request.base_url
             ).make_response
