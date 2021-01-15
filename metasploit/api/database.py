@@ -83,6 +83,7 @@ class DatabaseOperations(object):
 
         Args:
             amazon_resource_id (str): amazon resource ID.
+            type (str): type of the document. e.g.: Container, Image
 
         Returns:
             list(dict): a list of dict with all documents with requested type, empty list in case there aren't.
@@ -102,7 +103,6 @@ class DatabaseOperations(object):
 
         for document in all_documents:
             results.append(document)
-
         return results
 
     def delete_docker_document(self, amazon_resource_id, docker_resource_id, docker_document_type):
@@ -136,12 +136,14 @@ class DatabaseOperations(object):
             UpdateDatabaseError: in case pulling docker document from the array has failed.
 
         """
-        amazon_document = self.get_amazon_document(resource_id=amazon_resource_id)
+        docker_document = self.get_docker_document(
+            amazon_resource_id=amazon_resource_id, docker_resource_id=docker_resource_id, type=docker_document_type
+        )
 
         try:
             self.collection_type.update_one(
                 filter={
-                    global_constants.ID: amazon_document[global_constants.ID]
+                    global_constants.ID: amazon_resource_id
                 },
                 update={
                     global_constants.PULL: {
@@ -153,7 +155,7 @@ class DatabaseOperations(object):
             )
         except Exception as error:
             print("problem in delete docker document")
-            raise UpdateDatabaseError(document=amazon_document, error_msg=str(error))
+            raise UpdateDatabaseError(document=docker_document, error_msg=str(error))
 
     def add_docker_document(self, amazon_resource_id, docker_document_type, new_docker_document):
         """
@@ -167,8 +169,8 @@ class DatabaseOperations(object):
         new_docker_document examples:
             {
                 "_id": 1,
-                "image": metasploit_image,
-                "name": Awesome,
+                "image": "metasploit_image",
+                "name": "Awesome",
                 "status": "running",
                 "ports": [55555, 55556]
             }

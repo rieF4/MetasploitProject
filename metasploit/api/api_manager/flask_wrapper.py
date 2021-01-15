@@ -50,12 +50,13 @@ class FlaskAppWrapper(object):
                     '/DockerServerInstances/<instance_id>/Containers/Delete/<container_id>',
                     '/DockerServerInstances/<id>/Images/Pull',
                     '/DockerServerInstances/<instance_id>/Containers/CreateMetasploitContainer',
-                    '/DockerServerInstances/<instance_id>/Metasploit/RunExploit',
-                    '/DockerServerInstances/<instance_id>/Metasploit/ScanOpenPorts'
+                    '/DockerServerInstances/<instance_id>/Metasploit/<target>/RunExploit',
+                    '/DockerServerInstances/<instance_id>/Metasploit/<target>/ScanOpenPorts',
+                    '/DockerServerInstances/<instance_id>/Metasploit/<exploit_name>/ExploitInfo'
             ]
         }
 
-        return jsonify(url_error), HttpCodes.NOT_FOUND
+        return jsonify(url_error), HttpCodes.BAD_REQUEST
 
     @app.errorhandler(HttpCodes.METHOD_NOT_ALLOWED)
     def method_not_allowed(self):

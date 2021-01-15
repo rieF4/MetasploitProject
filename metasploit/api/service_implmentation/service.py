@@ -26,3 +26,6 @@ class Service(object):
 
     def run(self, *args, **kwargs):
         return self.class_type.run(*args, **kwargs)
+
+    def info(self, *args, **kwargs):
+        return self.class_type.info(*args, **kwargs)

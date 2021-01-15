@@ -16,16 +16,16 @@ class DockerServerServiceImplementation(DockerServerService):
         self.database = DatabaseOperations(collection_type=DatabaseCollections.INSTANCES)
 
     def create(self, *args, **kwargs):
-        return self.create_docker_server(docker_server_json=kwargs.get("docker_server_json"))
+        return self.create_docker_server(**kwargs)
 
     def get_all(self):
         return self.get_all_docker_servers()
 
     def get_one(self, *args, **kwargs):
-        return self.get_docker_server(instance_id=kwargs.get("instance_id"))
+        return self.get_docker_server(**kwargs)
 
     def delete_one(self, *args, **kwargs):
-        return self.delete_docker_server(instance_id=kwargs.get("instance_id"))
+        return self.delete_docker_server(**kwargs)
 
     def get_docker_server(self, instance_id):
         """
@@ -46,7 +46,6 @@ class DockerServerServiceImplementation(DockerServerService):
             return response.ErrorResponse(
                 error_msg=str(err), http_error_code=response.HttpCodes.NOT_FOUND
             ).make_response
-
 
     def get_all_docker_servers(self):
         """

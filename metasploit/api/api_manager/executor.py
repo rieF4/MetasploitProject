@@ -119,7 +119,7 @@ flask_wrapper.add_endpoints(
         [HttpMethods.POST]
     ),
     (
-        '/DockerServerInstances/<instance_id>/Metasploit/RunExploit',
+        '/DockerServerInstances/<instance_id>/Metasploit/<target>/RunExploit',
         'MetasploitController.run_exploit',
         MetasploitController.run_exploit,
         [HttpMethods.POST]
@@ -129,6 +129,12 @@ flask_wrapper.add_endpoints(
         'MetasploitController.scan_ports',
         MetasploitController.scan_ports,
         [HttpMethods.POST]
+    ),
+    (
+        '/DockerServerInstances/<instance_id>/Metasploit/<exploit_name>/ExploitInfo',
+        'MetasploitController.exploit_info',
+        MetasploitController.exploit_info,
+        [HttpMethods.GET]
     )
 )
 flask_wrapper.run()

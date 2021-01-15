@@ -336,10 +336,10 @@ class DockerImagesController(ControllerApi):
 class MetasploitController(ControllerApi):
 
     @staticmethod
-    @validate_json_request("target", "module_type", "exploit_name", "payloads")
-    def run_exploit(instance_id):
+    @validate_json_request("module_type", "exploit_name", "payloads")
+    def run_exploit(instance_id, target):
         return Service(class_type=MetasploitServiceImplementation).run(
-            instance_id=instance_id, exploit_request=request.json
+            instance_id=instance_id, exploit_request=request.json, target=target
         )
 
     @staticmethod
@@ -347,3 +347,9 @@ class MetasploitController(ControllerApi):
         return Service(class_type=MetasploitServiceImplementation).scan(
             instance_id=instance_id, target=target
         )
+
+    @staticmethod
+    def exploit_info(instance_id, exploit_name):
+        return Service(
+            class_type=MetasploitServiceImplementation
+        ).info(instance_id=instance_id, exploit_name=exploit_name)

@@ -22,16 +22,16 @@ class ContainerServiceImplementation(ContainerService):
         self.database = DatabaseOperations(collection_type=DatabaseCollections.INSTANCES)
 
     def create(self, *args, **kwargs):
-        return self.create_metasploit_container(instance_id=kwargs.get("instance_id"))
+        return self.create_metasploit_container(**kwargs)
 
     def get_all(self, *args, **kwargs):
-        return self.get_all_containers(instance_id=kwargs.get("instance_id"))
+        return self.get_all_containers(**kwargs)
 
     def get_one(self, *args, **kwargs):
-        return self.get_container(instance_id=kwargs.get("instance_id"), container_id=kwargs.get("container_id"))
+        return self.get_container(**kwargs)
 
     def delete_one(self, *args, **kwargs):
-        return self.delete_container(instance_id=kwargs.get("instance_id"), container_id=kwargs.get("container_id"))
+        return self.delete_container(**kwargs)
 
     @update_containers_status
     def get_container(self, instance_id, container_id):
@@ -118,15 +118,16 @@ class ContainerServiceImplementation(ContainerService):
             ApiResponse: parsed ApiResponse obj with the container document(s) in case of success.
         """
         try:
+            self.database.delete_docker_document(
+                amazon_resource_id=instance_id, docker_resource_id=container_id, docker_document_type=self.type
+            )
+
             ContainerOperations(
                 docker_server_id=instance_id, docker_resource_id=container_id
             ).container.remove(force=True)
 
-            self.database.delete_docker_document(
-                amazon_resource_id=instance_id, docker_resource_id=container_id, docker_document_type=self.type
-            )
             return response.ApiResponse(response='', http_status_code=response.HttpCodes.NO_CONTENT).make_response
-        except UpdateDatabaseError as err:
+        except (UpdateDatabaseError, AmazonResourceNotFoundError) as err:
             return response.ErrorResponse(
-                error_msg=str(err), http_error_code=response.HttpCodes.INTERNAL_SERVER_ERROR
+                error_msg=str(err), http_error_code=response.HttpCodes.NOT_FOUND
             ).make_response

@@ -11,12 +11,15 @@ class MetasploitServiceImplementation(MetasploitService):
         self.database = DatabaseOperations(collection_type=DatabaseCollections.INSTANCES)
 
     def scan(self, *args, **kwargs):
-        return self.scan_all_ports(instance_id=kwargs.get("instance_id"),target=kwargs.get("target"))
+        return self.scan_all_ports(**kwargs)
 
     def run(self, *args, **kwargs):
-        return self.run_exploit(instance_id=kwargs.get("instance_id"), exploit_request=kwargs.get("exploit_request"))
+        return self.run_exploit(**kwargs)
 
-    def run_exploit(self, instance_id, exploit_request):
+    def info(self, *args, **kwargs):
+        return self.get_exploit_info(*args, **kwargs)
+
+    def run_exploit(self, instance_id, exploit_request, target):
         """
         run exploits over a metasploit container with msfrpc daemon connected.
 
@@ -24,9 +27,7 @@ class MetasploitServiceImplementation(MetasploitService):
 
         exploits_requests = {
             "1": {
-                "target": '10.10.10.10',
                 "module_type": 'exploit',
-                "rpc_port": 50000,      # optional value
                 "exploit_name": "aix/local/ibstat_path",
                 "payloads": [
                     'cmd/unix/bind_perl',
@@ -40,9 +41,7 @@ class MetasploitServiceImplementation(MetasploitService):
                 }
             },
             "2": {
-                "target": '10.10.10.10',
-                "module_type": 'exploit',
-                "rpc_port": 50001,     # optional value
+                "module_type": 'exploit'
                 "exploit_name": "aix/rpc_cmsd_opcode21",
                 "payloads": [
                     'aix/ppc/shell_bind_tcp',
@@ -61,13 +60,11 @@ class MetasploitServiceImplementation(MetasploitService):
             }
         }
         """
-        rpc_port = exploit_request.pop("rpc_port", None)
-        target = exploit_request.pop("target")
 
         all_payload_exploit_results = module_executor.ExploitExecution(
             target_host=target,
             source_host=DockerServerInstanceOperations(instance_id=instance_id).docker_server.public_ip_address,
-            port=rpc_port if rpc_port else 50000
+            port=50000
         ).execute_exploit(**exploit_request)
 
         for payload_res in all_payload_exploit_results:
@@ -86,8 +83,29 @@ class MetasploitServiceImplementation(MetasploitService):
         Returns:
             ApiResponse: api response composed of a list with the open ports, if no open ports then empty list.
         """
-        return response.ApiResponse(response=module_executor.AuxiliaryExecution(
-            target_host=target,
-            source_host=DockerServerInstanceOperations(instance_id=instance_id).docker_server.public_ip_address,
-            port=50000
-        ).port_scanning).make_response
+        return response.ApiResponse(
+            response=module_executor.AuxiliaryExecution(
+                target_host=target,
+                source_host=DockerServerInstanceOperations(instance_id=instance_id).docker_server.public_ip_address,
+                port=50000
+            ).port_scanning
+        ).make_response
+
+    def get_exploit_info(self, instance_id, exploit_name):
+        """
+        Gets massive information about an exploit by it's name
+
+        Args:
+            instance_id (str): instance ID.
+            exploit_name (str): exploit name.
+
+        Returns:
+            ApiResponse: api response composed of a dict with the exploit information.
+        """
+        return response.ApiResponse(
+            response=module_executor.ExploitExecution(
+                target_host='',
+                source_host=DockerServerInstanceOperations(instance_id=instance_id).docker_server.public_ip_address,
+                port=50000
+            ).exploit_information(exploit_name=exploit_name.replace(" ", "/"))
+        ).make_response

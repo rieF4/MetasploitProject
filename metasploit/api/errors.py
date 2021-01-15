@@ -16,10 +16,13 @@ class ApiException(Exception):
     """
     A base class for all api exceptions.
     """
-    pass
+    error_code = 400
 
 
 class PortNotFoundError(ApiException):
+
+    code = 404
+
     def __init__(self, msg):
         super().__init__(msg)
 
