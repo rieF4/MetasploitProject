@@ -176,7 +176,7 @@ class InstancesController(ControllerApi):
 
     def _create_instances_endpoint(self):
         """
-        Create a dynamic amount of instances over AWS.
+        Creates docker server instance endpoint.
 
         Example of a request:
 
@@ -186,46 +186,40 @@ class InstancesController(ControllerApi):
         }
 
         Returns:
-            ApiResponse: an api response obj.
-
-        Raises:
-            ParamValidationError: in case the parameters by the client to create instances are not valid.
+            Response: a flask response.
         """
         return Service(class_type=self._docker_server_implementation).create(docker_server_json=request.json)
 
     def _get_all_instances_endpoint(self):
         """
-        Instance endpoint the get all the available instances from the DB.
+        Gets all available the docker server instances endpoint.
 
         Returns:
-            ApiResponse: an api response obj.
+            Response: a flask response.
         """
         return Service(class_type=self._docker_server_implementation).get_all()
 
     def _get_specific_instance_endpoint(self, instance_id):
         """
-        Instance endpoint to get a specific instance from the DB.
+        Gets a single docker server instance endpoint.
 
         Args:
             instance_id (str): instance id.
 
         Returns:
-            ApiResponse: an api response obj.
-
-        Raises:
-            AmazonResourceNotFoundError: in case there is not an instance with the ID.
+            Response: a flask response.
         """
         return Service(class_type=self._docker_server_implementation).get_one(instance_id=instance_id)
 
     def _delete_instance_endpoint(self, instance_id):
         """
-        Instance endpoint to delete a specific instance from the API.
+        Deletes a single docker server instance endpoint.
 
         Args:
             instance_id (str): instance id.
 
         Returns:
-            ApiResponse: an api response obj.
+            Response: a flask response.
         """
         return Service(class_type=self._docker_server_implementation).delete_one(instance_id=instance_id)
 
@@ -249,26 +243,26 @@ class ContainersController(ControllerApi):
 
     def _get_all_instance_containers_endpoint(self, instance_id):
         """
-        Container endpoint to get all the containers of a specific instance from the database.
+        Gets all the containers of docker server instance endpoint.
 
         Args:
             instance_id (str): instance ID.
 
         Returns:
-            ApiResponse: an api response obj.
+            Response: a flask response.
         """
         return Service(class_type=self._container_service_implementation).get_all(instance_id=instance_id)
 
     def _get_instance_container_endpoint(self, instance_id, container_id):
         """
-        Container endpoint to get a container by instance and container IDs from the DB.
+        Gets a single container of docker server instance endpoint.
 
         Args:
             instance_id (str): instance ID.
             container_id (str): container ID.
 
         Returns:
-            ApiResponse: an api response obj.
+            Response: a flask response.
         """
         return Service(
             class_type=self._container_service_implementation
@@ -276,14 +270,14 @@ class ContainersController(ControllerApi):
 
     def _delete_container_endpoint(self, instance_id, container_id):
         """
-        Container endpoint to deletes the container from an instance and remove it from DB.
+        Deletes a single container of docker server instance endpoint.
 
         Args:
             instance_id (str): instance ID.
             container_id (str): container ID.
 
         Returns:
-            ApiResponse: an api response obj.
+            Response: a flask response.
         """
         return Service(
             class_type=self._container_service_implementation
@@ -291,10 +285,13 @@ class ContainersController(ControllerApi):
 
     def _run_container_with_metasploit_daemon_endpoint(self, instance_id):
         """
-        Runs a container with metasploit daemon endpoint
+        Runs a container with metasploit daemon endpoint.
 
         Args:
              instance_id (str): instance ID.
+
+        Returns:
+            Response: a flask response.
         """
         return Service(class_type=self._container_service_implementation).create(instance_id=instance_id)
 
@@ -314,16 +311,46 @@ class MetasploitController(ControllerApi):
             return self._exploit_info(instance_id=instance_id, exploit_name=exploit_name)
 
     def _run_exploit(self, instance_id, target):
+        """
+        Runs an exploit on a container that belongs to the instance on a target host endpoint.
+
+        Args:
+            instance_id (str): instance ID.
+            target (str): target host to run the exploit (dns/IP).
+
+        Returns:
+            Response: a flask response.
+        """
         return Service(class_type=self._metasploit_service_implementation).run(
             instance_id=instance_id, exploit_request=request.json, target=target
         )
 
     def _scan_ports(self, instance_id, target):
+        """
+        Scans ports using a container that belongs to the instance on a target host endpoint.
+
+        Args:
+            instance_id (str): instance ID.
+            target (str): target host to scan the ports (dns/IP).
+
+        Returns:
+            Response: a flask response.
+        """
         return Service(class_type=self._metasploit_service_implementation).scan(
             instance_id=instance_id, target=target
         )
 
     def _exploit_info(self, instance_id, exploit_name):
+        """
+        Gets exploit information endpoint.
+
+        Args:
+            instance_id (str): instance ID.
+            exploit_name (str): exploit name to query.
+
+        Returns:
+            Response: a flask response.
+        """
         return Service(
             class_type=self._metasploit_service_implementation
         ).info(instance_id=instance_id, exploit_name=exploit_name)

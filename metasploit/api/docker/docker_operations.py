@@ -95,7 +95,7 @@ class ContainerOperations(DockerOperations):
     @property
     def container(self):
         """
-        Get container obj by instance and container IDs.
+        Get container object by instance and container IDs.
 
         Returns:
             Container: a container obj if found.

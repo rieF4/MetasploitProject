@@ -1,11 +1,6 @@
 
-
-from .amazon_docker_server import (
-    DockerServerInstance
-)
-from .aws_access import (
-    aws_api
-)
+from .amazon_docker_server import DockerServerInstance
+from .aws_access import aws_api
 
 
 class AmazonObjectOperations(object):
@@ -47,10 +42,9 @@ class SecurityGroupOperations(AmazonObjectOperations):
 
 class DockerServerInstanceOperations(AmazonObjectOperations):
 
-    def __init__(self, instance_id=None):
+    def __init__(self, instance_id):
         super(DockerServerInstanceOperations, self).__init__(amazon_resource_id=instance_id)
-        if instance_id:
-            self._docker_server = self.get_docker_server_instance()
+        self._docker_server = self.get_docker_server_instance()
 
     @property
     def docker_server(self):
@@ -71,13 +65,13 @@ class DockerServerInstanceOperations(AmazonObjectOperations):
 
     def get_docker_server_instance(self, ssh_flag=False):
         """
-        Get the docker server instance obj.
+        Get the docker server instance object.
 
         Args:
             ssh_flag (bool): True if ssh connection needs to be deployed, False otherwise.
 
         Returns:
-            DockerServerInstance: a docker server instance obj if exits, None otherwise.
+            DockerServerInstance: a docker server instance object.
         """
         return DockerServerInstance(instance_obj=self.aws_instance_object, ssh_flag=ssh_flag)
 
