@@ -1,4 +1,4 @@
-from metasploit.api.interfaces.services import ContainerService
+from metasploit.api.logic_interfaces.services import ContainerService
 from metasploit.api.database import (
     DatabaseOperations,
     DatabaseCollections

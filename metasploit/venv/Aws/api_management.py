@@ -357,9 +357,9 @@ class GetResource(ResourceOperation):
         Returns:
             ApiResponse: an api response obj.
         """
-        # documents = self.api_manager.db_manager.document[Constants.DOCKER][document_type]
+        # documents = self.controllers.db_manager.document[Constants.DOCKER][document_type]
         # return ApiResponse(
-        #     response=_find_specific_document(documents=documents, sub_resource_id=self.api_manager.docker_resource_id),
+        #     response=_find_specific_document(documents=documents, sub_resource_id=self.controllers.docker_resource_id),
         #     http_status_code=HttpCodes.OK
         # )
 

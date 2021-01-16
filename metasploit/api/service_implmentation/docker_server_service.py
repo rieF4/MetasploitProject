@@ -1,5 +1,5 @@
 
-from metasploit.api.interfaces.services import DockerServerService
+from metasploit.api.logic_interfaces.services import DockerServerService
 from metasploit.api.database import DatabaseOperations, DatabaseCollections
 from metasploit.aws.amazon_operations import create_instance
 from metasploit.aws import constants as aws_const
@@ -75,7 +75,6 @@ class DockerServerServiceImplementation(DockerServerService):
         Returns:
             dict: a new docker server document.
         """
-
         new_docker_server = create_instance(
             ImageId=docker_server_json.get("ImageId"),
             InstanceType=docker_server_json.get("InstanceType"),

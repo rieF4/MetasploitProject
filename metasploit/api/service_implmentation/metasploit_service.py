@@ -1,4 +1,4 @@
-from metasploit.api.interfaces.services import MetasploitService
+from metasploit.api.logic_interfaces.services import MetasploitService
 from metasploit.api.database import DatabaseOperations, DatabaseCollections
 from metasploit.aws.amazon_operations import DockerServerInstanceOperations
 from metasploit.metasploit_manager import module_executor
@@ -100,7 +100,6 @@ class MetasploitServiceImplementation(MetasploitService):
         Returns:
             list(str): a list of all the open ports in case found, empty list otherwise.
         """
-
         return module_executor.AuxiliaryExecution(
                 target_host=target,
                 source_host=DockerServerInstanceOperations(instance_id=instance_id).docker_server.public_ip_address,

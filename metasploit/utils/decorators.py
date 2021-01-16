@@ -6,7 +6,6 @@ from metasploit.api.utils import (
     validate_api_request_arguments
 )
 from metasploit.api.response import (
-    HttpCodes,
     ErrorResponse,
     ApiResponse
 )
@@ -15,6 +14,8 @@ from metasploit.api.errors import (
     InvalidInputTypeError,
     choose_http_error_code
 )
+from boto3.exceptions import Boto3Error
+from docker.errors import DockerException
 from metasploit.aws.amazon_operations import DockerServerInstanceOperations
 from metasploit import constants as global_const
 from metasploit.api.errors import (
@@ -127,6 +128,11 @@ def response_decorator(code):
             except ApiException as exc:
                 return ErrorResponse(
                     error_msg=str(exc), http_error_code=exc.error_code, req=request.json, path=request.base_url
+                ).make_response
+            except (Boto3Error, DockerException) as exc:
+                error_code = choose_http_error_code(error=exc)
+                return ErrorResponse(
+                    error_msg=str(exc), http_error_code=error_code, req=request.json, path=request.base_url
                 ).make_response
 
         return second_wrapper
