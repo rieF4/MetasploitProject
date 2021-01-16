@@ -1,14 +1,14 @@
 
-from metasploit.api.logic_interfaces.services import DockerServerService
+from metasploit.api.logic.services import DockerServerService
 from metasploit.api.database import DatabaseOperations, DatabaseCollections
-from metasploit.aws.amazon_operations import create_instance
-from metasploit.aws import constants as aws_const
-from metasploit.aws.amazon_operations import DockerServerInstanceOperations
+from metasploit.api.aws.amazon_operations import create_instance
+from metasploit.api.aws import constants as aws_const
+from metasploit.api.aws.amazon_operations import DockerServerInstanceOperations
 from metasploit.api.response import (
     HttpCodes,
     create_new_response
 )
-from metasploit.utils.decorators import (
+from metasploit.api.utils.decorators import (
     response_decorator,
     validate_json_request
 )

@@ -2,8 +2,8 @@ import re
 import nmap
 import time
 
-from metasploit.connections import Metasploit
-from metasploit.api import utils as global_utils
+from metasploit.api.connections import Metasploit
+from metasploit.api.utils import helpers as global_utils
 from . import utils
 from requests.adapters import ConnectionError
 from metasploit.api.errors import MsfrpcdConnectionError

@@ -1,7 +1,7 @@
 
 import docker
 
-from metasploit.connections import Connection
+from metasploit.api.connections import Connection
 
 
 class Docker(Connection):

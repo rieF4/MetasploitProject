@@ -9,12 +9,12 @@ from .api_endpoints import (
     ContainersController,
     MetasploitController
 )
-from metasploit.api.utils import (
+from metasploit.api.utils.helpers import (
     HttpMethods
 )
-from metasploit.api.service_implmentation.docker_server_service import DockerServerServiceImplementation
-from metasploit.api.service_implmentation.container_service import ContainerServiceImplementation
-from metasploit.api.service_implmentation.metasploit_service import MetasploitServiceImplementation
+from metasploit.api.logic.docker_server_service import DockerServerServiceImplementation
+from metasploit.api.logic.container_service import ContainerServiceImplementation
+from metasploit.api.logic.metasploit_service import MetasploitServiceImplementation
 
 
 class FlaskAppWrapper(object):

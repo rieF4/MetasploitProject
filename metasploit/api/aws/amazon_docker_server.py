@@ -1,10 +1,10 @@
-from metasploit.docker.connection import (
+from metasploit.api.docker.connection import (
     Docker
 )
 
 from . import constants as aws_constants
-from metasploit import constants as global_constants
-from metasploit.connections import SSH
+from .. import constants as global_constants
+from metasploit.api.connections import SSH
 
 from metasploit.api.errors import (
     CommandFailureError

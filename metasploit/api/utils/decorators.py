@@ -1,7 +1,7 @@
 import functools
 from flask_restful import request
 
-from metasploit.api.utils import (
+from metasploit.api.utils.helpers import (
     validate_request_type,
     validate_api_request_arguments
 )
@@ -16,8 +16,8 @@ from metasploit.api.errors import (
 )
 from boto3.exceptions import Boto3Error
 from docker.errors import DockerException
-from metasploit.aws.amazon_operations import DockerServerInstanceOperations
-from metasploit import constants as global_const
+from metasploit.api.aws.amazon_operations import DockerServerInstanceOperations
+from metasploit.api import constants as global_const
 from metasploit.api.errors import (
     ApiException,
     AmazonResourceNotFoundError

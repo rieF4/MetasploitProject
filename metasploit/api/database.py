@@ -1,6 +1,6 @@
 from pymongo import MongoClient
 
-from metasploit import constants as global_constants
+from metasploit.api import constants as global_constants
 from metasploit.api.errors import (
     DeleteDatabaseError,
     InsertDatabaseError,

@@ -1,7 +1,7 @@
 import time
-from metasploit import constants as global_constants
+from metasploit.api import constants as global_constants
 
-from .errors import (
+from metasploit.api.errors import (
     BadRequest,
     PortNotFoundError,
     DuplicateImageError,

@@ -1,11 +1,11 @@
-from metasploit.api.logic_interfaces.services import ContainerService
+from metasploit.api.logic.services import ContainerService
 from metasploit.api.database import (
     DatabaseOperations,
     DatabaseCollections
 )
-from metasploit.docker.docker_operations import ContainerOperations
+from metasploit.api.docker.docker_operations import ContainerOperations
 
-from metasploit.utils.decorators import (
+from metasploit.api.utils.decorators import (
     update_containers_status,
     response_decorator
 )

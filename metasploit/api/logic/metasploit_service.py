@@ -1,9 +1,9 @@
-from metasploit.api.logic_interfaces.services import MetasploitService
+from metasploit.api.logic.services import MetasploitService
 from metasploit.api.database import DatabaseOperations, DatabaseCollections
-from metasploit.aws.amazon_operations import DockerServerInstanceOperations
-from metasploit.metasploit_manager import module_executor
+from metasploit.api.aws.amazon_operations import DockerServerInstanceOperations
+from metasploit.api.metasploit_manager import module_executor
 from metasploit.api.response import HttpCodes
-from metasploit.utils.decorators import (
+from metasploit.api.utils.decorators import (
     response_decorator,
     verify_instance_exists,
     validate_json_request

@@ -1,4 +1,4 @@
-from metasploit.constants import (
+from metasploit.api.constants import (
     IP_PROTOCOL,
     SSH_PORT,
     CIDR_IP

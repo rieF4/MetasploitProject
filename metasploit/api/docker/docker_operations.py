@@ -1,7 +1,7 @@
 
-from metasploit.aws.amazon_operations import DockerServerInstanceOperations
+from metasploit.api.aws.amazon_operations import DockerServerInstanceOperations
 from metasploit.api.errors import ContainerCommandFailure
-from metasploit.api.utils import choose_port_for_msfrpcd
+from metasploit.api.utils.helpers import choose_port_for_msfrpcd
 
 
 class DockerOperations(DockerServerInstanceOperations):

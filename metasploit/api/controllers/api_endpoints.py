@@ -1,6 +1,6 @@
 from flask_restful import request, Resource
 
-from metasploit.api.service_implmentation.service import Service
+from metasploit.api.logic.service import Service
 
 
 class ControllerApi(Resource):
