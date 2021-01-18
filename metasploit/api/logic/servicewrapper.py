@@ -1,6 +1,6 @@
 
 
-class Service(object):
+class ServiceWrapper(object):
 
     def __init__(self, class_type, *args, **kwargs):
         self._class_type = class_type(*args, **kwargs)
@@ -20,9 +20,6 @@ class Service(object):
 
     def delete_one(self, *args, **kwargs):
         return self.class_type.delete_one(*args, **kwargs)
-
-    def scan(self, *args, **kwargs):
-        return self.class_type.scan(*args, **kwargs)
 
     def run(self, *args, **kwargs):
         return self.class_type.run(*args, **kwargs)

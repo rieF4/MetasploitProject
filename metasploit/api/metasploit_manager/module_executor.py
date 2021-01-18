@@ -3,100 +3,114 @@ import nmap
 import time
 
 from metasploit.api.connections import Metasploit
-from metasploit.api.utils import helpers as global_utils
-from . import utils
 from requests.adapters import ConnectionError
 from metasploit.api.errors import MsfrpcdConnectionError
-
+from metasploit.api.utils.decorators import metasploit_action_verification
 from metasploit.api.response import HttpCodes
 
 
-class ModuleExecution(object):
-    """
-    This is a class for module execution in metasploit on a container on amazon docker server.
-    """
-    def __init__(self, target_host, source_host, port):
-        """
-        Initializes the module execution constructor and implement a connection to the right container with the port.
+class MetasploitModule(object):
 
-        Args:
-            target_host (str): the target host to "attack". can be either IP/DNS
-            source_host (str): the source host that performs the "attack". can be either IP/DNS
-            port (int): The port that the msfrpcd listens to.
-        """
-        self._target_host = target_host
-        self._source_host = source_host
+    def __init__(self, source_host=None, port=50000, target=None):
 
-        try:
-            self._metasploit_connection = Metasploit(server=source_host, port=port)
-        except ConnectionError:
-            raise MsfrpcdConnectionError(host=source_host, port=port, error_code=HttpCodes.SERVICE_UNAVAILABLE)
+        if source_host:
+            self._target_host = target
+            self._source_host = source_host
+            try:
+                self._metasploit = Metasploit(server=source_host, port=port)
+            except ConnectionError:
+                raise MsfrpcdConnectionError(host=source_host, port=port, error_code=HttpCodes.SERVICE_UNAVAILABLE)
 
-    @property
-    def metasploit_connection(self):
+    def init_module(self, module_name, module_type):
         """
-        Returns the metasploit connection obj.
-        """
-        return self._metasploit_connection
-
-    @property
-    def target_host(self):
-        return self._target_host
-
-    def execute_module(self, module_name, module_type):
-        """
-        Executes the requested module of the metasploit.
+        initializes the requested module of the metasploit.
 
         Args:
             module_name (str): module name.
             module_type (str): module type.
 
         Returns:
-            MsfModule: a msfmodule obj. e.g. ExploitModule, AuxiliaryModule, PayloadModule.
+            MsfModule: a msfmodule object. e.g. ExploitModule, AuxiliaryModule, PayloadModule.
         """
-        utils.check_if_module_is_supported(
-            module_name=module_name,
-            module_type=module_type,
-            metasploit_connection=self.metasploit_connection
-        )
-        return self.metasploit_connection.modules.use(mtype=module_type, mname=module_name)
+        return self._metasploit.modules.use(mtype=module_type, mname=module_name)
 
-
-class ExploitExecution(ModuleExecution):
-
-    def execute_exploit(self, exploit_name, options, payloads, module_type='exploit'):
+    def execute_shell_commands(self, commands, session_id):
         """
-        Validates and executes the exploit provided by the client.
+        Executes shell commands on a remote host that we gained a remote shell to.
 
         Args:
-            exploit_name (str): the exploit name, e.g.: 'unix/ftp/vsftpd_234_backdoor'
-            options (dict): all the options to fill up for the exploit.
-            payloads (list(str)): all the payloads to run with the exploit.
-            module_type (str): the module type, defaults to 'exploit'
+            commands (list(str)): a list of commands to execute.
+            session_id (str): session ID of the required shell.
+
+        Yields:
+            str: output of a command that was executed in the remote shell.
+        """
+        shell = self._metasploit.metasploit_client.sessions.session(sid=session_id)
+
+        for cmd in commands:
+            shell.write(data=cmd)
+            yield shell.read()
+
+    def job_info(self, job_id):
+        """
+        Gets information about an existing job in metasploit, ignores jobs that reproduce errors.
+
+        Args:
+            job_id (str): job ID.
 
         Returns:
-            list(dict): exploit details with all chosen payloads in case they were successful in any kind of way.
+            dict: job information in case exists, empty dict otherwise.
         """
-        exploit = super().execute_module(module_name=exploit_name, module_type=module_type)
-        required_options = exploit.missing_required
-        utils.check_required_options_for_module(
-            required_params=required_options, options=options, module_name=exploit_name
-        )
-        utils.check_if_payloads_are_supported(available_payloads=exploit.payloads, client_payloads=payloads)
+        if job_id in self._metasploit.metasploit_client.jobs.list:
+            job_details = self._metasploit.metasploit_client.jobs.info(jobid=job_id)
+            if "error" not in job_details:
+                return job_details
+        return {}
+
+    def build_module(self, name, options, type='payload'):
+        """
+        Builds up the MsfModule along with the options for the module.
+
+        Args:
+            name (str): module name.
+            options (dict): module options.
+            type (str): module type.
+
+        Returns:
+            MsfModule: a msfmodule object. e.g. ExploitModule, PayloadModule.
+        """
+        msf_module = self.init_module(module_name=name, module_type=type)
 
         for option, option_value in options.items():
-            exploit[option] = option_value
+            msf_module[option] = option_value
+        return msf_module
 
-        return self._build_exploit_json(exploit=exploit, exploit_name=exploit_name, payloads=payloads)
+    def execute(self, *args, **kwargs):
+        """
+        Base method to execute metasploit modules
+        """
+        pass
 
-    def _build_exploit_json(self, exploit, exploit_name, payloads):
+    def info(self, *args, **kwargs):
+        """
+        Base method to collect information about metasploit modules
+        """
+        pass
+
+
+class Exploit(MetasploitModule):
+
+    type = 'exploit'
+
+    @metasploit_action_verification
+    def execute(self, name, options, payloads):
         """
         Run the exploit with the payloads and build the json for the client.
 
         Args:
-            exploit (ExploitModule): exploit module obj.
-            exploit_name (str): exploit name.
-            payloads (list(str)): all the payloads requested by the client.
+            name (ExploitModule): exploit name.
+            options (dict): exploit customized options.
+            payloads (dict): all the payloads requested by the client and their running options.
 
         Returns: list(dict): exploit details with all chosen payloads in case they were successful in any kind of way.
 
@@ -145,57 +159,134 @@ class ExploitExecution(ModuleExecution):
             },
         ]
         """
-        json_exploit_list_with_each_payload = []
+        exploit = self.build_module(name=name, options=options, type=self.type)
+        successful_payloads = []
 
-        _session = "session"
-        _hostname = "hostname"
-        _job = "job"
-        _whoami = "whoami"
-        _jobid = "job_id"
-        _error = "error"
-
-        for payload in payloads:
+        for payload_name, payload_options in payloads.items():
+            payload = self.build_module(name=payload_name, options=payload_options)
             exploit_job = exploit.execute(payload=payload)
-            exploit_payload_json = {}
+            job_id = exploit_job["job_id"]
 
             time.sleep(7)
 
-            for session_num, session_details in self.metasploit_connection.metasploit_client.sessions.list.items():
+            payload_details = self._collect_exploit_execution_result(
+                job_id=job_id, exploit_name=name, payload_name=payload_name
+            )
+            if payload_details:
+                successful_payloads.append(payload_details)
+        return successful_payloads
 
-                print(session_num)
-                print(session_details)
+    def _collect_exploit_execution_result(self, job_id, exploit_name, payload_name):
+        """
+        Collects information about exploit execution result.
 
-                if exploit_name in session_details['via_exploit'] and payload in session_details['via_payload']:
+        Args:
+            job_id (str): the job ID of the executed task.
+            exploit_name (str): exploit name.
+            payload_name (str): payload name.
 
-                    exploit_payload_json[_session] = session_details
-                    shell = self.metasploit_connection.metasploit_client.sessions.session(sid=session_num)
+        Returns:
+            dict: information about executed exploit with the provided payload if there is, empty dict otherwise.
+        """
+        payload_details = {}
+        commands = ["hostname", "whoami"]
 
-                    for shell_cmd in [_hostname, _whoami]:
-                        shell.write(data=shell_cmd)
-                        exploit_payload_json[shell_cmd] = shell.read()
+        for session_id, session_details in self._metasploit.metasploit_client.sessions.list.items():
+            if exploit_name in session_details['via_exploit'] and payload_name in session_details['via_payload']:
+                payload_details["session"] = session_details
 
-            if exploit_job[_jobid] in self.metasploit_connection.metasploit_client.jobs.list:
-                job_details = self.metasploit_connection.metasploit_client.jobs.info(jobid=exploit_job[_jobid])
-                if _error not in job_details:
-                    exploit_payload_json[_job] = job_details
+                for output, cmd in zip(self.execute_shell_commands(commands=commands, session_id=session_id), commands):
+                    payload_details[cmd] = output
 
-            if exploit_payload_json:
-                exploit_payload_json["target"] = self.target_host
-                json_exploit_list_with_each_payload.append(exploit_payload_json)
-        return json_exploit_list_with_each_payload
+        job_details = self.job_info(job_id=job_id)
+        if job_details:
+            payload_details["job"] = job_details
+        if payload_details:
+            payload_details["target"] = self._target_host
+        return payload_details
 
-    def exploit_information(self, exploit_name, module_type='exploit'):
+    @metasploit_action_verification
+    def info(self, exploit_name):
         """
         Gets detailed information about an exploit.
 
         Args:
             exploit_name (str): exploit name.
-            module_type (str): module type, defaults to 'exploit'.
 
         Returns:
-            dict: details information about the exploit.
+            dict: information about the exploit.
+
+        {
+            "description": "This module exploits a malicious backdoor that was added to the VSFTPD download archive.
+            This backdoor was introduced into the vsftpd-2.3.4.tar.gz archive between June 30th 2011 and July 1st 2011
+            according to the most recent information available. This backdoor was removed on July 3rd 2011.",
+            "filledOptions": {
+                "ConnectTimeout": 10,
+                "DisablePayloadHandler": false,
+                "EnableContextEncoding": false,
+                "RPORT": 21,
+                "SSL": false,
+                "SSLVerifyMode": "PEER",
+                "SSLVersion": "Auto",
+                "TCP::max_send_size": 0,
+                "TCP::send_delay": 0,
+                "VERBOSE": false,
+                "WfsDelay": 0
+            },
+            "name": "VSFTPD v2.3.4 Backdoor Command Execution",
+            "options": [
+                "WORKSPACE",
+                "VERBOSE",
+                "WfsDelay",
+                "EnableContextEncoding",
+                "ContextInformationFile",
+                "DisablePayloadHandler",
+                "RHOSTS",
+                "RPORT",
+                "SSL",
+                "SSLVersion",
+                "SSLVerifyMode",
+                "SSLCipher",
+                "Proxies",
+                "CPORT",
+                "CHOST",
+                "ConnectTimeout",
+                "TCP::max_send_size",
+                "TCP::send_delay"
+            ],
+            "payloads": [
+                "cmd/unix/interact"
+            ],
+            "platform": [
+                "Msf::Module::Platform::Unix"
+            ],
+            "privileged": true,
+            "rank": "excellent",
+            "references": [
+                [
+                    "OSVDB",
+                    "73573"
+                ],
+                [
+                    "URL",
+                    "http://pastebin.com/AetT9sS5"
+                ],
+                [
+                    "URL",
+                    "http://scarybeastsecurity.blogspot.com/2011/07/alert-vsftpd-download-backdoored.html"
+                ]
+            ],
+            "requiredOptions": [
+                "RHOSTS",
+                "RPORT",
+                "SSLVersion",
+                "ConnectTimeout"
+            ],
+            "stance": "aggressive"
+        }
         """
-        exploit = super().execute_module(module_name=exploit_name, module_type=module_type)
+        exploit_name = exploit_name.replace(" ", "/")
+        exploit = super().init_module(module_name=exploit_name, module_type=self.type)
 
         return {
             "name": exploit.name,
@@ -212,10 +303,32 @@ class ExploitExecution(ModuleExecution):
         }
 
 
-class AuxiliaryExecution(ModuleExecution):
+class Payload(MetasploitModule):
 
-    @property
-    def port_scanning(self):
+    type = 'payload'
+
+    @metasploit_action_verification
+    def info(self, payload_name):
+
+        payload_name = payload_name.replace(" ", "/")
+        payload = super().init_module(module_name=payload_name, module_type=self.type)
+
+        return {
+            "name": payload.name,
+            "description": payload.description,
+            "options": payload.options,
+            "filledOptions": payload.runoptions,
+            "requiredOptions": payload.required,
+            "platform": payload.platform,
+            "rank": payload.rank,
+            "privileged": payload.privileged,
+            "references": payload.references
+        }
+
+
+class PortScanning(MetasploitModule):
+
+    def info(self):
         """
         Scan all the open ports on the target host.
 
@@ -227,53 +340,104 @@ class AuxiliaryExecution(ModuleExecution):
             '172.18.0.3:8009', '172.18.0.3:8180', '172.18.0.3:8787'
         ]
         """
-        console = self.metasploit_connection.host_console
+        console = self._metasploit.host_console
+        output_res = ''
 
-        for cmd in ['use auxiliary/scanner/portscan/tcp', f'set RHOSTS {self.target_host}', 'run']:
+        for cmd in ['use auxiliary/scanner/portscan/tcp', f'set RHOSTS {self._target_host}', 'run']:
             console_busy = True
             console.write(command=cmd)
 
             while console_busy:
                 time.sleep(10)
                 output = console.read()
+                output_res += output['data']
                 if not output['busy']:
                     console_busy = False
-                print(output['data'])
+                print(output_res)
                 if cmd == 'run':
-                    self.metasploit_connection.destory_console()
-                    return re.findall(pattern=f"{self.target_host}:[0-9]+", string=output['data'])
+                    self._metasploit.destory_console()
+                    return re.findall(pattern=f"{self._target_host}:[0-9]+", string=output_res)
 
-    @property
-    def db_nmap_vulnerabilites(self):
 
-        console = self.metasploit_connection.host_console
+        # console = self._metasploit.host_console
+        #
+        # for cmd in ['use auxiliary/scanner/portscan/tcp', f'set RHOSTS {self._target_host}', 'run']:
+        #     console_busy = True
+        #     console.write(command=cmd)
+        #
+        #     while console_busy:
+        #         time.sleep(10)
+        #         output = console.read()
+        #         if not output['busy']:
+        #             console_busy = False
+        #         print(output['data'])
+        #         if cmd == 'run':
+        #             self._metasploit.destory_console()
+        #             return re.findall(pattern=f"{self._target_host}:[0-9]+", string=output['data'])
 
-        console_busy = True
-        console.write(command=f'db_nmap -v --script vuln {self.target_host}')
 
-        while console_busy:
-            time.sleep(10)
-            console_output = console.read()
-            print(console_output['data'])
-            if not console_output['busy']:
-                self.metasploit_connection.destory_console()
-                return console_output['data']
-        return ""
-
-    @property
-    def local_nmap_show_vulnerabilites(self):
-
-        nmap_obj = nmap.PortScanner()
-        vulnerabilities_found = {}
-
-        nmap_script_scan_res = nmap_obj.scan(hosts=self.target_host, arguments='-v --script vuln')
-
-        if nmap_script_scan_res['nmap']['scaninfo']['error']:
-            return {}
-
-        for tcp_ports_result in nmap_script_scan_res['scan'][self.target_host]['tcp'].values():
-            cur_vuln_script_result = tcp_ports_result['script']
-            for vuln_name, vuln_details in cur_vuln_script_result.items():
-                if 'ERROR' not in vuln_details:
-                    vulnerabilities_found[vuln_name] = global_utils.remove_trailing_spaces(string=vuln_details)
-        return vulnerabilities_found
+# class AuxiliaryExecution(ModuleExecution):
+#
+#     @property
+#     def port_scanning(self):
+#         """
+#         Scan all the open ports on the target host.
+#
+#         Returns: list(str): list with all the open ports on the target host.
+#             e.g.: [
+#             '172.18.0.3:3306', '172.18.0.3:3632', '172.18.0.3:5432',
+#             '172.18.0.3:5900', '172.18.0.3:6000',
+#             '172.18.0.3:6200', '172.18.0.3:6667', '172.18.0.3:6697',
+#             '172.18.0.3:8009', '172.18.0.3:8180', '172.18.0.3:8787'
+#         ]
+#         """
+#         console = self.metasploit_connection.host_console
+#
+#         for cmd in ['use auxiliary/scanner/portscan/tcp', f'set RHOSTS {self.target_host}', 'run']:
+#             console_busy = True
+#             console.write(command=cmd)
+#
+#             while console_busy:
+#                 time.sleep(10)
+#                 output = console.read()
+#                 if not output['busy']:
+#                     console_busy = False
+#                 print(output['data'])
+#                 if cmd == 'run':
+#                     self.metasploit_connection.destory_console()
+#                     return re.findall(pattern=f"{self.target_host}:[0-9]+", string=output['data'])
+#
+#     @property
+#     def db_nmap_vulnerabilites(self):
+#
+#         console = self.metasploit_connection.host_console
+#
+#         console_busy = True
+#         console.write(command=f'db_nmap -v --script vuln {self.target_host}')
+#
+#         while console_busy:
+#             time.sleep(10)
+#             console_output = console.read()
+#             print(console_output['data'])
+#             if not console_output['busy']:
+#                 self.metasploit_connection.destory_console()
+#                 return console_output['data']
+#         return ""
+#
+#     @property
+#     def local_nmap_show_vulnerabilites(self):
+#
+#         nmap_obj = nmap.PortScanner()
+#         vulnerabilities_found = {}
+#
+#         nmap_script_scan_res = nmap_obj.scan(hosts=self.target_host, arguments='-v --script vuln')
+#
+#         if nmap_script_scan_res['nmap']['scaninfo']['error']:
+#             return {}
+#
+#         for tcp_ports_result in nmap_script_scan_res['scan'][self.target_host]['tcp'].values():
+#             cur_vuln_script_result = tcp_ports_result['script']
+#             for vuln_name, vuln_details in cur_vuln_script_result.items():
+#                 if 'ERROR' not in vuln_details:
+#                     vulnerabilities_found[vuln_name] = global_utils.remove_trailing_spaces(string=vuln_details)
+#         return vulnerabilities_found

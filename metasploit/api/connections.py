@@ -111,6 +111,10 @@ class Metasploit(Connection):
         return self.modules.exploits
 
     @property
+    def payloads(self):
+        return self.modules.payloads
+
+    @property
     def _console(self):
         return msfrpc.MsfConsole(rpc=self.metasploit_client)
 

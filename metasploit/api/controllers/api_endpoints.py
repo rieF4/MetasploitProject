@@ -1,6 +1,11 @@
 from flask_restful import request, Resource
 
-from metasploit.api.logic.service import Service
+from metasploit.api.logic.servicewrapper import ServiceWrapper
+from metasploit.api.metasploit_manager.module_executor import (
+    Exploit,
+    Payload,
+    PortScanning
+)
 
 
 class ControllerApi(Resource):
@@ -19,6 +24,269 @@ class ControllerApi(Resource):
 
     def put(self, *args, **kwargs):
         pass
+
+
+class InstancesController(ControllerApi):
+
+    def __init__(self, docker_server_implementation):
+        self._docker_server_implementation = docker_server_implementation
+
+    def post(self):
+        return self._create_instances_endpoint()
+
+    def get(self, instance_id=None):
+        if instance_id:
+            return self._get_specific_instance_endpoint(instance_id=instance_id)
+        else:
+            return self._get_all_instances_endpoint()
+
+    def delete(self, instance_id):
+        return self._delete_instance_endpoint(instance_id=instance_id)
+
+    def _create_instances_endpoint(self):
+        """
+        Creates docker server instance endpoint.
+
+        Example of a request:
+
+        {
+            "ImageId": "ami-016b213e65284e9c9",
+            "InstanceType": "t2.micro"
+        }
+
+        Returns:
+            Response: a flask response.
+        """
+        return ServiceWrapper(class_type=self._docker_server_implementation).create(docker_server_json=request.json)
+
+    def _get_all_instances_endpoint(self):
+        """
+        Gets all available the docker server instances endpoint.
+
+        Returns:
+            Response: a flask response.
+        """
+        return ServiceWrapper(class_type=self._docker_server_implementation).get_all()
+
+    def _get_specific_instance_endpoint(self, instance_id):
+        """
+        Gets a single docker server instance endpoint.
+
+        Args:
+            instance_id (str): instance id.
+
+        Returns:
+            Response: a flask response.
+        """
+        return ServiceWrapper(class_type=self._docker_server_implementation).get_one(instance_id=instance_id)
+
+    def _delete_instance_endpoint(self, instance_id):
+        """
+        Deletes a single docker server instance endpoint.
+
+        Args:
+            instance_id (str): instance id.
+
+        Returns:
+            Response: a flask response.
+        """
+        return ServiceWrapper(class_type=self._docker_server_implementation).delete_one(instance_id=instance_id)
+
+
+class ContainersController(ControllerApi):
+
+    def __init__(self, container_service_implementation):
+        self._container_service_implementation = container_service_implementation
+
+    def post(self, instance_id):
+        return self._run_container_with_metasploit_daemon_endpoint(instance_id=instance_id)
+
+    def get(self, instance_id, container_id=None):
+        if container_id:
+            return self._get_instance_container_endpoint(instance_id=instance_id, container_id=container_id)
+        else:
+            return self._get_all_instance_containers_endpoint(instance_id=instance_id)
+
+    def delete(self, instance_id, container_id):
+        return self._delete_container_endpoint(instance_id=instance_id, container_id=container_id)
+
+    def _get_all_instance_containers_endpoint(self, instance_id):
+        """
+        Gets all the containers of docker server instance endpoint.
+
+        Args:
+            instance_id (str): instance ID.
+
+        Returns:
+            Response: a flask response.
+        """
+        return ServiceWrapper(class_type=self._container_service_implementation).get_all(instance_id=instance_id)
+
+    def _get_instance_container_endpoint(self, instance_id, container_id):
+        """
+        Gets a single container of docker server instance endpoint.
+
+        Args:
+            instance_id (str): instance ID.
+            container_id (str): container ID.
+
+        Returns:
+            Response: a flask response.
+        """
+        return ServiceWrapper(
+            class_type=self._container_service_implementation
+        ).get_one(instance_id=instance_id, container_id=container_id)
+
+    def _delete_container_endpoint(self, instance_id, container_id):
+        """
+        Deletes a single container of docker server instance endpoint.
+
+        Args:
+            instance_id (str): instance ID.
+            container_id (str): container ID.
+
+        Returns:
+            Response: a flask response.
+        """
+        return ServiceWrapper(
+            class_type=self._container_service_implementation
+        ).delete_one(instance_id=instance_id, container_id=container_id)
+
+    def _run_container_with_metasploit_daemon_endpoint(self, instance_id):
+        """
+        Runs a container with metasploit daemon endpoint.
+
+        Args:
+             instance_id (str): instance ID.
+
+        Returns:
+            Response: a flask response.
+        """
+        return ServiceWrapper(class_type=self._container_service_implementation).create(instance_id=instance_id)
+
+
+class MetasploitController(ControllerApi):
+
+    def __init__(self, metasploit_service_implementation):
+        self._metasploit_service_implementation = metasploit_service_implementation
+
+    def post(self, instance_id, target):
+        return self._run_exploit(instance_id=instance_id, target=target)
+
+    def get(self, instance_id, target=None, exploit_name=None, payload_name=None):
+        if target:
+            return self._scan_ports(instance_id=instance_id, target=target)
+        elif exploit_name:
+            return self._exploit_info(instance_id=instance_id, exploit_name=exploit_name)
+        else:
+            return self._payload_info(instance_id=instance_id, payload_name=payload_name)
+
+    def _run_exploit(self, instance_id, target):
+        """
+        Runs an exploit on a container that belongs to the instance on a target host endpoint.
+
+        Args:
+            instance_id (str): instance ID.
+            target (str): target host to run the exploit (dns/IP).
+
+        Returns:
+            Response: a flask response.
+        """
+        return ServiceWrapper(
+            class_type=self._metasploit_service_implementation,
+            module=Exploit,
+            instance_id=instance_id,
+            target=target
+        ).run(exploit_request=request.json)
+
+    def _scan_ports(self, instance_id, target):
+        """
+        Scans ports using a container that belongs to the instance on a target host endpoint.
+
+        Args:
+            instance_id (str): instance ID.
+            target (str): target host to scan the ports (dns/IP).
+
+        Returns:
+            Response: a flask response.
+        """
+        return ServiceWrapper(
+            class_type=self._metasploit_service_implementation,
+            module=PortScanning,
+            instance_id=instance_id,
+            target=target
+        ).info()
+
+    def _exploit_info(self, instance_id, exploit_name):
+        """
+        Gets exploit information endpoint.
+
+        Args:
+            instance_id (str): instance ID.
+            exploit_name (str): exploit name to query.
+
+        Returns:
+            Response: a flask response.
+        """
+        return ServiceWrapper(
+            class_type=self._metasploit_service_implementation,
+            module=Exploit,
+            instance_id=instance_id
+        ).info(exploit_name=exploit_name)
+
+    def _payload_info(self, instance_id, payload_name):
+        """
+        Gets exploit information endpoint.
+
+        Args:
+            instance_id (str): instance ID.
+            payload_name (str): payload name to query.
+
+        Returns:
+            Response: a flask response.
+        """
+        return ServiceWrapper(
+            class_type=self._metasploit_service_implementation,
+            module=Payload,
+            instance_id=instance_id
+        ).info(payload_name=payload_name)
+
+# class DockerImagesController(ControllerApi):
+#
+#     @staticmethod
+#     @validate_json_request("Repository")
+#     def pull_instance_images_endpoint(id):
+#         """
+#         Pull docker images to an instance.
+#
+#         Examples of a request:
+#             {
+#                 "1": {
+#                     "Repository": "phocean/msf",
+#                 },
+#                 "2": {
+#                     "Repository": "ubuntu",
+#                 }
+#             }
+#
+#         Args:
+#             id (str): instance ID.
+#
+#         Returns:
+#             ApiResponse: an api response obj.
+#
+#         Raises:
+#             AmazonResourceNotFoundError: in case it's invalid instance ID.
+#             ApiError: in case docker server returns an error.
+#         """
+#         # return ApiManager(
+#         #     collection_type=InstancesController.instance_collection,
+#         #     amazon_resource_id=id,
+#         #     client_request=request.json,
+#         #     single_amazon_document=True,
+#         #     amazon_resource_type=global_constants.INSTANCE,
+#         # ).create_docker_resources.pull_image
+
 
 
 # class SecurityGroupsController(ControllerApi):
@@ -155,239 +423,3 @@ class ControllerApi(Resource):
 #         #     amazon_resource_id=id,
 #         #     amazon_resource_type=global_constants.SECURITY_GROUP
 #         # ).update_resource.modify_security_group_inbound_permissions
-
-
-class InstancesController(ControllerApi):
-
-    def __init__(self, docker_server_implementation):
-        self._docker_server_implementation = docker_server_implementation
-
-    def post(self):
-        return self._create_instances_endpoint()
-
-    def get(self, instance_id=None):
-        if instance_id:
-            return self._get_specific_instance_endpoint(instance_id=instance_id)
-        else:
-            return self._get_all_instances_endpoint()
-
-    def delete(self, instance_id):
-        return self._delete_instance_endpoint(instance_id=instance_id)
-
-    def _create_instances_endpoint(self):
-        """
-        Creates docker server instance endpoint.
-
-        Example of a request:
-
-        {
-            "ImageId": "ami-016b213e65284e9c9",
-            "InstanceType": "t2.micro"
-        }
-
-        Returns:
-            Response: a flask response.
-        """
-        return Service(class_type=self._docker_server_implementation).create(docker_server_json=request.json)
-
-    def _get_all_instances_endpoint(self):
-        """
-        Gets all available the docker server instances endpoint.
-
-        Returns:
-            Response: a flask response.
-        """
-        return Service(class_type=self._docker_server_implementation).get_all()
-
-    def _get_specific_instance_endpoint(self, instance_id):
-        """
-        Gets a single docker server instance endpoint.
-
-        Args:
-            instance_id (str): instance id.
-
-        Returns:
-            Response: a flask response.
-        """
-        return Service(class_type=self._docker_server_implementation).get_one(instance_id=instance_id)
-
-    def _delete_instance_endpoint(self, instance_id):
-        """
-        Deletes a single docker server instance endpoint.
-
-        Args:
-            instance_id (str): instance id.
-
-        Returns:
-            Response: a flask response.
-        """
-        return Service(class_type=self._docker_server_implementation).delete_one(instance_id=instance_id)
-
-
-class ContainersController(ControllerApi):
-
-    def __init__(self, container_service_implementation):
-        self._container_service_implementation = container_service_implementation
-
-    def post(self, instance_id):
-        return self._run_container_with_metasploit_daemon_endpoint(instance_id=instance_id)
-
-    def get(self, instance_id, container_id=None):
-        if container_id:
-            return self._get_instance_container_endpoint(instance_id=instance_id, container_id=container_id)
-        else:
-            return self._get_all_instance_containers_endpoint(instance_id=instance_id)
-
-    def delete(self, instance_id, container_id):
-        return self._delete_container_endpoint(instance_id=instance_id, container_id=container_id)
-
-    def _get_all_instance_containers_endpoint(self, instance_id):
-        """
-        Gets all the containers of docker server instance endpoint.
-
-        Args:
-            instance_id (str): instance ID.
-
-        Returns:
-            Response: a flask response.
-        """
-        return Service(class_type=self._container_service_implementation).get_all(instance_id=instance_id)
-
-    def _get_instance_container_endpoint(self, instance_id, container_id):
-        """
-        Gets a single container of docker server instance endpoint.
-
-        Args:
-            instance_id (str): instance ID.
-            container_id (str): container ID.
-
-        Returns:
-            Response: a flask response.
-        """
-        return Service(
-            class_type=self._container_service_implementation
-        ).get_one(instance_id=instance_id, container_id=container_id)
-
-    def _delete_container_endpoint(self, instance_id, container_id):
-        """
-        Deletes a single container of docker server instance endpoint.
-
-        Args:
-            instance_id (str): instance ID.
-            container_id (str): container ID.
-
-        Returns:
-            Response: a flask response.
-        """
-        return Service(
-            class_type=self._container_service_implementation
-        ).delete_one(instance_id=instance_id, container_id=container_id)
-
-    def _run_container_with_metasploit_daemon_endpoint(self, instance_id):
-        """
-        Runs a container with metasploit daemon endpoint.
-
-        Args:
-             instance_id (str): instance ID.
-
-        Returns:
-            Response: a flask response.
-        """
-        return Service(class_type=self._container_service_implementation).create(instance_id=instance_id)
-
-
-class MetasploitController(ControllerApi):
-
-    def __init__(self, metasploit_service_implementation):
-        self._metasploit_service_implementation = metasploit_service_implementation
-
-    def post(self, instance_id, target):
-        return self._run_exploit(instance_id=instance_id, target=target)
-
-    def get(self, instance_id, target=None, exploit_name=None):
-        if target:
-            return self._scan_ports(instance_id=instance_id, target=target)
-        else:
-            return self._exploit_info(instance_id=instance_id, exploit_name=exploit_name)
-
-    def _run_exploit(self, instance_id, target):
-        """
-        Runs an exploit on a container that belongs to the instance on a target host endpoint.
-
-        Args:
-            instance_id (str): instance ID.
-            target (str): target host to run the exploit (dns/IP).
-
-        Returns:
-            Response: a flask response.
-        """
-        return Service(class_type=self._metasploit_service_implementation).run(
-            instance_id=instance_id, exploit_request=request.json, target=target
-        )
-
-    def _scan_ports(self, instance_id, target):
-        """
-        Scans ports using a container that belongs to the instance on a target host endpoint.
-
-        Args:
-            instance_id (str): instance ID.
-            target (str): target host to scan the ports (dns/IP).
-
-        Returns:
-            Response: a flask response.
-        """
-        return Service(class_type=self._metasploit_service_implementation).scan(
-            instance_id=instance_id, target=target
-        )
-
-    def _exploit_info(self, instance_id, exploit_name):
-        """
-        Gets exploit information endpoint.
-
-        Args:
-            instance_id (str): instance ID.
-            exploit_name (str): exploit name to query.
-
-        Returns:
-            Response: a flask response.
-        """
-        return Service(
-            class_type=self._metasploit_service_implementation
-        ).info(instance_id=instance_id, exploit_name=exploit_name)
-
-# class DockerImagesController(ControllerApi):
-#
-#     @staticmethod
-#     @validate_json_request("Repository")
-#     def pull_instance_images_endpoint(id):
-#         """
-#         Pull docker images to an instance.
-#
-#         Examples of a request:
-#             {
-#                 "1": {
-#                     "Repository": "phocean/msf",
-#                 },
-#                 "2": {
-#                     "Repository": "ubuntu",
-#                 }
-#             }
-#
-#         Args:
-#             id (str): instance ID.
-#
-#         Returns:
-#             ApiResponse: an api response obj.
-#
-#         Raises:
-#             AmazonResourceNotFoundError: in case it's invalid instance ID.
-#             ApiError: in case docker server returns an error.
-#         """
-#         # return ApiManager(
-#         #     collection_type=InstancesController.instance_collection,
-#         #     amazon_resource_id=id,
-#         #     client_request=request.json,
-#         #     single_amazon_document=True,
-#         #     amazon_resource_type=global_constants.INSTANCE,
-#         # ).create_docker_resources.pull_image
-

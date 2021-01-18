@@ -14,9 +14,6 @@ class Service(object):
     def delete_one(self, *args, **kwargs):
         pass
 
-    def scan(self, *args, **kwargs):
-        pass
-
     def run(self, *args, **kwargs):
         pass
 
@@ -59,9 +56,4 @@ class MetasploitService(Service):
     def run_exploit(self, instance_id, exploit_request, target):
         pass
 
-    def scan_all_ports(self, instance_id, target):
-        pass
-
-    def get_exploit_info(self, instance_id, exploit_name):
-        pass
 

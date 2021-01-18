@@ -238,7 +238,7 @@ class DockerServerInstance(object):
         self.write_to_file(
             filename='/etc/systemd/system/docker.service.d/override.conf',
             mode='w',
-            data='[Service]\nExecStart=\nExecStart=/usr/bin/dockerd\n'
+            data='[ServiceWrapper]\nExecStart=\nExecStart=/usr/bin/dockerd\n'
         )
 
         self.execute_shell_commands(

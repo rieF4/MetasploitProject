@@ -7,7 +7,8 @@ from metasploit.api.utils.helpers import (
 )
 from metasploit.api.response import (
     ErrorResponse,
-    ApiResponse
+    ApiResponse,
+    HttpCodes
 )
 from metasploit.api.errors import (
     BadJsonInput,
@@ -20,7 +21,8 @@ from metasploit.api.aws.amazon_operations import DockerServerInstanceOperations
 from metasploit.api import constants as global_const
 from metasploit.api.errors import (
     ApiException,
-    AmazonResourceNotFoundError
+    AmazonResourceNotFoundError,
+    MetasploitActionError
 )
 
 
@@ -115,7 +117,6 @@ def response_decorator(code):
         """
         def second_wrapper(*args, **kwargs):
             """
-
             Args:
                 args: function args
                 kwargs: function kwargs
@@ -137,6 +138,26 @@ def response_decorator(code):
 
         return second_wrapper
     return first_wrapper
+
+
+def metasploit_action_verification(func):
+    """
+    Verifies that the metasploit actions that are performed are valid.
+
+    Args:
+        func (Function): metasploit function.
+    """
+
+    def wrapper(self, *args, **kwargs):
+        """
+        Catches error of metasploit actions in case there are any.
+        """
+        try:
+            return func(self, *args, **kwargs)
+        except Exception as error:
+            raise MetasploitActionError(error_msg=str(error), error_code=HttpCodes.BAD_REQUEST)
+
+    return wrapper
 
 
 def verify_instance_exists(func):

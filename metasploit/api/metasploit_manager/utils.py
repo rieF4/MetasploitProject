@@ -1,8 +1,10 @@
 from metasploit.api.errors import (
     ModuleOptionsError,
     ModuleNotSupportedError,
-    PayloadNotSupportedError
+    PayloadNotSupportedError,
+    MetasploitActionError
 )
+from metasploit.api.response import HttpCodes
 
 
 def check_required_options_for_module(required_params, options, module_name):
@@ -25,6 +27,24 @@ def check_required_options_for_module(required_params, options, module_name):
         raise ModuleOptionsError(options=not_in_requirements, module_name=module_name)
 
 
+def metasploit_action_verification(func):
+    """
+    Verifies that the metasploit actions that are performed are valid.
+
+    Args:
+        func (Function): metasploit function.
+    """
+    def wrapper(self, *args, **kwargs):
+        """
+        Catches error of metasploit actions in case there are any.
+        """
+        try:
+            return func(self, *args, **kwargs)
+        except Exception as error:
+            raise MetasploitActionError(error_msg=str(error), error_code=HttpCodes.BAD_REQUEST)
+    return wrapper
+
+
 def check_if_module_is_supported(module_name, module_type, metasploit_connection):
     """
     Checks whether module type and name are valid parameters.
@@ -42,6 +62,9 @@ def check_if_module_is_supported(module_name, module_type, metasploit_connection
             raise ModuleNotSupportedError(module_type=module_type, module_name=module_name)
     elif module_type == 'auxiliary':
         if module_name not in metasploit_connection.auxiliaries:
+            raise ModuleNotSupportedError(module_type=module_type, module_name=module_name)
+    elif module_type == 'payloads':
+        if module_name not in metasploit_connection.payloads:
             raise ModuleNotSupportedError(module_type=module_type, module_name=module_name)
     else:
         raise ModuleNotSupportedError(module_type=module_type)

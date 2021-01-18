@@ -112,7 +112,7 @@ class ModuleNotSupportedError(ApiException):
 
     def __init__(self, module_type, module_name=None, error_code=HttpCodes.BAD_REQUEST):
         if module_name:
-            msg = f"module {module_name} is not supported under module type {module_type}"
+            msg = f"module name {module_name} is not supported under module type {module_type}"
         else:
             msg = f"module type {module_type} is not a valid type"
         super().__init__(error_msg=msg, error_code=error_code)
@@ -125,6 +125,10 @@ class PayloadNotSupportedError(ApiException):
         for payload in unsupported_payloads:
             msg += f"Payload {payload} is not supported. "
         super().__init__(error_msg=msg, error_code=error_code)
+
+
+class MetasploitActionError(ApiException):
+    pass
 
 
 class InvalidInputTypeError(ApiException):
