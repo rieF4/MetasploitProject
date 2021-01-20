@@ -27,14 +27,12 @@ class MetasploitServiceImplementation(MetasploitService):
     def run(self, *args, **kwargs):
         return self.run_exploit(*args, **kwargs)
 
-    @response_decorator(code=HttpCodes.OK)
     def info(self, *args, **kwargs):
         """
         Gets information about a module parameters.
         """
         return self.module.info(*args, **kwargs)
 
-    @response_decorator(code=HttpCodes.OK)
     @validate_json_request("name", "payloads", "options")
     def run_exploit(self, exploit_request):
         """

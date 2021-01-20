@@ -1,25 +1,42 @@
 import re
 import nmap
 import time
+import socket
 
 from metasploit.api.connections import Metasploit
 from requests.adapters import ConnectionError
-from metasploit.api.errors import MsfrpcdConnectionError
+from metasploit.api.errors import MsfrpcdConnectionError, TimeoutExpiredError, InvalidHostName
 from metasploit.api.utils.decorators import metasploit_action_verification
-from metasploit.api.response import HttpCodes
+from metasploit.api.utils.helpers import TimeoutSampler
 
 
 class MetasploitModule(object):
 
-    def __init__(self, source_host=None, port=50000, target=None):
+    def __init__(self, source_host, port=50000, target=None):
+        """
+        Creates a metasploit class to connect and use metasploit functionality.
 
-        if source_host:
-            self._target_host = target
-            self._source_host = source_host
-            try:
-                self._metasploit = Metasploit(server=source_host, port=port)
-            except ConnectionError:
-                raise MsfrpcdConnectionError(host=source_host, port=port, error_code=HttpCodes.SERVICE_UNAVAILABLE)
+        Args:
+            source_host (str): the host that uses metasploit.
+            port (int): on which port the msfrpc listens to.
+            target (str): target host to perform actions.
+
+        Raises:
+            MsfrpcdConnectionError: in case metasploit connection attempt has failed.
+            InvalidHostName: in case the provided target host name is invalid.
+        """
+        self._source_host = source_host
+
+        try:
+            if target:
+                self._target_host = socket.gethostbyname(target)
+        except socket.gaierror:
+            raise InvalidHostName(invalid_host=target)
+
+        try:
+            self._metasploit = Metasploit(server=source_host, port=port)
+        except ConnectionError:
+            raise MsfrpcdConnectionError(host=source_host, port=port)
 
     def init_module(self, module_name, module_type):
         """
@@ -50,6 +67,32 @@ class MetasploitModule(object):
         for cmd in commands:
             shell.write(data=cmd)
             yield shell.read()
+
+    def execute_host_console_commands(self, commands, timeout=90, sleep=3):
+        """
+        executes host console commands in msf console.
+
+        Args:
+            commands (list(str)): set of commands to be done on the msf console.
+            timeout (int): timeout to sample the duration of each command.
+            sleep (int): sleep time between each sampling of the console for every command.
+
+        Yields:
+            str: data output from the console of each command.
+        """
+        console = self._metasploit.host_console
+
+        for cmd in commands:
+            console.write(command=cmd)
+            try:
+                for is_busy in TimeoutSampler(timeout=timeout, sleep=sleep, func=console.is_busy):
+                    if not is_busy:
+                        break
+            except TimeoutExpiredError:
+                pass
+            yield console.read()["data"]
+
+        self._metasploit.destory_console()
 
     def job_info(self, job_id):
         """
@@ -87,13 +130,13 @@ class MetasploitModule(object):
 
     def execute(self, *args, **kwargs):
         """
-        Base method to execute metasploit modules
+        Base method to execute metasploit modules.
         """
         pass
 
     def info(self, *args, **kwargs):
         """
-        Base method to collect information about metasploit modules
+        Base method to collect information about metasploit modules.
         """
         pass
 
@@ -216,6 +259,8 @@ class Exploit(MetasploitModule):
         Returns:
             dict: information about the exploit.
 
+        Example:
+
         {
             "description": "This module exploits a malicious backdoor that was added to the VSFTPD download archive.
             This backdoor was introduced into the vsftpd-2.3.4.tar.gz archive between June 30th 2011 and July 1st 2011
@@ -309,7 +354,45 @@ class Payload(MetasploitModule):
 
     @metasploit_action_verification
     def info(self, payload_name):
+        """
+        Gets information about a payload.
 
+        Args:
+            payload_name (str): payload name.
+
+        Returns:
+            dict: information about the payload.
+
+        Example:
+
+        {
+            "description": "Simply execve /bin/sh (for inetd programs)",
+            "filledOptions": {
+                "AIX": "6.1.4",
+                "CreateSession": true,
+                "VERBOSE": false
+            },
+            "name": "AIX execve Shell for inetd",
+            "options": [
+                "WORKSPACE",
+                "VERBOSE",
+                "AIX",
+                "CreateSession",
+                "InitialAutoRunScript",
+                "AutoRunScript",
+                "CommandShellCleanupCommand"
+            ],
+            "platform": [
+                "Msf::Module::Platform::AIX"
+            ],
+            "privileged": false,
+            "rank": "normal",
+            "references": [],
+            "requiredOptions": [
+                "AIX"
+            ]
+        }
+        """
         payload_name = payload_name.replace(" ", "/")
         payload = super().init_module(module_name=payload_name, module_type=self.type)
 
@@ -340,72 +423,15 @@ class PortScanning(MetasploitModule):
             '172.18.0.3:8009', '172.18.0.3:8180', '172.18.0.3:8787'
         ]
         """
-        console = self._metasploit.host_console
-        output_res = ''
+        commands = ['use auxiliary/scanner/portscan/tcp', f'set RHOSTS {self._target_host}', 'run']
+        open_ports = []
+        finding_port_pattern = f"{self._target_host}:[0-9]+"
 
-        for cmd in ['use auxiliary/scanner/portscan/tcp', f'set RHOSTS {self._target_host}', 'run']:
-            console_busy = True
-            console.write(command=cmd)
+        for data in self.execute_host_console_commands(commands=commands):
+            open_ports += re.findall(pattern=finding_port_pattern, string=data)
 
-            while console_busy:
-                time.sleep(10)
-                output = console.read()
-                output_res += output['data']
-                if not output['busy']:
-                    console_busy = False
-                print(output_res)
-                if cmd == 'run':
-                    self._metasploit.destory_console()
-                    return re.findall(pattern=f"{self._target_host}:[0-9]+", string=output_res)
+        return open_ports
 
-
-        # console = self._metasploit.host_console
-        #
-        # for cmd in ['use auxiliary/scanner/portscan/tcp', f'set RHOSTS {self._target_host}', 'run']:
-        #     console_busy = True
-        #     console.write(command=cmd)
-        #
-        #     while console_busy:
-        #         time.sleep(10)
-        #         output = console.read()
-        #         if not output['busy']:
-        #             console_busy = False
-        #         print(output['data'])
-        #         if cmd == 'run':
-        #             self._metasploit.destory_console()
-        #             return re.findall(pattern=f"{self._target_host}:[0-9]+", string=output['data'])
-
-
-# class AuxiliaryExecution(ModuleExecution):
-#
-#     @property
-#     def port_scanning(self):
-#         """
-#         Scan all the open ports on the target host.
-#
-#         Returns: list(str): list with all the open ports on the target host.
-#             e.g.: [
-#             '172.18.0.3:3306', '172.18.0.3:3632', '172.18.0.3:5432',
-#             '172.18.0.3:5900', '172.18.0.3:6000',
-#             '172.18.0.3:6200', '172.18.0.3:6667', '172.18.0.3:6697',
-#             '172.18.0.3:8009', '172.18.0.3:8180', '172.18.0.3:8787'
-#         ]
-#         """
-#         console = self.metasploit_connection.host_console
-#
-#         for cmd in ['use auxiliary/scanner/portscan/tcp', f'set RHOSTS {self.target_host}', 'run']:
-#             console_busy = True
-#             console.write(command=cmd)
-#
-#             while console_busy:
-#                 time.sleep(10)
-#                 output = console.read()
-#                 if not output['busy']:
-#                     console_busy = False
-#                 print(output['data'])
-#                 if cmd == 'run':
-#                     self.metasploit_connection.destory_console()
-#                     return re.findall(pattern=f"{self.target_host}:[0-9]+", string=output['data'])
 #
 #     @property
 #     def db_nmap_vulnerabilites(self):

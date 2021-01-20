@@ -35,7 +35,6 @@ class ContainerServiceImplementation(ContainerService):
         return self.delete_container(**kwargs)
 
     @update_containers_status
-    @response_decorator(HttpCodes.OK)
     def get_container(self, instance_id, container_id):
         """
         Gets a container from the DB.
@@ -52,7 +51,6 @@ class ContainerServiceImplementation(ContainerService):
         )
 
     @update_containers_status
-    @response_decorator(HttpCodes.OK)
     def get_all_containers(self, instance_id):
         """
         Gets all containers from the DB.
@@ -65,7 +63,6 @@ class ContainerServiceImplementation(ContainerService):
         """
         return self.database.get_docker_documents(amazon_resource_id=instance_id, type=self.type)
 
-    @response_decorator(HttpCodes.OK)
     def create_metasploit_container(self, instance_id):
         """
         Creates a new metasploit container over a docker server instance.
@@ -90,7 +87,6 @@ class ContainerServiceImplementation(ContainerService):
 
         return container_response
 
-    @response_decorator(HttpCodes.NO_CONTENT)
     def delete_container(self, instance_id, container_id):
         """
         Deletes a container from the DB.

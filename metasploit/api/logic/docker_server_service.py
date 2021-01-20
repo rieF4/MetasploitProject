@@ -33,7 +33,6 @@ class DockerServerServiceImplementation(DockerServerService):
     def delete_one(self, *args, **kwargs):
         return self.delete_docker_server(**kwargs)
 
-    @response_decorator(code=HttpCodes.OK)
     def get_docker_server(self, instance_id):
         """
         Gets a docker server from the DB
@@ -46,7 +45,6 @@ class DockerServerServiceImplementation(DockerServerService):
         """
         return self.database.get_amazon_document(type=self.type, resource_id=instance_id)
 
-    @response_decorator(code=HttpCodes.OK)
     def get_all_docker_servers(self):
         """
         Gets all available docker servers from the DB.
@@ -56,7 +54,6 @@ class DockerServerServiceImplementation(DockerServerService):
         """
         return self.database.get_all_amazon_documents()
 
-    @response_decorator(code=HttpCodes.OK)
     @validate_json_request("ImageId", "InstanceType")
     def create_docker_server(self, docker_server_json):
         """
@@ -89,7 +86,6 @@ class DockerServerServiceImplementation(DockerServerService):
 
         return docker_server_response
 
-    @response_decorator(code=HttpCodes.NO_CONTENT)
     def delete_docker_server(self, instance_id):
         """
         Deletes a docker server from the DB.

@@ -123,11 +123,22 @@ class TimeoutSampler(object):
         ''' Time of last sample. '''
 
     def __iter__(self):
+        """
+        Iterator that generates the function output every 'sleep' seconds.
+
+        Yields:
+            any function output.
+
+        Raises:
+            TimeoutExpiredError: in case the function sampling reached to the timeout provided
+        """
         if self.start_time is None:
             self.start_time = time.time()
+
         while True:
             self.last_sample_time = time.time()
             yield self.func(*self.func_args, **self.func_kwargs)
+
             if self.timeout < (time.time() - self.start_time):
                 raise TimeoutExpiredError(error_msg=f"Timeout occurred sampling {self.func.__name__}")
             time.sleep(self.sleep)
@@ -139,15 +150,14 @@ class TimeoutSampler(object):
         Args:
             result (bool): expected result from the function.
 
-        Raises:
-            TimeoutExpiredError: in case the timeout was reached
+        Returns:
+            bool: in case function output is what's expected, false otherwise.
         """
         try:
             for res in self:
                 if result == res:
                     return True
-        except TimeoutExpiredError as err:
-            print(err)
+        except TimeoutExpiredError:
             return False
 
 

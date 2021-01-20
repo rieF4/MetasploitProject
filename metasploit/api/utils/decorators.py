@@ -125,7 +125,9 @@ def response_decorator(code):
                 Response: flask api response.
             """
             try:
-                return ApiResponse(response=func(*args, **kwargs), http_status_code=code).make_response
+                res = func(*args, **kwargs)
+                print(res)
+                return ApiResponse(response=res, http_status_code=code).make_response
             except ApiException as exc:
                 return ErrorResponse(
                     error_msg=str(exc), http_error_code=exc.error_code, req=request.json, path=request.base_url
@@ -154,8 +156,8 @@ def metasploit_action_verification(func):
         """
         try:
             return func(self, *args, **kwargs)
-        except Exception as error:
-            raise MetasploitActionError(error_msg=str(error), error_code=HttpCodes.BAD_REQUEST)
+        except Exception as exc:
+            raise MetasploitActionError(error_msg=str(exc), error_code=HttpCodes.BAD_REQUEST)
 
     return wrapper
 
@@ -172,5 +174,5 @@ def verify_instance_exists(func):
         instance_id = kwargs.get("instance_id")
         if not self.database.get_amazon_document(resource_id=instance_id):
             raise AmazonResourceNotFoundError(type=self.type, id=instance_id)
-        return func(self, *args, **kwargs)
+        func(self, *args, **kwargs)
     return wrapper

@@ -37,6 +37,13 @@ class ApiException(Exception):
         return 500 <= self.error_code < 600
 
 
+class InvalidHostName(ApiException):
+
+    def __init__(self, invalid_host, error_code=HttpCodes.BAD_REQUEST):
+        msg = f"the host {invalid_host} is invalid and does not exist!"
+        super().__init__(error_msg=msg, error_code=error_code)
+
+
 class GeneralConnectionError(ApiException):
 
     def __init__(self, error_msg, error_code=HttpCodes.SERVICE_UNAVAILABLE):

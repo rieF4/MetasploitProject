@@ -6,6 +6,8 @@ from metasploit.api.metasploit_manager.module_executor import (
     Payload,
     PortScanning
 )
+from metasploit.api.utils.decorators import response_decorator
+from metasploit.api.response import HttpCodes
 
 
 class ControllerApi(Resource):
@@ -43,6 +45,7 @@ class InstancesController(ControllerApi):
     def delete(self, instance_id):
         return self._delete_instance_endpoint(instance_id=instance_id)
 
+    @response_decorator(HttpCodes.OK)
     def _create_instances_endpoint(self):
         """
         Creates docker server instance endpoint.
@@ -59,6 +62,7 @@ class InstancesController(ControllerApi):
         """
         return ServiceWrapper(class_type=self._docker_server_implementation).create(docker_server_json=request.json)
 
+    @response_decorator(HttpCodes.OK)
     def _get_all_instances_endpoint(self):
         """
         Gets all available the docker server instances endpoint.
@@ -68,6 +72,7 @@ class InstancesController(ControllerApi):
         """
         return ServiceWrapper(class_type=self._docker_server_implementation).get_all()
 
+    @response_decorator(HttpCodes.OK)
     def _get_specific_instance_endpoint(self, instance_id):
         """
         Gets a single docker server instance endpoint.
@@ -80,6 +85,7 @@ class InstancesController(ControllerApi):
         """
         return ServiceWrapper(class_type=self._docker_server_implementation).get_one(instance_id=instance_id)
 
+    @response_decorator(HttpCodes.NO_CONTENT)
     def _delete_instance_endpoint(self, instance_id):
         """
         Deletes a single docker server instance endpoint.
@@ -110,6 +116,7 @@ class ContainersController(ControllerApi):
     def delete(self, instance_id, container_id):
         return self._delete_container_endpoint(instance_id=instance_id, container_id=container_id)
 
+    @response_decorator(HttpCodes.OK)
     def _get_all_instance_containers_endpoint(self, instance_id):
         """
         Gets all the containers of docker server instance endpoint.
@@ -122,6 +129,7 @@ class ContainersController(ControllerApi):
         """
         return ServiceWrapper(class_type=self._container_service_implementation).get_all(instance_id=instance_id)
 
+    @response_decorator(HttpCodes.OK)
     def _get_instance_container_endpoint(self, instance_id, container_id):
         """
         Gets a single container of docker server instance endpoint.
@@ -137,6 +145,7 @@ class ContainersController(ControllerApi):
             class_type=self._container_service_implementation
         ).get_one(instance_id=instance_id, container_id=container_id)
 
+    @response_decorator(HttpCodes.NO_CONTENT)
     def _delete_container_endpoint(self, instance_id, container_id):
         """
         Deletes a single container of docker server instance endpoint.
@@ -152,6 +161,7 @@ class ContainersController(ControllerApi):
             class_type=self._container_service_implementation
         ).delete_one(instance_id=instance_id, container_id=container_id)
 
+    @response_decorator(HttpCodes.OK)
     def _run_container_with_metasploit_daemon_endpoint(self, instance_id):
         """
         Runs a container with metasploit daemon endpoint.
@@ -181,6 +191,7 @@ class MetasploitController(ControllerApi):
         else:
             return self._payload_info(instance_id=instance_id, payload_name=payload_name)
 
+    @response_decorator(HttpCodes.OK)
     def _run_exploit(self, instance_id, target):
         """
         Runs an exploit on a container that belongs to the instance on a target host endpoint.
@@ -199,6 +210,7 @@ class MetasploitController(ControllerApi):
             target=target
         ).run(exploit_request=request.json)
 
+    @response_decorator(HttpCodes.OK)
     def _scan_ports(self, instance_id, target):
         """
         Scans ports using a container that belongs to the instance on a target host endpoint.
@@ -217,6 +229,7 @@ class MetasploitController(ControllerApi):
             target=target
         ).info()
 
+    @response_decorator(HttpCodes.OK)
     def _exploit_info(self, instance_id, exploit_name):
         """
         Gets exploit information endpoint.
@@ -234,6 +247,7 @@ class MetasploitController(ControllerApi):
             instance_id=instance_id
         ).info(exploit_name=exploit_name)
 
+    @response_decorator(HttpCodes.OK)
     def _payload_info(self, instance_id, payload_name):
         """
         Gets exploit information endpoint.
