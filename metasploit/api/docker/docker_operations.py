@@ -45,16 +45,15 @@ class ContainerOperations(DockerOperations):
             image (str): image name that the docker will be created with.
             kwargs (dict): https://docker-py.readthedocs.io/en/stable/containers.html#container-objects
 
-            Returns:
-                Container: a container obj if created successfully.
+        Returns:
+            Container: a container obj if created successfully.
 
-            Raises:
-                ImageNotFound: in case the image was not found on the docker server.
-                ApiError: In case the docker server returns an error.
+        Raises:
+            ImageNotFound: in case the image was not found on the docker server.
+            ApiError: In case the docker server returns an error.
         """
         if "detach" not in kwargs:
             kwargs["detach"] = True
-        print(kwargs)
         return self.docker_server.docker.container_collection.run(image=image, **kwargs)
 
     def run_container_with_msfrpcd_metasploit(self, containers_documents):

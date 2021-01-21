@@ -12,24 +12,41 @@ from metasploit.api.response import HttpCodes
 
 class ControllerApi(Resource):
     """
-    Base class for all the collection API classes
+    Base class for all the Controllers API classes
     """
 
     def post(self, *args, **kwargs):
+        """
+        Base method for all the post operations
+        """
         pass
 
     def get(self, *args, **kwargs):
+        """
+        Base method for all the get operations
+        """
         pass
 
     def delete(self, *args, **kwargs):
+        """
+        Base method for all the delete operations
+        """
         pass
 
     def put(self, *args, **kwargs):
+        """
+        Base method for all the put operations
+        """
         pass
 
 
 class InstancesController(ControllerApi):
+    """
+    Docker server controller.
 
+    Attributes:
+        _docker_server_implementation: a class which implements the service of the docker server.
+    """
     def __init__(self, docker_server_implementation):
         self._docker_server_implementation = docker_server_implementation
 
@@ -100,7 +117,12 @@ class InstancesController(ControllerApi):
 
 
 class ContainersController(ControllerApi):
+    """
+    Containers controller.
 
+    Attributes:
+        _container_service_implementation: a class which implements the service of the containers.
+    """
     def __init__(self, container_service_implementation):
         self._container_service_implementation = container_service_implementation
 
@@ -176,7 +198,12 @@ class ContainersController(ControllerApi):
 
 
 class MetasploitController(ControllerApi):
+    """
+    Containers controller.
 
+    Attributes:
+        _metasploit_service_implementation: a class which implements the service of the metasploit.
+    """
     def __init__(self, metasploit_service_implementation):
         self._metasploit_service_implementation = metasploit_service_implementation
 
@@ -250,7 +277,7 @@ class MetasploitController(ControllerApi):
     @response_decorator(HttpCodes.OK)
     def _payload_info(self, instance_id, payload_name):
         """
-        Gets exploit information endpoint.
+        Gets payload information endpoint.
 
         Args:
             instance_id (str): instance ID.

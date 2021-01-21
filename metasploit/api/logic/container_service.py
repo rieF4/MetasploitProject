@@ -6,33 +6,36 @@ from metasploit.api.database import (
 from metasploit.api.docker.docker_operations import ContainerOperations
 
 from metasploit.api.utils.decorators import (
-    update_containers_status,
-    response_decorator
+    update_containers_status
 )
 from metasploit.api.response import (
-    HttpCodes,
     create_new_response
 )
 
 
 class ContainerServiceImplementation(ContainerService):
+    """
+    Implements the container service.
 
+    Attributes:
+        database (DatabaseOperations): DatabaseOperations object.
+    """
     type = "Container"
 
     def __init__(self):
         self.database = DatabaseOperations(collection_type=DatabaseCollections.INSTANCES)
 
     def create(self, *args, **kwargs):
-        return self.create_metasploit_container(**kwargs)
+        return self.create_metasploit_container(*args, **kwargs)
 
     def get_all(self, *args, **kwargs):
-        return self.get_all_containers(**kwargs)
+        return self.get_all_containers(*args, **kwargs)
 
     def get_one(self, *args, **kwargs):
-        return self.get_container(**kwargs)
+        return self.get_container(*args, **kwargs)
 
     def delete_one(self, *args, **kwargs):
-        return self.delete_container(**kwargs)
+        return self.delete_container(*args, **kwargs)
 
     @update_containers_status
     def get_container(self, instance_id, container_id):
@@ -95,6 +98,8 @@ class ContainerServiceImplementation(ContainerService):
             instance_id (str): instance ID.
             container_id (str): container ID.
 
+        Returns:
+            str: empty string as a response in case of success.
         """
         self.database.delete_docker_document(
             amazon_resource_id=instance_id, docker_resource_id=container_id, docker_document_type=self.type

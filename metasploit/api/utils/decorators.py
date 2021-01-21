@@ -74,7 +74,9 @@ def validate_json_request(*expected_args):
 
 
 def update_containers_status(func):
-
+    """
+    Updates containers status in case there is any change with them ( running state ---> stopped state for example)
+    """
     def wrapper(self, **kwargs):
         database = self.database
 
@@ -125,9 +127,7 @@ def response_decorator(code):
                 Response: flask api response.
             """
             try:
-                res = func(*args, **kwargs)
-                print(res)
-                return ApiResponse(response=res, http_status_code=code).make_response
+                return ApiResponse(response=func(*args, **kwargs), http_status_code=code).make_response
             except ApiException as exc:
                 return ErrorResponse(
                     error_msg=str(exc), http_error_code=exc.error_code, req=request.json, path=request.base_url

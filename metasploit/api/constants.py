@@ -1,19 +1,15 @@
 
 
 ID = "_id"
-CONTAINERS = "Containers"
 CONTAINER = "Container"
 DOCKER = "Docker"
 PUSH = "$push"
 PULL = "$pull"
 SET = "$set"
 ADD_TO_SET = "$addToSet"
-INSTANCES = "Instances"
 INSTANCE = "Instance"
-SECURITY_GROUPS = "SecurityGroups"
 SECURITY_GROUP = "SecurityGroup"
 IMAGE = "Image"
-IMAGES = "Images"
 NETWORKS = "Networks"
 
 SSH_PORT = 22

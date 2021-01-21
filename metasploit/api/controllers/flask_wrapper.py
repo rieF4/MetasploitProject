@@ -64,21 +64,29 @@ class FlaskAppWrapper(object):
 
     @app.errorhandler(HttpCodes.METHOD_NOT_ALLOWED)
     def method_not_allowed(self):
+        """
+        Catches a client request which indicates abut a bad method over the provided URL.
 
+        Returns:
+            tuple (Json, int): an error response and 405 status code indicating for 'METHOD_NOT_ALLOWED'.
+        """
         method_not_allowed_err = {
             "Error": f"Method {request.method} is not allowed in URL {request.base_url}",
             "AvailableMethods": "In progress"
         }
-
         return jsonify(method_not_allowed_err), HttpCodes.METHOD_NOT_ALLOWED
 
     @app.errorhandler(HttpCodes.BAD_REQUEST)
     def bad_request(self):
+        """
+        Catches a client request which indicates about an invalid data input to the server.
 
+        Returns:
+            tuple (Json, int): an error response and 400 status code indicating for 'Bad Request'.
+        """
         bad_request_error = {
             "Error": "Invalid data type!!"
         }
-
         return jsonify(bad_request_error), HttpCodes.BAD_REQUEST
 
     def get_app(self):
@@ -100,12 +108,17 @@ class FlaskAppWrapper(object):
         self.app.run(debug=True)
 
     def add_all_endpoints(self):
+        """
+        Add all the api endpoints
+        """
         self._add_container_endpoints()
         self._add_docker_instance_endpoints()
         self._add_metasploit_endpoints()
 
     def _add_docker_instance_endpoints(self):
-
+        """
+        Add all the endpoints that is related to docker server operations.
+        """
         docker_server_controller_kwargs = {'docker_server_implementation': DockerServerServiceImplementation}
 
         self._api.add_resource(
@@ -141,7 +154,9 @@ class FlaskAppWrapper(object):
         )
 
     def _add_container_endpoints(self):
-
+        """
+        Add all the endpoints that is related to container operations.
+        """
         container_controller_kwargs = {'container_service_implementation': ContainerServiceImplementation}
 
         self._api.add_resource(
@@ -177,7 +192,9 @@ class FlaskAppWrapper(object):
         )
 
     def _add_metasploit_endpoints(self):
-
+        """
+        Add all the endpoints that is related to metasploit operations.
+        """
         metasploit_controller_kwargs = {
             'metasploit_service_implementation': MetasploitServiceImplementation
         }

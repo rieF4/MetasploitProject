@@ -28,6 +28,15 @@ def choose_port_for_msfrpcd(containers_document):
 
 
 def get_all_used_port_in_instance(containers_document):
+    """
+    Gets all the used ports in an instance.
+
+    Args:
+        containers_document (dict): containers documents.
+
+    Returns:
+        list: all the used ports for the containers in the instance.
+    """
     if containers_document:
         all_containers_ports = [container_document["ports"] for container_document in containers_document]
         used_ports = []
@@ -50,7 +59,8 @@ def check_if_image_already_exists(image_document, tag_to_check):
     Returns:
         bool: False if the tag was not found.
 
-    Raises
+    Raises:
+        DuplicateImageError: in case there is already the same image available.
     """
     for image in image_document:
         for tag in image['tags']:
@@ -103,24 +113,30 @@ class HttpMethods:
 
 
 class TimeoutSampler(object):
+    """
+    An iterator class that takes a function and it's parameters and executes it for 'timeout' seconds and produces
+    it's result every 'sleep' seconds.
 
+    Attributes:
+        timeout (int): maximum timeout limit for the function to be performed.
+        sleep (int): samples the function each 'sleep' seconds.
+        func (Function): a function to execute.
+        func_args (list): function args.
+        function_kwargs (dict): function kwargs.
+        start_time (int): start time to sample.
+        last_sample_time (int): time of the last sample.
+    """
     def __init__(self, timeout, sleep, func, *func_args, **func_kwargs):
+
         self.timeout = timeout
-        ''' Timeout in seconds. '''
         self.sleep = sleep
-        ''' Sleep interval seconds. '''
 
         self.func = func
-        ''' A function to sample. '''
         self.func_args = func_args
-        ''' Args for func. '''
         self.func_kwargs = func_kwargs
-        ''' Kwargs for func. '''
 
         self.start_time = None
-        ''' Time of starting the sampling. '''
         self.last_sample_time = None
-        ''' Time of last sample. '''
 
     def __iter__(self):
         """
@@ -130,7 +146,7 @@ class TimeoutSampler(object):
             any function output.
 
         Raises:
-            TimeoutExpiredError: in case the function sampling reached to the timeout provided
+            TimeoutExpiredError: in case the function sampling reached to the timeout provided.
         """
         if self.start_time is None:
             self.start_time = time.time()

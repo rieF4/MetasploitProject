@@ -91,20 +91,38 @@ class Metasploit(Connection):
 
     @property
     def metasploit_client(self):
+        """
+        Gets metasploit client.
+
+        Returns:
+            MsfRpcClient: msfrpc client object.
+        """
         return self._metasploit_client
 
     @property
     def modules(self):
+        """
+        Gets the ModuleManager object.
+
+        Returns:
+            ModuleManager: a module manager object.
+        """
         return self.metasploit_client.modules
 
     @property
     def auxiliaries(self):
+        """
+        Gets all the available auxiliaries in metasploit.
+
+        Returns:
+           list(str): a list of strings representing all the available auxiliaries on metasploit.
+        """
         return self.modules.auxiliary
 
     @property
     def exploits(self):
         """
-        Get all the available exploits in metasploit.
+        Gets all the available exploits in metasploit.
 
         Returns:
            list(str): a list of strings representing all the available exploits on metasploit
@@ -113,15 +131,33 @@ class Metasploit(Connection):
 
     @property
     def payloads(self):
+        """
+        Gets all the available payloads in metasploit.
+
+        Returns:
+            list(str): a list of strings representing all the available payloads on metasploit
+        """
         return self.modules.payloads
 
     @property
     def _console(self):
+        """
+        Creates a new msfConsole object.
+
+        Returns:
+            msfConsole: msf console object.
+        """
         return msfrpc.MsfConsole(rpc=self.metasploit_client)
 
     def destory_console(self):
+        """
+        Destroys the msfConsole.
+        """
         self.host_console.destroy()
 
     @property
     def host_console(self):
+        """
+        Gets the host console attribute which represents a msfConsole object.
+        """
         return self._host_console

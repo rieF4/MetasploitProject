@@ -5,17 +5,20 @@ from metasploit.api.aws.amazon_operations import create_instance
 from metasploit.api.aws import constants as aws_const
 from metasploit.api.aws.amazon_operations import DockerServerInstanceOperations
 from metasploit.api.response import (
-    HttpCodes,
     create_new_response
 )
 from metasploit.api.utils.decorators import (
-    response_decorator,
     validate_json_request
 )
 
 
 class DockerServerServiceImplementation(DockerServerService):
+    """
+    Implements the docker server instance service.
 
+    Attributes:
+        database (DatabaseOperations): DatabaseOperations object.
+    """
     type = "Instance"
 
     def __init__(self):
@@ -57,7 +60,7 @@ class DockerServerServiceImplementation(DockerServerService):
     @validate_json_request("ImageId", "InstanceType")
     def create_docker_server(self, docker_server_json):
         """
-        Creates a docker server
+        Creates a docker server instance.
 
         docker_server_json example:
 
@@ -92,6 +95,9 @@ class DockerServerServiceImplementation(DockerServerService):
 
         Args:
             instance_id (str): instance ID.
+
+        Returns:
+            empty string as a response in case of success.
         """
         self.database.delete_amazon_document(resource_id=instance_id, type=self.type)
         DockerServerInstanceOperations(instance_id=instance_id).docker_server.terminate()

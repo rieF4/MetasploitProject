@@ -21,11 +21,12 @@ def singleton(cls):
 @singleton
 class AwsAccess(object):
     """
-    This is a class for API calls to the AWS ec2 service.
+    This is a class for API calls to the AWS entire API including EC2
 
     Attributes:
-        _client(put here the type of variable) - client for api calls to ec2
-        _resource(put here the type of variable) - resource for api calls to ec2
+        _client(Boto3.client): client for api calls to AWS
+        _resource(Boto3.resource): resource for api calls to AWS
+        _session(Boto3.session): sessions for api calls to AWS
 
     Documentation:
         https://boto3.amazonaws.com/v1/documentation/api/latest/index.html

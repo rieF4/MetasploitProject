@@ -74,8 +74,8 @@ class MetasploitModule(object):
 
         Args:
             commands (list(str)): set of commands to be done on the msf console.
-            timeout (int): timeout to sample the duration of each command.
-            sleep (int): sleep time between each sampling of the console for every command.
+            timeout (int): timeout limit to sample the duration of each command.
+            sleep (int): sleep time between each sampling of the console status for every command.
 
         Yields:
             str: data output from the console of each command.
@@ -96,7 +96,7 @@ class MetasploitModule(object):
 
     def job_info(self, job_id):
         """
-        Gets information about an existing job in metasploit, ignores jobs that reproduce errors.
+        Gets information about an existing job in metasploit, ignores jobs that produce errors.
 
         Args:
             job_id (str): job ID.

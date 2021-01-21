@@ -23,7 +23,7 @@ class ApiResponse(object):
     This is a class to represent an API response.
 
     Attributes:
-        response (dict): a response from the database.
+        response (dict/list/serializable object): a response from the database.
         http_status_code (int): the http status code of the response.
     """
     def __init__(self, response=None, http_status_code=HttpCodes.OK):
@@ -33,6 +33,12 @@ class ApiResponse(object):
 
     @property
     def make_response(self):
+        """
+        Returns an API response for the client.
+
+        Returns:
+            Response: a flask response.
+        """
         return make_response(jsonify(self.response), self.http_status_code)
 
     @property
@@ -53,6 +59,7 @@ class ErrorResponse(ApiResponse):
     def __init__(self, error_msg, http_error_code, req=None, path=None):
         """
         Prepare an error response for a resource.
+
         Args:
             error_msg (str): error message to send.
             http_error_code (int): the http error code.

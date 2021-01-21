@@ -1,17 +1,21 @@
 from metasploit.api.logic.services import MetasploitService
 from metasploit.api.database import DatabaseOperations, DatabaseCollections
 from metasploit.api.aws.amazon_operations import DockerServerInstanceOperations
-from metasploit.api.metasploit_manager import module_executor
-from metasploit.api.response import HttpCodes
 from metasploit.api.utils.decorators import (
-    response_decorator,
     verify_instance_exists,
     validate_json_request
 )
 
 
 class MetasploitServiceImplementation(MetasploitService):
+    """
+    Implements the metasploit service.
 
+    Attributes:
+        database (DatabaseOperations): DatabaseOperations object.
+        module: (MetasploitModule): metasploit module subclass object, e.g.: PayLoad, PortScanning, Exploit
+        docker_server (DockerServerInstance): a docker server object where the metasploit operations will be executed.
+    """
     def __init__(self, module, *args, **kwargs):
         self.database = DatabaseOperations(collection_type=DatabaseCollections.INSTANCES)
         self.module = None
@@ -20,6 +24,9 @@ class MetasploitServiceImplementation(MetasploitService):
 
     @verify_instance_exists
     def init(self, module, *args, **kwargs):
+        """
+        Initialize the metasploit module/docker server classes.
+        """
         instance_id = kwargs.pop("instance_id")
         self.docker_sever = DockerServerInstanceOperations(instance_id=instance_id).docker_server
         self.module = module(source_host=self.docker_sever.public_ip_address, *args, **kwargs)
@@ -29,7 +36,7 @@ class MetasploitServiceImplementation(MetasploitService):
 
     def info(self, *args, **kwargs):
         """
-        Gets information about a module parameters.
+        Gets information about a module (Exploit, Payload, PortScanning) parameters.
         """
         return self.module.info(*args, **kwargs)
 
@@ -60,9 +67,9 @@ class MetasploitServiceImplementation(MetasploitService):
             }
         }
         """
-        results = self.module.execute(**exploit_request)
+        exploit_results = self.module.execute(**exploit_request)
 
-        for res in results:
+        for exploit_details in exploit_results:
             self.database.add_metasploit_document(
-                amazon_resource_id=self.docker_sever.instance_id, metasploit_document=res)
-        return results
+                amazon_resource_id=self.docker_sever.instance_id, metasploit_document=exploit_details)
+        return exploit_results

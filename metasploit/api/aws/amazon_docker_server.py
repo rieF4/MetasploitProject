@@ -105,7 +105,6 @@ class DockerServerInstance(object):
     def start(self):
         """
         Start the instance and wait till is is on running state
-
         """
         if self.state['Name'] == aws_constants.STOPPED_STATE:
             self._instance_obj.start()
@@ -115,7 +114,6 @@ class DockerServerInstance(object):
     def stop(self):
         """
         Stop the instance and wait till it's in a stopped state
-
         """
         if self.state['Name'] == aws_constants.RUNNING_STATE:
             self._instance_obj.stop()
@@ -125,7 +123,6 @@ class DockerServerInstance(object):
     def reboot(self):
         """
         Reboot the instance and wait till it's in a running state
-
         """
         if self.state['Name'] == aws_constants.RUNNING_STATE:
             self._instance_obj.reboot()
@@ -135,7 +132,6 @@ class DockerServerInstance(object):
     def terminate(self):
         """
         Terminate the instance and delete the current instance
-
         """
         self._instance_obj.terminate()
 
@@ -189,7 +185,6 @@ class DockerServerInstance(object):
     def _init_docker_server_on_instance(self):
         """
         Initialize the docker server over an instance in AWS.
-
         """
         self.execute_shell_commands(
             commands=aws_constants.MAKE_DOCKER_FILES_COMMANDS

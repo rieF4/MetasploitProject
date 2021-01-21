@@ -33,7 +33,6 @@ class DatabaseOperations(object):
 
         Args:
             collection_type (pymongo.Collection): the collection to use to access/modify DB documents.
-
         """
         self._collection_type = collection_type
 
@@ -154,7 +153,6 @@ class DatabaseOperations(object):
                 }
             )
         except Exception as error:
-            print("problem in delete docker document")
             raise UpdateDatabaseError(document=docker_document, error_msg=str(error))
 
     def add_docker_document(self, amazon_resource_id, docker_document_type, new_docker_document):
@@ -166,7 +164,7 @@ class DatabaseOperations(object):
             docker_document_type (str): document type, eg. "Container", "Network", "Image"
             new_docker_document (dict): the new docker document.
 
-        new_docker_document examples:
+        new_docker_document example:
             {
                 "_id": 1,
                 "image": "metasploit_image",
@@ -192,7 +190,6 @@ class DatabaseOperations(object):
                 }
             )
         except Exception as error:
-            print("problem in add docker document")
             raise UpdateDatabaseError(document=amazon_document, error_msg=str(error))
 
     def add_metasploit_document(self, amazon_resource_id, metasploit_document):
@@ -220,7 +217,6 @@ class DatabaseOperations(object):
                 }
             )
         except Exception as error:
-            print("problem in add metasploit document")
             raise UpdateDatabaseError(document=amazon_document, error_msg=str(error))
 
     def update_docker_document(self, docker_document_type, docker_document_id, update, docker_server_id):
