@@ -13,7 +13,7 @@ class Docker(Connection):
         _api_client (APIClient): The low level API obj for docker.
     """
 
-    def __init__(self, protocol, docker_server_ip, docker_port):
+    def __init__(self, protocol, docker_server_ip, docker_port=2375):
         """
         Initialize the connection to the docker server over an AWS ec2 instance using a chosen protocol,
         docker server ip and a port that the docker server listens to.

@@ -1,7 +1,16 @@
 import paramiko
+from paramiko.ssh_exception import (
+    SSHException,
+    NoValidConnectionsError
+)
 
 from pymetasploit3 import msfrpc
 from pymetasploit3.msfrpc import MsfRpcClient
+from metasploit.api.utils.helpers import TimeoutSampler
+from metasploit.api.errors import (
+    TimeoutExpiredError,
+    SSHConnectionError
+)
 
 
 class Connection(object):
@@ -33,13 +42,24 @@ class SSH(Connection):
         self._ssh_client = paramiko.SSHClient()
         self._ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         self._private_key = paramiko.RSAKey.from_private_key(open(private_key))
-        num_tries = 0
-        while num_tries < 1000:
+
+        is_connection_established = False
+        while not is_connection_established:
             try:
-                self._ssh_client.connect(hostname=hostname, username=username, pkey=self._private_key)
-                break
-            except Exception:
-                num_tries += 1
+                for _ in TimeoutSampler(
+                        timeout=90,
+                        sleep=3,
+                        func=self._ssh_client.connect,
+                        hostname=hostname,
+                        username=username,
+                        pkey=self._private_key
+                ):
+                    is_connection_established = True
+                    break
+            except (SSHException, NoValidConnectionsError, TimeoutExpiredError) as err:
+                if isinstance(err, TimeoutExpiredError):
+                    raise SSHConnectionError(host=hostname)
+
         self._sftp = self._ssh_client.open_sftp()
 
     def get_client(self):

@@ -17,7 +17,6 @@ class DockerServerInstance(object):
 
     Attributes:
         _instance_obj (Aws.Instance): a aws instance obj.
-        _commands (list(Command)): a list of all the _commands that were executed on this instance.
         _ssh (SSH): a SSH client that opens a connection to the instance.
         _docker (Docker): a docker class that represents docker-container over an instance.
     """
@@ -33,7 +32,6 @@ class DockerServerInstance(object):
 
         """
         self._instance_obj = instance_obj
-        self._commands = []
 
         if ssh_flag:
             self._ssh = SSH(
@@ -50,10 +48,6 @@ class DockerServerInstance(object):
             docker_server_ip=self.public_ip_address,
             docker_port=global_constants.DOCKER_PORT
         )
-
-    @property
-    def get_commands(self):
-        return self._commands
 
     @property
     def docker(self):
