@@ -54,7 +54,6 @@ class MetasploitServiceImplementation(MetasploitService):
         Example of exploits running request where the key is the target host and the values are exploit's params:
 
         exploits_request = {
-            "module_type": "exploit",
             "exploit_name": "unix/ftp/vsftpd_234_backdoor",
             "payloads": {
                 "cmd/unix/interact": {

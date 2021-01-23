@@ -99,15 +99,16 @@ class MetasploitModule(object):
         Gets information about an existing job in metasploit, ignores jobs that produce errors.
 
         Args:
-            job_id (str): job ID.
+            job_id (int): job ID.
 
         Returns:
             dict: job information in case exists, empty dict otherwise.
         """
-        if job_id in self._metasploit.metasploit_client.jobs.list:
+        if str(job_id) in self._metasploit.metasploit_client.jobs.list:
             job_details = self._metasploit.metasploit_client.jobs.info(jobid=job_id)
             if "error" not in job_details:
                 return job_details
+            return {}
         return {}
 
     def build_module(self, name, options, type='payload'):
@@ -224,7 +225,7 @@ class Exploit(MetasploitModule):
         Collects information about exploit execution result.
 
         Args:
-            job_id (str): the job ID of the executed task.
+            job_id (int): the job ID of the executed task.
             exploit_name (str): exploit name.
             payload_name (str): payload name.
 
