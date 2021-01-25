@@ -1,1 +1,1 @@
-import metasploit.api.controllers.flask_wrapper
+import metasploit.api.controllers.flask_runner

