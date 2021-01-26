@@ -77,21 +77,21 @@ def is_docker_server_response_body_expected(docker_response, **expected):
     expected_containers = expected.get("containers")
 
     if expected_containers is not None and actual_containers != expected_containers:
-        logger.error(f"actual: {actual_containers}, expected: {expected_containers}")
+        logger.error(f"actual containers: {actual_containers}, expected containers: {expected_containers}")
         return False
 
     actual_metasploit = docker_response.get(test_const.METASPLOIT)
     excpected_metasploit = expected.get("metasploit", None)
 
     if excpected_metasploit is not None and actual_metasploit != excpected_metasploit:
-        logger.error(f"actual: {actual_metasploit}, expected: {excpected_metasploit}")
+        logger.error(f"actual metasploit: {actual_metasploit}, expected metasploit: {excpected_metasploit}")
         return False
 
     actual_state = docker_response.get(test_const.STATE)
     expected_state = expected.get("state")
 
     if expected_state is not None and actual_state != expected_state:
-        logger.error(f"actual: {actual_state}, expected: {expected_state}")
+        logger.error(f"actual state: {actual_state}, expected state: {expected_state}")
         return False
 
     return True
@@ -196,28 +196,28 @@ def is_error_response_body_expected(error_response_body, **expected):
     expected_status_code = expected.get("code")
 
     if expected_status_code is not None and actual_status_code != expected_status_code:
-        logger.error(f"actual: {actual_status_code}, expected: {expected_status_code}")
+        logger.error(f"actual status code: {actual_status_code}, expected status code: {expected_status_code}")
         return False
 
     actual_message = error_response_body.get("Message")
     expected_message = expected.get("message")
 
     if expected_message is not None and actual_message != expected_message:
-        logger.error(f"actual: {actual_message}, expected: {expected_message}")
+        logger.error(f"actual message: {actual_message}, expected message: {expected_message}")
         return False
 
     actual_request = error_response_body.get("Request")
     expected_request = expected.get("request")
 
     if expected_request is not None and actual_request != expected_request:
-        logger.error(f"actual: {actual_request}, expected: {expected_request}")
+        logger.error(f"actual request: {actual_request}, expected request: {expected_request}")
         return False
 
     actual_url = error_response_body.get("Url")
     expected_url = expected.get("url")
 
     if expected_url is not None and actual_url != expected_url:
-        logger.error(f"actual: {actual_url}, expected: {expected_url}")
+        logger.error(f"actual url: {actual_url}, expected url: {expected_url}")
         return False
 
     return True

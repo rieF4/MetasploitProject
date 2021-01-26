@@ -1,20 +1,21 @@
 import pytest
+import logging
 
+
+from metasploit.api.response import HttpCodes
 from metasploit.tests.conftest import test_client  # noqa: F401
 from metasploit.tests.helpers import (
     is_docker_server_response_body_valid,
     is_expected_code,
     is_error_response_valid
 )
-from assertpy import assert_that
-from metasploit.api.response import HttpCodes
+
 from .fixtures import (  # noqa: F401
     create_docker_servers,
-    set_number_of_dockers_servers
+    docker_server_ids
 )
 from .docker_server_api import docker_server_api  # noqa: F401
 from . import config
-import logging
 
 
 logger = logging.getLogger("DockerServerTests")
@@ -38,7 +39,7 @@ class TestDockerServerPostApi(object):
             logger.info(f"Verify that the docker response {docker_server_body_response} is expected")
             assert is_response_valid, f"{docker_server_body_response} is not as expected"
 
-            logger.info(f"Verify that status code {actual_status_code} is expected")
+            logger.info(f"Verify that status code is {HttpCodes.OK}")
             assert is_expected_code(actual_code=actual_status_code), (
                 f"actual {actual_status_code}, expected {HttpCodes.OK}"
             )
@@ -62,7 +63,7 @@ class TestDockerServerPostApi(object):
     )
     def test_create_docker_server_fails(self, invalid_create_docker_request, docker_server_api):
         """
-        Tests scenarios where the post request to create a docker server should fail.
+        Tests scenarios where the POST request to create a docker server should fail.
         """
         response_body, actual_status_code = docker_server_api.post(
             create_docker_server_request=invalid_create_docker_request
@@ -72,6 +73,7 @@ class TestDockerServerPostApi(object):
             f"Response body {response_body} is not as expected"
         )
 
+        logger.info(f"Verify that the status code is {HttpCodes.BAD_REQUEST}")
         assert actual_status_code == HttpCodes.BAD_REQUEST, (
             f"actual: {actual_status_code}, expected: {HttpCodes.BAD_REQUEST}"
         )
@@ -79,32 +81,32 @@ class TestDockerServerPostApi(object):
 
 class TestDockerServerGetApi(object):
 
-    def test_get_single_new_docker_server_succeed(self, create_docker_servers, docker_server_api):
+    num_of_docker_servers_to_create = 3
+
+    def test_get_single_new_docker_server_succeed(self, docker_server_ids, docker_server_api):
         """
-        Tests that given a new docker server that was just created, a get response succeed and is valid.
+        Tests that given a new docker server that was just created, a GET response is valid.
         """
-        docker_server_body_response, actual_status_code = docker_server_api.get_one(instance_id=create_docker_servers[0][0]["_id"])
+        for docker_server_id in docker_server_ids:
 
-        is_response_valid = is_docker_server_response_body_valid(
-            docker_server_data_response=docker_server_body_response,
-            **config.EXPECTED_RESPONSE_FOR_NEW_DOCKER_SERVER
-        )
+            docker_server_body_response, actual_status_code = docker_server_api.get_one(instance_id=docker_server_id)
 
-        logger.info(f"Verify that the docker response {docker_server_body_response} is expected")
-        assert is_response_valid, f"{docker_server_body_response} is not as expected"
+            is_response_valid = is_docker_server_response_body_valid(
+                docker_server_data_response=docker_server_body_response,
+                **config.EXPECTED_RESPONSE_FOR_NEW_DOCKER_SERVER
+            )
 
-        logger.info(f"Verify that status code {actual_status_code} is expected")
-        assert is_expected_code(actual_code=actual_status_code), (
-            f"actual {actual_status_code}, expected {HttpCodes.OK}"
-        )
+            logger.info(f"Verify that the docker response {docker_server_body_response} is expected")
+            assert is_response_valid, f"{docker_server_body_response} is not as expected"
 
-    @pytest.mark.usefixtures(
-        set_number_of_dockers_servers.__name__,
-        create_docker_servers.__name__
-    )
+            logger.info(f"Verify that status code is {HttpCodes.OK}")
+            assert is_expected_code(actual_code=actual_status_code), (
+                f"actual {actual_status_code}, expected {HttpCodes.OK}"
+            )
+
     def test_get_many_new_docker_servers_succeed(self, docker_server_api):
         """
-        Tests that given many new docker servers that were just created, a get response succeed and is valid.
+        Tests that given many new docker servers that were just created, a GET response is valid.
         """
         docker_servers, actual_status_code = docker_server_api.get_many()
 
@@ -118,5 +120,23 @@ class TestDockerServerGetApi(object):
             logger.info(f"Verify that the docker response {docker_server_body_response} is expected")
             assert is_response_valid, f"{docker_server_body_response} is not as expected"
 
-        logger.info(f"Verify that status code {actual_status_code} is expected")
+        logger.info(f"Verify that status code is {HttpCodes.OK}")
         assert is_expected_code(actual_code=actual_status_code), f"actual {actual_status_code}, expected {HttpCodes.OK}"
+
+
+class TestDockerServerDeleteApi(object):
+
+    is_delete_docker_server_required = False
+
+    def test_delete_docker_server_succeed(self, docker_server_ids,  docker_server_api):
+        """
+        Tests that given a docker server, a DELETE response is valid.
+        """
+        for docker_server_id in docker_server_ids:
+            docker_server_body_response, actual_status_code = docker_server_api.delete(instance_id=docker_server_id)
+
+            logger.info(f"Verify that the DELETE body response is an empty string")
+            assert docker_server_body_response == '', f"Failed to delete docker server {docker_server_id}"
+
+            logger.info(f"Verify that the DELETE response status code is {HttpCodes.NO_CONTENT}")
+            assert actual_status_code == HttpCodes.NO_CONTENT, f"Failed to delete docker server {docker_server_id}"
