@@ -7,7 +7,8 @@ from metasploit.tests.conftest import test_client  # noqa: F401
 from metasploit.tests.helpers import (
     is_docker_server_response_body_valid,
     is_expected_code,
-    is_error_response_valid
+    is_error_response_valid,
+    load_json
 )
 
 from .fixtures import (  # noqa: F401
@@ -83,6 +84,37 @@ class TestDockerServerGetApi(object):
 
     num_of_docker_servers_to_create = 3
 
+    def test_get_docker_servers_without_instances(self, docker_server_api):
+        """
+        Tests that given an empty DB without docker servers, GET all dockers servers brings back []
+        """
+        docker_servers, actual_status_code = docker_server_api.get_many()
+
+        logger.info(f"Verify that response {docker_servers} == []")
+        assert docker_servers == [], f"Failed to verify that docker servers is empty"
+
+        logger.info(f"Verify that the status code is {HttpCodes.OK}")
+        assert is_expected_code(actual_code=actual_status_code), (
+            f"actual: {actual_status_code}, expected: {HttpCodes.OK}"
+        )
+
+    def test_get_single_docker_server_fails_without_instances(self, docker_server_api):
+        """
+        Tests that given an empty DB without docker servers, single GET response returns an error.
+        """
+        docker_server_body_response, actual_status_code = docker_server_api.get_one(
+            instance_id=config.INVALID_INSTANCE_ID
+        )
+
+        assert is_error_response_valid(error_response=docker_server_body_response, code=HttpCodes.NOT_FOUND), (
+            f"Response body {docker_server_body_response} is not as expected"
+        )
+
+        logger.info(f"Verify that the status code is {HttpCodes.NOT_FOUND}")
+        assert is_expected_code(actual_code=actual_status_code, expected_code=HttpCodes.NOT_FOUND), (
+             f"actual: {actual_status_code}, expected: {HttpCodes.NOT_FOUND}"
+        )
+
     def test_get_single_new_docker_server_succeed(self, docker_server_ids, docker_server_api):
         """
         Tests that given a new docker server that was just created, a GET response is valid.
@@ -128,9 +160,29 @@ class TestDockerServerDeleteApi(object):
 
     is_delete_docker_server_required = False
 
+    def test_delete_docker_server_fails(self, docker_server_api):
+        """
+        Tests that given an invalid docker server, DELETE operation fails.
+        """
+        docker_server_body_response, actual_status_code = docker_server_api.delete(
+            instance_id=config.INVALID_INSTANCE_ID
+        )
+        if isinstance(docker_server_body_response, str):
+            docker_server_body_response = load_json(string=docker_server_body_response)
+
+        logger.info(f"Verify that DELETE body response {docker_server_body_response} is an ERROR")
+        assert is_error_response_valid(error_response=docker_server_body_response, code=HttpCodes.NOT_FOUND), (
+            f"Response body {docker_server_body_response} is not as expected"
+        )
+
+        logger.info(f"Verify that the DELETE response status code is {HttpCodes.NOT_FOUND}")
+        assert is_expected_code(actual_code=actual_status_code, expected_code=HttpCodes.NOT_FOUND), (
+            f"actual {actual_status_code}, expected {HttpCodes.NOT_FOUND}"
+        )
+
     def test_delete_docker_server_succeed(self, docker_server_ids,  docker_server_api):
         """
-        Tests that given a docker server, a DELETE response is valid.
+        Tests that given a valid docker server, a DELETE response is valid.
         """
         for docker_server_id in docker_server_ids:
             docker_server_body_response, actual_status_code = docker_server_api.delete(instance_id=docker_server_id)
@@ -139,4 +191,7 @@ class TestDockerServerDeleteApi(object):
             assert docker_server_body_response == '', f"Failed to delete docker server {docker_server_id}"
 
             logger.info(f"Verify that the DELETE response status code is {HttpCodes.NO_CONTENT}")
-            assert actual_status_code == HttpCodes.NO_CONTENT, f"Failed to delete docker server {docker_server_id}"
+            assert actual_status_code == HttpCodes.NO_CONTENT, (
+                f"actual {actual_status_code}, expected {HttpCodes.NO_CONTENT}"
+            )
+

@@ -13,3 +13,5 @@ EXPECTED_RESPONSE_FOR_NEW_DOCKER_SERVER = {
     "metasploit": [],
     "state": {"Code": 16, "Name": "running"}
 }
+
+INVALID_INSTANCE_ID = "i-07841d983a"
