@@ -1,44 +1,122 @@
+import pytest
+
 from metasploit.tests.conftest import test_client  # noqa: F401
 from metasploit.tests.helpers import (
-    is_docker_server_response_expected,
-    is_expected_code
+    is_docker_server_response_body_valid,
+    is_expected_code,
+    is_error_response_valid
 )
 from assertpy import assert_that
-from metasploit.tests.docker_server.docker_server_api import DockerServerApi
 from metasploit.api.response import HttpCodes
-from .fixtures import create_docker_server  # noqa: F401
+from .fixtures import (  # noqa: F401
+    create_docker_servers,
+    set_number_of_dockers_servers
+)
+from .docker_server_api import docker_server_api  # noqa: F401
+from . import config
 import logging
 
 
 logger = logging.getLogger("DockerServerTests")
 
 
-class TestDockerServerApi(object):
+class TestDockerServerPostApi(object):
 
-    docker_server_api = DockerServerApi
-
-    def test_create_docker_server_success(self, create_docker_server):
+    def test_create_docker_server_success(self, create_docker_servers):
         """
-        Tests that creating a new docker server succeed with the right response body and code.
+        Tests that creating a new docker server succeed with the correct response body and code.
         """
-        created_instances = create_docker_server
+        created_instances = create_docker_servers
 
-        for docker_server_response, status_code in created_instances:
+        for docker_server_body_response, actual_status_code in created_instances:
 
-            logger.info(f"Verify that the docker instance response contains the right json keys")
-            assert_that(
-                val=docker_server_response, description="Docker instance response is not a valid response"
-            ).contains("Containers", "Metasploit", "IpParameters", "State", "_id")
-
-            is_response_valid, err_msg = is_docker_server_response_expected(
-                docker_response=docker_server_response,
-                containers=[],
-                metasploit=[],
-                state={"Code": 16, "Name": "running"}
+            is_response_valid = is_docker_server_response_body_valid(
+                docker_server_data_response=docker_server_body_response,
+                **config.EXPECTED_RESPONSE_FOR_NEW_DOCKER_SERVER
             )
 
-            logger.info(f"Verify that the docker response {docker_server_response} is valid")
-            assert is_response_valid, err_msg
+            logger.info(f"Verify that the docker response {docker_server_body_response} is expected")
+            assert is_response_valid, f"{docker_server_body_response} is not as expected"
 
-            logger.info(f"Verify that status code {status_code} is valid")
-            assert is_expected_code(actual_code=status_code), f"actual {status_code}, expected {HttpCodes.OK}"
+            logger.info(f"Verify that status code {actual_status_code} is expected")
+            assert is_expected_code(actual_code=actual_status_code), (
+                f"actual {actual_status_code}, expected {HttpCodes.OK}"
+            )
+
+    @pytest.mark.parametrize(
+        "invalid_create_docker_request",
+        [
+            pytest.param(
+                config.CREATE_DOCKER_REQUEST_EMPTY_JSON,
+                id="Create_docker_server_with_empty_json"
+            ),
+            pytest.param(
+                config.CREATE_DOCKER_REQUEST_WITHOUT_IMAGE_ID,
+                id="Create_docker_server_without_imageID_parameter"
+            ),
+            pytest.param(
+                config.CREATE_DOCKER_REQUEST_WITHOUT_INSTANCE_TYPE,
+                id="Create_docker_server_without_instanceType_parameter"
+            )
+        ]
+    )
+    def test_create_docker_server_fails(self, invalid_create_docker_request, docker_server_api):
+        """
+        Tests scenarios where the post request to create a docker server should fail.
+        """
+        response_body, actual_status_code = docker_server_api.post(
+            create_docker_server_request=invalid_create_docker_request
+        )
+
+        assert is_error_response_valid(error_response=response_body, code=HttpCodes.BAD_REQUEST), (
+            f"Response body {response_body} is not as expected"
+        )
+
+        assert actual_status_code == HttpCodes.BAD_REQUEST, (
+            f"actual: {actual_status_code}, expected: {HttpCodes.BAD_REQUEST}"
+        )
+
+
+class TestDockerServerGetApi(object):
+
+    def test_get_single_new_docker_server_succeed(self, create_docker_servers, docker_server_api):
+        """
+        Tests that given a new docker server that was just created, a get response succeed and is valid.
+        """
+        docker_server_body_response, actual_status_code = docker_server_api.get_one(instance_id=create_docker_servers[0][0]["_id"])
+
+        is_response_valid = is_docker_server_response_body_valid(
+            docker_server_data_response=docker_server_body_response,
+            **config.EXPECTED_RESPONSE_FOR_NEW_DOCKER_SERVER
+        )
+
+        logger.info(f"Verify that the docker response {docker_server_body_response} is expected")
+        assert is_response_valid, f"{docker_server_body_response} is not as expected"
+
+        logger.info(f"Verify that status code {actual_status_code} is expected")
+        assert is_expected_code(actual_code=actual_status_code), (
+            f"actual {actual_status_code}, expected {HttpCodes.OK}"
+        )
+
+    @pytest.mark.usefixtures(
+        set_number_of_dockers_servers.__name__,
+        create_docker_servers.__name__
+    )
+    def test_get_many_new_docker_servers_succeed(self, docker_server_api):
+        """
+        Tests that given many new docker servers that were just created, a get response succeed and is valid.
+        """
+        docker_servers, actual_status_code = docker_server_api.get_many()
+
+        for docker_server_body_response in docker_servers:
+
+            is_response_valid = is_docker_server_response_body_valid(
+                docker_server_data_response=docker_server_body_response,
+                **config.EXPECTED_RESPONSE_FOR_NEW_DOCKER_SERVER
+            )
+
+            logger.info(f"Verify that the docker response {docker_server_body_response} is expected")
+            assert is_response_valid, f"{docker_server_body_response} is not as expected"
+
+        logger.info(f"Verify that status code {actual_status_code} is expected")
+        assert is_expected_code(actual_code=actual_status_code), f"actual {actual_status_code}, expected {HttpCodes.OK}"

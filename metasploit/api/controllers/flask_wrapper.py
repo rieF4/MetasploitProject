@@ -29,7 +29,6 @@ class FlaskAppWrapper(object):
     def __init__(self):
         self._api = Api(app=FlaskAppWrapper.app)
         self.add_all_endpoints()
-        # self.run()
 
     @app.errorhandler(HttpCodes.NOT_FOUND)
     def invalid_urls_error(self):
