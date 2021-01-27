@@ -3,10 +3,7 @@ import pytest
 
 from metasploit.tests.test_wrapper import BaseApiInterface
 from metasploit.tests import constants as test_const
-from metasploit.tests.helpers import (
-    convert,
-    to_utf8
-)
+from metasploit.tests.helpers import to_utf8
 from metasploit.tests.helpers import execute_rest_api_func
 
 logger = logging.getLogger("ContainersApi")
@@ -31,7 +28,7 @@ def container_api(test_client):
                 create_msfrpcd_container_url (str): URL for the POST request to create the container.
 
             Returns:
-                tuple[dict, int]: a tuple containing the data response as a first arg, and status code as second arg.
+                tuple[dict, int]: a tuple containing the body response as a first arg, and status code as second arg.
             """
             create_msfrpcd_container_url = create_msfrpcd_container_url.format(instance_id=instance_id)
             logger.info(f"Send POST request, URL: {create_msfrpcd_container_url}")
@@ -40,16 +37,54 @@ def container_api(test_client):
 
         def get_many(self, instance_id):
             """
-            Sends a GET request to retrieve all the docker server instances available.
+            Sends a GET request to retrieve all the containers available.
 
             Args:
                 instance_id (str): instance ID.
 
             Returns:
-                tuple[list[dict], int]: a tuple containing the data response as a first arg,
+                tuple[list[dict], int]: a tuple containing the body response as a first arg,
                     and status code as second arg.
             """
             get_all_containers_url = test_const.GET_CONTAINERS.format(instance_id=instance_id)
             logger.info(f"Send GET request, URL: {get_all_containers_url}")
 
-            return execute_rest_api_func(url=get_all_containers_url, api_func=self._test_client)
+            return execute_rest_api_func(url=get_all_containers_url, api_func=self._test_client.get)
+
+        def get_one(self, instance_id, container_id):
+            """
+            Sends a GET request to retrieve get a single container.
+
+            Args:
+                instance_id (str): instance ID
+                container_id (str): container ID.
+
+            Returns:
+                tuple[dict, int]: a tuple containing the body response as a first arg, and status code as second arg.
+            """
+            get_container_url = test_const.GET_CONTAINER.format(instance_id=instance_id, container_id=container_id)
+            logger.info(f"Send GET request, URL: {get_container_url}")
+
+            return execute_rest_api_func(url=get_container_url, api_func=self._test_client.get)
+
+        def delete(self, instance_id, container_id):
+            """
+            Sends a DELETE request to delete a single container.
+
+            Args:
+                instance_id (str): instance ID
+                container_id (str): container ID.
+
+            Returns:
+                tuple[str, int]: a tuple containing the body response as first arg, and status code as second arg.
+            """
+            delete_container_url = test_const.DELETE_CONTAINER.format(
+                instance_id=instance_id, container_id=container_id
+            )
+            logger.info(f"Send DELETE request, URL: {delete_container_url}")
+
+            return execute_rest_api_func(
+                url=delete_container_url, api_func=self._test_client.delete, convert_func=to_utf8
+            )
+
+    return ContainerApi(test_client=test_client)

@@ -35,7 +35,7 @@ def docker_server_api(test_client):
                 create_docker_server_request (dict): the request to create a docker server.
 
             Returns:
-                tuple[dict, int]: a tuple containing the data response as a first arg, and status code as second arg.
+                tuple[dict, int]: a tuple containing the body response as a first arg, and status code as second arg.
             """
             logger.info(f"Send POST request, URL: {create_docker_server_url}, REQUEST: {create_docker_server_request}")
 
@@ -50,7 +50,7 @@ def docker_server_api(test_client):
             Sends a GET request to retrieve all the docker server instances available.
 
             Returns:
-                tuple[list[dict], int]: a tuple containing the data response as a first arg,
+                tuple[list[dict], int]: a tuple containing the body response as a first arg,
                     and status code as second arg.
             """
             get_all_docker_servers_url = test_const.GET_ALL_DOCKER_SERVERS
@@ -66,7 +66,7 @@ def docker_server_api(test_client):
                 instance_id (str): instance ID.
 
             Returns:
-                tuple[dict, int]: a tuple containing the data response as a first arg, and status code as second arg.
+                tuple[dict, int]: a tuple containing the body response as a first arg, and status code as second arg.
             """
             get_docker_server_url = test_const.GET_DOCKER_SERVER.format(instance_id=instance_id)
             logger.info(f"Send GET request, URL: {get_docker_server_url}")
@@ -81,7 +81,7 @@ def docker_server_api(test_client):
                 instance_id (str): instance ID.
 
             Returns:
-                tuple[str, int]: a tuple containing the data response as first arg, and status code as second arg.
+                tuple[str, int]: a tuple containing the body response as first arg, and status code as second arg.
             """
             delete_docker_server_url = test_const.DELETE_DOCKER_SERVER.format(instance_id=instance_id)
             logger.info(f"Send DELETE request, URL: {delete_docker_server_url}")

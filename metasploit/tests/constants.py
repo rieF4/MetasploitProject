@@ -12,6 +12,8 @@ CREATE_DOCKER_SERVER_REQUEST = {
 
 CREATE_MSFRPCD_CONTAINER = '/DockerServerInstances/{instance_id}/Containers/CreateMetasploitContainer'
 GET_CONTAINERS = '/DockerServerInstances/{instance_id}/Containers/Get'
+GET_CONTAINER = '/DockerServerInstances/{instance_id}/Containers/Get/{container_id}'
+DELETE_CONTAINER = '/DockerServerInstances/{instance_id}/Containers/Delete/{container_id}'
 
 CONTAINERS = "Containers"
 METASPLOIT = "Metasploit"
