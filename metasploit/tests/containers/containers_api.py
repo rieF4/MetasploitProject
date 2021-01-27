@@ -2,10 +2,10 @@ import logging
 import pytest
 
 from metasploit.tests.test_wrapper import BaseApiInterface
-from metasploit.tests import constants as test_const
 from metasploit.tests.helpers import to_utf8
 from metasploit.tests.helpers import execute_rest_api_func
 
+from . import config
 logger = logging.getLogger("ContainersApi")
 
 
@@ -19,7 +19,7 @@ def container_api(test_client):
     """
     class ContainerApi(BaseApiInterface):
 
-        def post(self, instance_id, create_msfrpcd_container_url=test_const.CREATE_MSFRPCD_CONTAINER):
+        def post(self, instance_id, create_msfrpcd_container_url=config.CREATE_MSFRPCD_CONTAINER_URL):
             """
             Sends a POST request in order to create a metasploit based image container.
 
@@ -46,7 +46,7 @@ def container_api(test_client):
                 tuple[list[dict], int]: a tuple containing the body response as a first arg,
                     and status code as second arg.
             """
-            get_all_containers_url = test_const.GET_CONTAINERS.format(instance_id=instance_id)
+            get_all_containers_url = config.GET_CONTAINERS_URL.format(instance_id=instance_id)
             logger.info(f"Send GET request, URL: {get_all_containers_url}")
 
             return execute_rest_api_func(url=get_all_containers_url, api_func=self._test_client.get)
@@ -62,7 +62,7 @@ def container_api(test_client):
             Returns:
                 tuple[dict, int]: a tuple containing the body response as a first arg, and status code as second arg.
             """
-            get_container_url = test_const.GET_CONTAINER.format(instance_id=instance_id, container_id=container_id)
+            get_container_url = config.GET_CONTAINER_URL.format(instance_id=instance_id, container_id=container_id)
             logger.info(f"Send GET request, URL: {get_container_url}")
 
             return execute_rest_api_func(url=get_container_url, api_func=self._test_client.get)
@@ -78,7 +78,7 @@ def container_api(test_client):
             Returns:
                 tuple[str, int]: a tuple containing the body response as first arg, and status code as second arg.
             """
-            delete_container_url = test_const.DELETE_CONTAINER.format(
+            delete_container_url = config.DELETE_CONTAINER_URL.format(
                 instance_id=instance_id, container_id=container_id
             )
             logger.info(f"Send DELETE request, URL: {delete_container_url}")

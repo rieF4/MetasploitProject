@@ -1,5 +1,13 @@
 
+CREATE_DOCKER_SERVER_URL = '/DockerServerInstances/Create'
+DELETE_DOCKER_SERVER_URL = '/DockerServerInstances/Delete/{instance_id}'
+GET_ALL_DOCKER_SERVERS_URL = '/DockerServerInstances/Get'
+GET_DOCKER_SERVER_URL = '/DockerServerInstances/Get/{instance_id}'
 
+CREATE_DOCKER_SERVER_REQUEST = {
+    "ImageId": "ami-016b213e65284e9c9",
+    "InstanceType": "t2.micro"
+}
 CREATE_DOCKER_REQUEST_WITHOUT_IMAGE_ID = {
      "InstanceType": "t2.micro"
 }

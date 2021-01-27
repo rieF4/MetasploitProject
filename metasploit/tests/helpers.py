@@ -2,7 +2,7 @@ import json
 import logging
 from metasploit.api.response import HttpCodes
 
-from . import constants as test_const
+from . import config
 
 logger = logging.getLogger("isResponseExpected")
 
@@ -73,21 +73,21 @@ def is_docker_server_response_body_expected(docker_response, **expected):
         bool: True if the docker response is as expected, False otherwise.
 
     """
-    actual_containers = docker_response.get(test_const.CONTAINERS)
+    actual_containers = docker_response.get(config.CONTAINERS)
     expected_containers = expected.get("containers")
 
     if expected_containers is not None and actual_containers != expected_containers:
         logger.error(f"actual containers: {actual_containers}, expected containers: {expected_containers}")
         return False
 
-    actual_metasploit = docker_response.get(test_const.METASPLOIT)
+    actual_metasploit = docker_response.get(config.METASPLOIT)
     excpected_metasploit = expected.get("metasploit", None)
 
     if excpected_metasploit is not None and actual_metasploit != excpected_metasploit:
         logger.error(f"actual metasploit: {actual_metasploit}, expected metasploit: {excpected_metasploit}")
         return False
 
-    actual_state = docker_response.get(test_const.STATE)
+    actual_state = docker_response.get(config.STATE)
     expected_state = expected.get("state")
 
     if expected_state is not None and actual_state != expected_state:
@@ -112,23 +112,23 @@ def is_docker_server_response_body_valid(docker_server_data_response, **expected
     Returns:
         bool: True if docker server response is valid, False otherwise.
     """
-    if test_const.CONTAINERS not in docker_server_data_response:
+    if config.CONTAINERS not in docker_server_data_response:
         logger.error(f"There is no Containers key in the docker response body {docker_server_data_response}")
         return False
 
-    if test_const.METASPLOIT not in docker_server_data_response:
+    if config.METASPLOIT not in docker_server_data_response:
         logger.error(f"There is not Metasploit key in the docker response body {docker_server_data_response}")
         return False
 
-    if test_const.IP_PARAMETERS not in docker_server_data_response:
+    if config.IP_PARAMETERS not in docker_server_data_response:
         logger.error(f"There is no IpParameters key in the docker response body {docker_server_data_response}")
         return False
 
-    if test_const.ID not in docker_server_data_response:
+    if config.ID not in docker_server_data_response:
         logger.error(f"There is no _id key in the docker response body {docker_server_data_response}")
         return False
 
-    if test_const.STATE not in docker_server_data_response:
+    if config.STATE not in docker_server_data_response:
         logger.error(f"There is no State key in the docker response body {docker_server_data_response}")
         return False
 
