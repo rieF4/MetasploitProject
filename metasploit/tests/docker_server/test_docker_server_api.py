@@ -1,7 +1,6 @@
 import pytest
 import logging
 
-
 from metasploit.api.response import HttpCodes
 from metasploit.tests.conftest import test_client  # noqa: F401
 from metasploit.tests.helpers import (
@@ -194,4 +193,3 @@ class TestDockerServerDeleteApi(object):
             assert actual_status_code == HttpCodes.NO_CONTENT, (
                 f"actual {actual_status_code}, expected {HttpCodes.NO_CONTENT}"
             )
-

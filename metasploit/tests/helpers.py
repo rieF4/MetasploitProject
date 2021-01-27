@@ -221,3 +221,27 @@ def is_error_response_body_expected(error_response_body, **expected):
         return False
 
     return True
+
+
+def execute_rest_api_func(url, api_func, convert_func=convert, request_body=None):
+    """
+    Execute the REST-API Http request to the server [POST, GET, DELETE]
+
+    Args:
+        url (str): URL for the request.
+        api_func (function): API function type e.g.: (POST, GET, DELETE)
+        convert_func (function): a convert function (to-utf-8, convert)
+        request_body (dict): a request body in case exists.
+
+    Returns:
+        tuple[dict/list[dict], int]: a tuple containing the body response and status code.
+    """
+    if request_body:
+        full_response = api_func(url, json=request_body)
+    else:
+        full_response = api_func(url)
+
+    response_body = convert_func(response_as_bytes=full_response.data)
+    status_code = full_response.status_code
+
+    return response_body, status_code

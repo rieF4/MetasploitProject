@@ -10,6 +10,9 @@ CREATE_DOCKER_SERVER_REQUEST = {
     "InstanceType": "t2.micro"
 }
 
+CREATE_MSFRPCD_CONTAINER = '/DockerServerInstances/{instance_id}/Containers/CreateMetasploitContainer'
+GET_CONTAINERS = '/DockerServerInstances/{instance_id}/Containers/Get'
+
 CONTAINERS = "Containers"
 METASPLOIT = "Metasploit"
 SECURITY_GROUPS = "SecurityGroups"

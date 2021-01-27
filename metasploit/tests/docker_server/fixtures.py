@@ -4,7 +4,7 @@ import logging
 from metasploit.api.response import HttpCodes
 
 
-logger = logging.getLogger("docker_api_fixtures")
+logger = logging.getLogger("DockerApiFixtures")
 
 
 @pytest.fixture(scope="class")
