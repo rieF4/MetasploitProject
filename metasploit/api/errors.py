@@ -65,8 +65,8 @@ class SSHConnectionError(GeneralConnectionError):
 
 class DockerServerConnectionError(GeneralConnectionError):
 
-    def __init__(self, url, error_code=HttpCodes.SERVICE_UNAVAILABLE):
-        error_msg = f"Failed to connect to {url}"
+    def __init__(self, docker_server, url, error_code=HttpCodes.SERVICE_UNAVAILABLE):
+        error_msg = f"Failed to connect to {docker_server} docker daemon using URL {url}"
         super().__init__(error_msg=error_msg, error_code=error_code)
 
 
@@ -83,10 +83,10 @@ class CommandFailureError(ApiException):
 
     Attributes:
          cmd (str) - the command that was executed over the instance
-         instance_id (str) - the instance id that this command was executed on
+         instance_fqdn (str) - the instance fqdn that executed the command.
     """
-    def __init__(self, cmd, instance_id, error_code=HttpCodes.INTERNAL_SERVER_ERROR):
-        msg = f"The following command {cmd} has failed over the instance {instance_id}!"
+    def __init__(self, cmd, instance_fqdn, error_code=HttpCodes.INTERNAL_SERVER_ERROR):
+        msg = f"The following command {cmd} has failed over the instance {instance_fqdn}!"
         super().__init__(error_msg=msg, error_code=error_code)
 
 

@@ -6,9 +6,7 @@ from . import constants as aws_constants
 from .. import constants as global_constants
 from metasploit.api.connections import SSH
 
-from metasploit.api.errors import (
-    CommandFailureError
-)
+from metasploit.api.errors import CommandFailureError
 
 
 class DockerServerInstance(object):
@@ -34,20 +32,12 @@ class DockerServerInstance(object):
         self._instance_obj = instance_obj
 
         if ssh_flag:
-            self._ssh = SSH(
-                hostname=self.public_dns_name,
-                username=aws_constants.USER_NAME,
-                private_key=aws_constants.DEFAULT_PRIVATE_KEY_PATH
-            )
+            self._ssh = SSH(hostname=self.public_dns_name)
 
         if init_docker_server_flag:
             self._init_docker_server_on_instance()
 
-        self._docker = Docker(
-            protocol=global_constants.IP_PROTOCOL,
-            docker_server_ip=self.public_ip_address,
-            docker_port=global_constants.DOCKER_PORT
-        )
+        self._docker = Docker(docker_server_ip=self.public_dns_name)
 
     @property
     def docker(self):
@@ -131,29 +121,20 @@ class DockerServerInstance(object):
 
     def execute_shell_commands(self, commands):
         """
-        Executes the given _commands over the instance using SSH and add them to the _commands attribute
+        Executes the given commands over the instance.
 
         Args:
-            commands (list(str)) - list of all the _commands to execute on the instance
+            commands (list(str)) - list of all the commands to execute on the instance.
 
         Raises:
             CommandFailureError in case the command fails over the instance
         """
         if self.state['Name'] == aws_constants.RUNNING_STATE:
-            ssh_flag = True
-            while ssh_flag:
-                try:
-                    for command in commands:
-                        stdin, stdout, stderr = self._ssh.get_client().exec_command(command=command, timeout=10)
-                        exit_cmd_status = stdout.channel.recv_exit_status()
-                        if exit_cmd_status:  # means the command was not successful - similar to echo $?
-                            ssh_flag = False
-                            raise CommandFailureError(
-                                cmd=command, instance_id=self.instance_id
-                            )
-                    ssh_flag = False
-                except Exception as error:
-                    print(error)
+            are_commands_successful, cmd = self._ssh.execute_commands(commands=commands)
+            if not are_commands_successful:
+                raise CommandFailureError(
+                    cmd=cmd, instance_fqdn=self.public_dns_name
+                )
 
     def write_to_file(self, filename, mode, data=None):
         """
@@ -168,13 +149,10 @@ class DockerServerInstance(object):
             True if the write operation is success, False otherwise.
         """
         sftp = self._ssh.get_sftp()
-        try:
-            file_obj = sftp.open(filename=filename, mode=mode)
-            if mode == 'w':
-                file_obj.write(data=data)
-            return True
-        except Exception:
-            return False
+
+        file_obj = sftp.open(filename=filename, mode=mode)
+        if mode == 'w':
+            file_obj.write(data=data)
 
     def _init_docker_server_on_instance(self):
         """

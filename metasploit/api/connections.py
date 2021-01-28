@@ -11,6 +11,7 @@ from metasploit.api.errors import (
     TimeoutExpiredError,
     SSHConnectionError
 )
+from metasploit.api.aws import constants as aws_const
 
 
 class Connection(object):
@@ -30,7 +31,7 @@ class SSH(Connection):
         _sftp (SFTPClient): the SFTPClient that is connected to the server.
     """
 
-    def __init__(self, hostname, username, private_key):
+    def __init__(self, hostname, username=aws_const.USER_NAME, private_key=aws_const.DEFAULT_PRIVATE_KEY_PATH):
         """
         initialize the SSH class with a new connection to a remote machine.
 
@@ -42,6 +43,7 @@ class SSH(Connection):
         self._ssh_client = paramiko.SSHClient()
         self._ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         self._private_key = paramiko.RSAKey.from_private_key(open(private_key))
+        self._hostname = hostname
 
         is_connection_established = False
         while not is_connection_established:
@@ -88,6 +90,29 @@ class SSH(Connection):
             str: the private key for the server.
         """
         return self._private_key
+
+    def execute_commands(self, commands):
+        """
+        Executes commands over a remote host via SSH.
+
+        Args:
+            commands (list[str]): list of commands to execute.
+
+        Returns:
+            bool: True if all the commands were successful, False if one of the commands failed.
+
+        Raises:
+            SSHException: in case the SSH server fails to execute the command.
+        """
+        try:
+            for command in commands:
+                stdin, stdout, stderr = self.get_client().exec_command(command=command, timeout=10)
+                exit_cmd_status = stdout.channel.recv_exit_status()
+                if exit_cmd_status:  # means the command was not successful - similar to echo $?
+                    return False, command
+            return True, 'Success'
+        except SSHException:
+            raise SSHConnectionError(host=self._hostname)
 
 
 class Metasploit(Connection):
