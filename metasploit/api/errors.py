@@ -63,6 +63,13 @@ class SSHConnectionError(GeneralConnectionError):
         super().__init__(error_msg=error_msg, error_code=error_code)
 
 
+class DockerServerConnectionError(GeneralConnectionError):
+
+    def __init__(self, url, error_code=HttpCodes.SERVICE_UNAVAILABLE):
+        error_msg = f"Failed to connect to {url}"
+        super().__init__(error_msg=error_msg, error_code=error_code)
+
+
 class PortNotFoundError(ApiException):
 
     def __init__(self, error_code=HttpCodes.INTERNAL_SERVER_ERROR):

@@ -2,6 +2,34 @@
 import docker
 
 from metasploit.api.connections import Connection
+from metasploit.api.utils.helpers import TimeoutSampler
+from metasploit.api.errors import (
+    TimeoutExpiredError,
+    DockerServerConnectionError
+)
+
+
+def execute_docker_function(docker_api_func):
+    """
+    a decorator that executes a docker function in case the docker is reachable.
+
+    Args:
+        docker_api_func (function): a docker API function.
+    """
+    def wrapper(self, *args, **kwargs):
+        """
+        Returns the docker API function result in case a connection was established successfully.
+
+        Raises:
+            DockerServerConnectionError: in case the docker server is unreachable.
+        """
+        try:
+            for ping_result in TimeoutSampler(timeout=30, sleep=3, func=self._docker_client.ping):
+                if ping_result:
+                    return docker_api_func(self, *args, **kwargs)
+        except TimeoutExpiredError:
+            raise DockerServerConnectionError(url=self.base_url)
+    return wrapper
 
 
 class Docker(Connection):
@@ -23,11 +51,11 @@ class Docker(Connection):
             docker_server_ip (str): the docker server public ip.
             docker_port (int): the port that the docker server listens to.
         """
-        base_url = f"{protocol}://{docker_server_ip}:{docker_port}"
+        self.base_url = f"{protocol}://{docker_server_ip}:{docker_port}"
 
-        self._docker_client = docker.DockerClient(base_url=base_url)
+        self._docker_client = docker.DockerClient(base_url=self.base_url)
 
-        self._api_client = docker.APIClient(base_url=base_url)
+        self._api_client = docker.APIClient(base_url=self.base_url)
 
     @property
     def api_client(self):
@@ -38,6 +66,7 @@ class Docker(Connection):
         return self._docker_client
 
     @property
+    @execute_docker_function
     def info(self):
         """
         Display system-wide information about the docker, Identical to the docker info command.
@@ -48,6 +77,7 @@ class Docker(Connection):
         return self._docker_client.info()
 
     @property
+    @execute_docker_function
     def container_collection(self):
         """
         Get a container collection obj.
@@ -58,6 +88,7 @@ class Docker(Connection):
         return self._docker_client.containers
 
     @property
+    @execute_docker_function
     def network_collection(self):
         """
         Get a network collection obj.
@@ -68,6 +99,7 @@ class Docker(Connection):
         return self._docker_client.networks
 
     @property
+    @execute_docker_function
     def image_collection(self):
         """
         Get an image collection obj.
@@ -78,6 +110,7 @@ class Docker(Connection):
         return self._docker_client.images
 
     @property
+    @execute_docker_function
     def config_collection(self):
         """
         Get a config collection obj.
