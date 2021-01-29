@@ -1,10 +1,7 @@
 from metasploit.api.logic.services import MetasploitService
 from metasploit.api.database import DatabaseOperations, DatabaseCollections
 from metasploit.api.aws.amazon_operations import DockerServerInstanceOperations
-from metasploit.api.utils.decorators import (
-    verify_instance_exists,
-    validate_json_request
-)
+from metasploit.api.utils.decorators import validate_json_request
 
 
 class MetasploitServiceImplementation(MetasploitService):
@@ -18,16 +15,10 @@ class MetasploitServiceImplementation(MetasploitService):
     """
     def __init__(self, module, *args, **kwargs):
         self.database = DatabaseOperations(collection_type=DatabaseCollections.INSTANCES)
-        self.module = None
-        self.docker_sever = None
-        self.init(module, *args, **kwargs)
 
-    @verify_instance_exists
-    def init(self, module, *args, **kwargs):
-        """
-        Initialize the metasploit module/docker server classes.
-        """
         instance_id = kwargs.pop("instance_id")
+        self.database.get_amazon_document(resource_id=instance_id)
+
         self.docker_sever = DockerServerInstanceOperations(instance_id=instance_id).docker_server
         self.module = module(source_host=self.docker_sever.public_ip_address, *args, **kwargs)
 

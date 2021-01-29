@@ -160,19 +160,3 @@ def metasploit_action_verification(func):
             raise MetasploitActionError(error_msg=str(exc), error_code=HttpCodes.BAD_REQUEST)
 
     return wrapper
-
-
-def verify_instance_exists(func):
-    """
-    Verify if instance exists before executing the function
-
-    Args:
-        func (Function): function to decorate.
-    """
-    def wrapper(self, *args, **kwargs):
-
-        instance_id = kwargs.get("instance_id")
-        if not self.database.get_amazon_document(resource_id=instance_id):
-            raise AmazonResourceNotFoundError(type=self.type, id=instance_id)
-        func(self, *args, **kwargs)
-    return wrapper
