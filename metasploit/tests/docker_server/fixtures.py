@@ -2,6 +2,8 @@ import pytest
 import logging
 
 from metasploit.api.response import HttpCodes
+from metasploit.api.connections import SSH
+from metasploit.api.aws import constants as aws_const
 
 
 logger = logging.getLogger("DockerApiFixtures")
@@ -56,6 +58,34 @@ def docker_server_ids(create_docker_servers):
     Get the docker server IDS of all the created docker servers.
 
     Returns:
-        list: a list of docker server instance IDs
+        list[str]: a list of docker server instance IDs
     """
     return [new_instance_response.get("_id") for new_instance_response, _ in create_docker_servers]
+
+
+@pytest.fixture(scope="class")
+def docker_server_dns(create_docker_servers):
+    """
+    Get the docker server dns names of all the created docker servers.
+
+    Returns:
+        list[str]: a list of docker server dns names.
+    """
+    return [
+        new_instance_response.get("IpParameters").get("PublicDNSName")
+        for new_instance_response, _ in create_docker_servers
+    ]
+
+
+@pytest.fixture(scope="function")
+def stop_docker_daemon(docker_server_dns):
+    """
+    Stops the docker servers docker daemon.
+    """
+    stop_docker_daemon_cmd = ["sudo systemctl stop docker"]
+
+    for docker_dns in docker_server_dns:
+        logger.info(f"Stop docker daemon at {docker_dns}")
+        is_cmd_success, cmd = SSH(hostname=docker_dns).execute_commands(commands=stop_docker_daemon_cmd)
+
+        assert is_cmd_success, f"Failed to stop docker daemon at {docker_dns} using cmd {cmd}"

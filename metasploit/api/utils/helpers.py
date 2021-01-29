@@ -167,7 +167,7 @@ class TimeoutSampler(object):
             result (bool): expected result from the function.
 
         Returns:
-            bool: in case function output is what's expected, false otherwise.
+            bool: True in case function output is what's expected, false otherwise.
         """
         try:
             for res in self:
