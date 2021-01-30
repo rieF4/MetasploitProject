@@ -15,3 +15,15 @@ class BaseApiInterface(object):
 
     def delete(self, *args, **kwargs):
         pass
+
+
+class MetasploitApiInterface(BaseApiInterface):
+
+    def scan_ports(self, *args, **kwargs):
+        pass
+
+    def get_exploit(self, *args, **kwargs):
+        pass
+
+    def get_payload(self, *args, **kwargs):
+        pass
