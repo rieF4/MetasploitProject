@@ -23,3 +23,11 @@ EXPECTED_RESPONSE_FOR_NEW_DOCKER_SERVER = {
 }
 
 INVALID_INSTANCE_ID = "i-07841d983a"
+
+
+CONTAINERS = "Containers"
+METASPLOIT = "Metasploit"
+SECURITY_GROUPS = "SecurityGroups"
+STATE = "State"
+IP_PARAMETERS = "IpParameters"
+ID = "_id"

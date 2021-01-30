@@ -3,7 +3,6 @@ import logging
 
 from metasploit.api.response import HttpCodes
 from metasploit.api.connections import SSH
-from metasploit.api.aws import constants as aws_const
 
 
 logger = logging.getLogger("DockerApiFixtures")

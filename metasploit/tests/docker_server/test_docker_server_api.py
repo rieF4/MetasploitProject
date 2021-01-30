@@ -4,7 +4,6 @@ import logging
 from metasploit.api.response import HttpCodes
 from metasploit.tests.conftest import test_client  # noqa: F401
 from metasploit.tests.helpers import (
-    is_docker_server_response_body_valid,
     is_expected_code,
     is_error_response_valid,
     load_json
@@ -16,6 +15,7 @@ from .fixtures import (  # noqa: F401
 )
 from .docker_server_api import docker_server_api  # noqa: F401
 from . import config
+from .helpers import is_docker_server_response_body_valid
 
 
 logger = logging.getLogger("DockerServerTests")
