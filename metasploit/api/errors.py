@@ -44,6 +44,12 @@ class InvalidHostName(ApiException):
         super().__init__(error_msg=msg, error_code=error_code)
 
 
+class HostIsUnreachable(ApiException):
+    def __init__(self, source_host, target_host, error_code=HttpCodes.BAD_REQUEST):
+        msg = f"Unable to ping from {source_host} to {target_host}, {target_host} is unreachable"
+        super().__init__(error_msg=msg, error_code=error_code)
+
+
 class GeneralConnectionError(ApiException):
 
     def __init__(self, error_msg, error_code=HttpCodes.SERVICE_UNAVAILABLE):

@@ -1,11 +1,16 @@
 import re
-import nmap
 import time
 import socket
+from icmplib import ping
 
 from metasploit.api.connections import Metasploit
 from requests.adapters import ConnectionError
-from metasploit.api.errors import MsfrpcdConnectionError, TimeoutExpiredError, InvalidHostName
+from metasploit.api.errors import (
+    MsfrpcdConnectionError,
+    TimeoutExpiredError,
+    InvalidHostName,
+    HostIsUnreachable
+)
 from metasploit.api.utils.decorators import metasploit_action_verification
 from metasploit.api.utils.helpers import TimeoutSampler
 
@@ -30,6 +35,9 @@ class MetasploitModule(object):
         try:
             if target:
                 self._target_host = socket.gethostbyname(target)
+                is_target_reachable = ping(address=self._target_host, privileged=False).is_alive
+                if not is_target_reachable:
+                    raise HostIsUnreachable(source_host=self._source_host, target_host=self._target_host)
         except socket.gaierror:
             raise InvalidHostName(invalid_host=target)
 
