@@ -105,9 +105,11 @@ class TestDockerServerGetApi(object):
             instance_id=config.INVALID_INSTANCE_ID
         )
 
-        assert is_error_response_valid(error_response=docker_server_body_response, code=HttpCodes.NOT_FOUND), (
-            f"Response body {docker_server_body_response} is not as expected"
-        )
+        assert is_error_response_valid(
+            error_response=docker_server_body_response,
+            code=HttpCodes.NOT_FOUND,
+            message=config.INSTANCE_NOT_FOUND_MSG.format(invalid_instance_id=config.INVALID_INSTANCE_ID)
+        ), f"Response body {docker_server_body_response} is not as expected"
 
         logger.info(f"Verify that the status code is {HttpCodes.NOT_FOUND}")
         assert is_expected_code(actual_code=actual_status_code, expected_code=HttpCodes.NOT_FOUND), (
@@ -170,9 +172,11 @@ class TestDockerServerDeleteApi(object):
             docker_server_body_response = load_json(string=docker_server_body_response)
 
         logger.info(f"Verify that DELETE body response {docker_server_body_response} is an ERROR")
-        assert is_error_response_valid(error_response=docker_server_body_response, code=HttpCodes.NOT_FOUND), (
-            f"Response body {docker_server_body_response} is not as expected"
-        )
+        assert is_error_response_valid(
+            error_response=docker_server_body_response,
+            code=HttpCodes.NOT_FOUND,
+            message=config.INSTANCE_NOT_FOUND_MSG.format(invalid_instance_id=config.INVALID_INSTANCE_ID)
+        ), f"Response body {docker_server_body_response} is not as expected"
 
         logger.info(f"Verify that the DELETE response status code is {HttpCodes.NOT_FOUND}")
         assert is_expected_code(actual_code=actual_status_code, expected_code=HttpCodes.NOT_FOUND), (

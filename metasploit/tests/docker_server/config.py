@@ -23,7 +23,7 @@ EXPECTED_RESPONSE_FOR_NEW_DOCKER_SERVER = {
 }
 
 INVALID_INSTANCE_ID = "i-07841d983a"
-
+INSTANCE_NOT_FOUND_MSG = "404 Client error: Instance with ID {invalid_instance_id} was not found"
 
 CONTAINERS = "Containers"
 METASPLOIT = "Metasploit"
