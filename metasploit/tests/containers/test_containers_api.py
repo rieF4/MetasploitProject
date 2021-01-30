@@ -16,6 +16,7 @@ from metasploit.tests.docker_server.fixtures import (  # noqa: F401
     docker_server_dns
 )
 from metasploit.tests.docker_server.docker_server_api import docker_server_api  # noqa: F401
+from ..helpers import load_json
 
 from .containers_api import container_api  # noqa: F401
 from . import config
@@ -89,7 +90,7 @@ class TestMetasploitContainerGetApi(object):
             assert is_error_response_valid(
                 error_response=response_body,
                 code=HttpCodes.NOT_FOUND,
-                message=f"404 Client error: Container with ID {config.INVALID_CONTAINER_ID} was not found"
+                message=config.CONTAINER_NOT_FOUND_MSG.format(invalid_container_id=config.INVALID_CONTAINER_ID)
             ), f"Failed to validate that {response_body} is an ERROR"
 
             logger.info(f"Verify the status code is {HttpCodes.NOT_FOUND}")
@@ -140,7 +141,7 @@ class TestMetasploitContainerGetApi(object):
         Tests that given new containers in a docker servers, GET all containers returns all of them.
         """
         for docker_server_id in docker_server_ids:
-
+            
             all_containers_response, actual_status_code = container_api.get_many(instance_id=docker_server_id)
             assert isinstance(all_containers_response, list), f"{all_containers_response} is not a list"
             assert len(all_containers_response) == self.num_of_containers_to_create, (
@@ -167,6 +168,61 @@ class TestMetasploitContainerGetApi(object):
 
             logger.info(f"Verify the status code is {actual_status_code}")
             assert is_expected_code(actual_code=actual_status_code, expected_code=HttpCodes.OK)
+
+
+class TestMetasploitContainerDeleteApi(object):
+
+    num_of_docker_servers_to_create = 2
+    num_of_containers_to_create = 2
+
+    def test_delete_non_existing_container_fails(self, docker_server_ids, container_api):
+        """
+        Tests that in case there isn't a container with the requested ID,
+        the server returns ERROR response body and 404.
+        """
+        for docker_server_id in docker_server_ids:
+
+            logger.info(f"delete container {config.INVALID_CONTAINER_ID} from instance {docker_server_id}")
+            body_response, actual_status_code = container_api.delete(
+                instance_id=docker_server_id, container_id=config.INVALID_CONTAINER_ID
+            )
+            if isinstance(body_response, str):
+                body_response = load_json(string=body_response)
+
+            logger.info(f"Verify that DELETE body response {body_response} is an ERROR")
+            assert is_error_response_valid(
+                error_response=body_response,
+                code=HttpCodes.NOT_FOUND,
+                message=config.CONTAINER_NOT_FOUND_MSG.format(invalid_container_id=config.INVALID_CONTAINER_ID)
+            ), (
+                f"Response body {body_response} is not as expected"
+            )
+
+            logger.info(f"Verify that the DELETE response status code is {HttpCodes.NOT_FOUND}")
+            assert is_expected_code(actual_code=actual_status_code, expected_code=HttpCodes.NOT_FOUND), (
+                f"actual {actual_status_code}, expected {HttpCodes.NOT_FOUND}"
+            )
+
+    def test_delete_existing_container_succeed(self, docker_server_ids_and_container_ids, container_api):
+        """
+        Tests that deleting an existing container the server gives back an empty response and 204
+        """
+        for docker_server_id, container_ids in docker_server_ids_and_container_ids.items():
+
+            for container_id in container_ids:
+
+                logger.info(f"delete container {container_id} from instance {docker_server_id}")
+                body_response, actual_status_code = container_api.delete(
+                    instance_id=docker_server_id, container_id=container_id
+                )
+
+                logger.info(f"Verify that the DELETE body response is an empty string")
+                assert body_response == '', f"Failed to delete docker server {docker_server_id}"
+
+                logger.info(f"Verify that the DELETE response status code is {HttpCodes.NO_CONTENT}")
+                assert actual_status_code == HttpCodes.NO_CONTENT, (
+                    f"actual {actual_status_code}, expected {HttpCodes.NO_CONTENT}"
+                )
 
 
 class TestDockerDaemonRecover(object):

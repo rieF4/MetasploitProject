@@ -21,3 +21,4 @@ EXPECTED_NEW_CONTAINER_RESPONSE = {
 }
 
 INVALID_CONTAINER_ID = "2c152455e2c4913a257a2a549bd16b2a8630a08a3a5b2347539d"
+CONTAINER_NOT_FOUND_MSG = "404 Client error: Container with ID {invalid_container_id} was not found"
