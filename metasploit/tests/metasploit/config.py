@@ -9,8 +9,13 @@ INVALID_IP_ADDRESS = "1.2.3.4"
 INVALID_DOMAIN_NAME = "walla.blabla"
 INVALID_HOST_NAME = "blabla"
 
-VALID_HOST_NAME_1 = "ynet.co.il"
+VALID_HOST_NAME_1 = "8.8.8.8"
 VALID_HOST_NAME_2 = "itsecgames.com"
 VALID_HOST_NAME_3 = "defendtheweb.net"
 VALID_HOST_NAME_4 = "google-gruyere.appspot.com"
 VALID_IP_ADDRESS_5 = "104.20.66.68"
+
+INVALID_EXPLOIT_NAME_1 = "unix.ftp.vsftpd_234_backdoor"
+INVALID_EXPLOIT_NAME_2 = "unix/ftp/vsftpd_234_backdoor"
+INVALID_EXPLOIT_NAME_3 = "unix ftp vsftpd_234_backdoorr"
+

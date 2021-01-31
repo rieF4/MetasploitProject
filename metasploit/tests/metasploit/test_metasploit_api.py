@@ -63,17 +63,21 @@ class TestScanPortsApi(object):
             )
 
             logger.info(f"Verify scan ports of {invalid_target_name} on instance {docker_server_id} failed")
-            assert is_error_response_valid(error_response=response_body, code=HttpCodes.BAD_REQUEST)
+            assert is_error_response_valid(error_response=response_body, code=HttpCodes.BAD_REQUEST), (
+                f"Failed to verify that response {response_body} is an ERROR"
+            )
 
             logger.info(f"Verify the status code is {HttpCodes.BAD_REQUEST}")
-            assert is_expected_code(actual_code=actual_status_code, expected_code=HttpCodes.BAD_REQUEST)
+            assert is_expected_code(actual_code=actual_status_code, expected_code=HttpCodes.BAD_REQUEST), (
+                f"actual {actual_status_code}, expected: {HttpCodes.BAD_REQUEST}"
+            )
 
     @pytest.mark.parametrize(
         "target_host",
         [
             pytest.param(
                 config.VALID_HOST_NAME_1,
-                id="Scan_ports_of_ynet"
+                id="Scan_ports_of_google_dns_server"
             ),
             pytest.param(
                 config.VALID_HOST_NAME_2,
@@ -112,9 +116,55 @@ class TestScanPortsApi(object):
 
             target_ip = socket.gethostbyname(target_host)
 
-            logger.info(f"Verify that response body {response_body} is a valid response structure")
+            logger.info(f"Verify that response body {response_body} contains IP {target_ip} with a valid port")
             actual_response = re.findall(pattern=f"{target_ip}:[0-9]+", string=" ".join(response_body))
             assert len(actual_response) == len(response_body), f"actual {actual_response}, expected {response_body}"
 
             logger.info(f"Verify the status code is {HttpCodes.OK}")
-            assert is_expected_code(actual_code=actual_status_code)
+            assert is_expected_code(actual_code=actual_status_code), (
+                f"actual {actual_status_code}, expected {HttpCodes.OK}"
+            )
+
+
+@pytest.mark.usefixtures(
+    create_containers.__name__
+)
+class TestGetExploitApi(object):
+
+    @pytest.mark.parametrize(
+        "invalid_exploit_name",
+        [
+            pytest.param(
+                config.INVALID_EXPLOIT_NAME_1,
+                id="get_exploit_of_invalid_exploit_with_dots"
+            ),
+            pytest.param(
+                config.INVALID_EXPLOIT_NAME_2,
+                id="get_exploit_of_invalid_exploit_with_/"
+            ),
+            pytest.param(
+                config.INVALID_EXPLOIT_NAME_3,
+                id="get_exploit_of_invalid_exploit_name_that_does_not_exist"
+            )
+        ]
+    )
+    def test_get_invalid_exploit_name(self, invalid_exploit_name, docker_server_ids, metasploit_api):
+        """
+        Tests scenarios where trying to get invalid exploit names should fail.
+        """
+        for docker_server_id in docker_server_ids:
+
+            logger.info(f"Get exploit {invalid_exploit_name} in instance {docker_server_id}")
+            response_body, actual_status_code = metasploit_api.get_exploit(
+                instance_id=docker_server_id, exploit_name=invalid_exploit_name
+            )
+
+            logger.info(f"Verify get exploit of {invalid_exploit_name} on instance {docker_server_id} failed")
+            assert is_error_response_valid(error_response=response_body, code=HttpCodes.BAD_REQUEST), (
+                f"Failed to verify that {response_body} is an ERROR"
+            )
+
+            logger.info(f"Verify the status code is {HttpCodes.BAD_REQUEST}")
+            assert is_expected_code(actual_code=actual_status_code, expected_code=HttpCodes.BAD_REQUEST), (
+                f"actual {actual_status_code}, expected {HttpCodes.OK}"
+            )
