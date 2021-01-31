@@ -2,7 +2,8 @@ from flask import Flask, jsonify
 from flask_restful import Api, request
 
 from metasploit.api.response import (
-    HttpCodes
+    HttpCodes,
+    ErrorResponse
 )
 from .api_endpoints import (
     InstancesController,
@@ -38,8 +39,8 @@ class FlaskAppWrapper(object):
         Returns:
             tuple (Json, int): an error response that shows all available URL's for the client to use.
         """
-        url_error = {
-            "Error": f"The given url {request.base_url} is invalid ",
+
+        err_msg = {
             "AvailableUrls": [
                 '/SecurityGroups/Get',
                 '/SecurityGroups/Get/<id>',
@@ -60,22 +61,24 @@ class FlaskAppWrapper(object):
                 '/DockerServerInstances/<instance_id>/Metasploit/<exploit_name>/ExploitInfo'
             ]
         }
-
-        return jsonify(url_error), HttpCodes.BAD_REQUEST
+        return ErrorResponse(
+            error_msg=err_msg, http_error_code=HttpCodes.BAD_REQUEST, req=request.json, path=request.base_url
+        ).make_response
 
     @app.errorhandler(HttpCodes.METHOD_NOT_ALLOWED)
     def method_not_allowed(self):
         """
-        Catches a client request which indicates abut a bad method over the provided URL.
+        Catches a client request which indicates abut a bad method over a valid API URL.
 
         Returns:
             tuple (Json, int): an error response and 405 status code indicating for 'METHOD_NOT_ALLOWED'.
         """
-        method_not_allowed_err = {
-            "Error": f"Method {request.method} is not allowed in URL {request.base_url}",
-            "AvailableMethods": "In progress"
-        }
-        return jsonify(method_not_allowed_err), HttpCodes.METHOD_NOT_ALLOWED
+        return ErrorResponse(
+            error_msg=f"Method {request.method} is not allowed in URL {request.base_url}",
+            http_error_code=HttpCodes.METHOD_NOT_ALLOWED,
+            req=request.json,
+            path=request.base_url
+        ).make_response
 
     @app.errorhandler(HttpCodes.BAD_REQUEST)
     def bad_request(self):
@@ -85,10 +88,12 @@ class FlaskAppWrapper(object):
         Returns:
             tuple (Json, int): an error response and 400 status code indicating for 'Bad Request'.
         """
-        bad_request_error = {
-            "Error": "Invalid data type!!"
-        }
-        return jsonify(bad_request_error), HttpCodes.BAD_REQUEST
+        return ErrorResponse(
+            error_msg="Invalid data type input",
+            http_error_code=HttpCodes.BAD_REQUEST,
+            req=request.json,
+            path=request.base_url
+        ).make_response
 
     def get_app(self):
         """
