@@ -1,12 +1,13 @@
 import pytest
 import logging
+import socket
+import re
 
 from metasploit.api.response import HttpCodes
 from metasploit.tests.conftest import test_client  # noqa: F401
 from metasploit.tests.helpers import (
     is_expected_code,
-    is_error_response_valid,
-    load_json
+    is_error_response_valid
 )
 
 from ..containers.fixtures import (  # noqa: F401
@@ -44,7 +45,7 @@ class TestScanPortsApi(object):
                 id="Scan_ports_of_invalid_domain_name"
             ),
             pytest.param(
-                config.INVALID_WWW_HOST_NAME,
+                config.INVALID_HOST_NAME,
                 id="Scan_ports_of_invalid_random_host_name"
             )
         ]
@@ -66,3 +67,54 @@ class TestScanPortsApi(object):
 
             logger.info(f"Verify the status code is {HttpCodes.BAD_REQUEST}")
             assert is_expected_code(actual_code=actual_status_code, expected_code=HttpCodes.BAD_REQUEST)
+
+    @pytest.mark.parametrize(
+        "target_host",
+        [
+            pytest.param(
+                config.VALID_HOST_NAME_1,
+                id="Scan_ports_of_ynet"
+            ),
+            pytest.param(
+                config.VALID_HOST_NAME_2,
+                id="Scan_ports_of_itsecgames"
+            ),
+            pytest.param(
+                config.VALID_HOST_NAME_3,
+                id="Scan_ports_of_defendtheweb"
+            ),
+            pytest.param(
+                config.VALID_HOST_NAME_4,
+                id="Scan_ports_of_google-gruyere.appspot"
+            ),
+            pytest.param(
+                config.VALID_IP_ADDRESS_5,
+                id=f"Scan_ports_of_{config.VALID_IP_ADDRESS_5}"
+            )
+        ]
+    )
+    def test_scan_ports_success(self, target_host, docker_server_ids, metasploit_api):
+        """
+        Tests scenarios where the port scanning of valid target host should be success.
+        """
+        for docker_server_id in docker_server_ids:
+
+            logger.info(f"Scan ports, instance: {docker_server_id}, target: {target_host}")
+            response_body, actual_status_code = metasploit_api.scan_ports(
+                instance_id=docker_server_id, target_host=target_host
+            )
+
+            logger.info(f"Verify that response body {response_body} is a list")
+            assert isinstance(response_body, list), f"response body {response_body} is not a list."
+
+            logger.info(f"Verify that response body {response_body} is not empty")
+            assert response_body != [], f"Failed to verify that {response_body} is not empty"
+
+            target_ip = socket.gethostbyname(target_host)
+
+            logger.info(f"Verify that response body {response_body} is a valid response structure")
+            actual_response = re.findall(pattern=f"{target_ip}:[0-9]+", string=" ".join(response_body))
+            assert len(actual_response) == len(response_body), f"actual {actual_response}, expected {response_body}"
+
+            logger.info(f"Verify the status code is {HttpCodes.OK}")
+            assert is_expected_code(actual_code=actual_status_code)

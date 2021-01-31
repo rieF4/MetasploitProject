@@ -7,5 +7,10 @@ GET_PAYLOAD_URL = "/DockerServerInstances/{instance_id}/Metasploit/{payload_name
 
 INVALID_IP_ADDRESS = "1.2.3.4"
 INVALID_DOMAIN_NAME = "walla.blabla"
-INVALID_WWW_HOST_NAME = "blabla"
+INVALID_HOST_NAME = "blabla"
 
+VALID_HOST_NAME_1 = "ynet.co.il"
+VALID_HOST_NAME_2 = "itsecgames.com"
+VALID_HOST_NAME_3 = "defendtheweb.net"
+VALID_HOST_NAME_4 = "google-gruyere.appspot.com"
+VALID_IP_ADDRESS_5 = "104.20.66.68"
