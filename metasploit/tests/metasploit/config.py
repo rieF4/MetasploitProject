@@ -19,3 +19,8 @@ INVALID_EXPLOIT_NAME_1 = "unix.ftp.vsftpd_234_backdoor"
 INVALID_EXPLOIT_NAME_2 = "unix/ftp/vsftpd_234_backdoor"
 INVALID_EXPLOIT_NAME_3 = "unix ftp vsftpd_234_backdoorr"
 
+VALID_EXPLOIT_NAME_1 = 'windows wins ms04_045_wins'
+VALID_EXPLOIT_NAME_2 = 'aix rpc_cmsd_opcode21'
+VALID_EXPLOIT_NAME_3 = 'unix ftp vsftpd_234_backdoor'
+
+

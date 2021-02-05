@@ -23,6 +23,7 @@ from ..containers.containers_api import container_api  # noqa: F401
 
 from . import config
 from .metasploit_api import metasploit_api  # noqa: F401
+from .helpers import is_exploit_name_response_valid
 
 
 logger = logging.getLogger("MetasploitTests")
@@ -166,5 +167,44 @@ class TestGetExploitApi(object):
 
             logger.info(f"Verify the status code is {HttpCodes.BAD_REQUEST}")
             assert is_expected_code(actual_code=actual_status_code, expected_code=HttpCodes.BAD_REQUEST), (
+                f"actual {actual_status_code}, expected {HttpCodes.BAD_REQUEST}"
+            )
+
+    @pytest.mark.parametrize(
+        "exploit_name",
+        [
+            pytest.param(
+                config.VALID_EXPLOIT_NAME_1,
+                id="get_exploit_details_of_a_windows_exploit"
+            ),
+            pytest.param(
+                config.VALID_EXPLOIT_NAME_2,
+                id="get_exploit_details_of_a_aix_exploit/"
+            ),
+            pytest.param(
+                config.VALID_EXPLOIT_NAME_3,
+                id="get_exploit_details_of_a_unix_exploit"
+            )
+        ]
+    )
+    def test_get_exploit_name_success(self, exploit_name, docker_server_ids, metasploit_api):
+        """
+        Tests scenarios where trying to get a valid exploit names should succeed.
+        """
+        for docker_server_id in docker_server_ids:
+
+            logger.info(f"Get exploit {exploit_name} in instance {docker_server_id}")
+            response_body, actual_status_code = metasploit_api.get_exploit(
+                instance_id=docker_server_id, exploit_name=exploit_name
+            )
+
+            logger.info(f"Verify get exploit of {exploit_name} on instance {docker_server_id} succeeded")
+            assert is_exploit_name_response_valid(exploit_details_body_response=response_body), (
+                f"Exploit details response {response_body} is not valid"
+            )
+
+            logger.info(f"Verify the status code is {HttpCodes.OK}")
+            assert is_expected_code(actual_code=actual_status_code), (
                 f"actual {actual_status_code}, expected {HttpCodes.OK}"
             )
+
