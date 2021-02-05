@@ -3,7 +3,7 @@ import logging
 from metasploit.api.response import HttpCodes
 
 
-logger = logging.getLogger("isResponseExpected")
+logger = logging.getLogger("GlobalHelpers")
 
 
 def to_utf8(response_as_bytes):

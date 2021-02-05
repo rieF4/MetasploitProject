@@ -88,23 +88,23 @@ def is_container_response_valid(container_response_body, **expected):
         bool: True if the response body is as expected, False otherwise.
     """
     if "_id" not in container_response_body:
-        logger.error(f"There is no _id key in the error response body {container_response_body}")
+        logger.error(f"There is no _id key in the container response body {container_response_body}")
         return False
 
     if "image" not in container_response_body:
-        logger.error(f"There is no image key in the error response body {container_response_body}")
+        logger.error(f"There is no image key in the container response body {container_response_body}")
         return False
 
     if "name" not in container_response_body:
-        logger.error(f"There is no name key in the error response body {container_response_body}")
+        logger.error(f"There is no name key in the container response body {container_response_body}")
         return False
 
     if "ports" not in container_response_body:
-        logger.error(f"There is no ports key in the error response body {container_response_body}")
+        logger.error(f"There is no ports key in the container response body {container_response_body}")
         return False
 
     if "status" not in container_response_body:
-        logger.error(f"There is no status key in the error response body {container_response_body}")
+        logger.error(f"There is no status key in the container response body {container_response_body}")
         return False
 
     return is_container_body_response_expected(container_response_body, **expected)
