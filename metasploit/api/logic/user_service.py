@@ -14,42 +14,42 @@ class UserServiceImplementation(UserService):
     """
     type = "User"
 
-    def __init__(self, **kwargs):
+    def __init__(self, is_new_user=False, **kwargs):
         self.database = DatabaseOperations(collection_type=DatabaseCollections.USERS)
-        self.user = User(**kwargs)
+        self.user = User(is_new_user=is_new_user, **kwargs)
 
     def create(self):
         return self.create_user()
 
-    # def get_all(self):
-    #     pass
-    #
-    # def get_one(self, *args, **kwargs):
-    #     return self.get_user()
-    #
-    # def delete_one(self, *args, **kwargs):
-    #     pass
-    #
-    # def get_user(self, user_id):
-    #     """
-    #     Returns an existing user response from the DB.
-    #     """
-    #     existing_users_details = self.database.get_all_amazon_documents()
-    #     for user_details in existing_users_details:
-    #         if self.user.compare(user_to_compare=User(**user_details)):
-    #             return user_details.client_response()
-    #     raise UserNotFoundError
-    #
-    #
-    # def get_all_users(self):
-    #     pass
+    def get_one(self):
+        return self.get_user()
+
+    def get_all(self):
+        return self.get_all_users()
+
+    def get_user(self):
+        """
+        Returns an existing user document from the DB.
+
+        Returns:
+            dict: a user client response in case found.
+
+        Raises:
+            UserNotFoundError: in case the user was not found in the DB.
+        """
+        return User(
+            **self.database.get_user_document_by_id(
+                user_id=self.user.id, username=self.user.username, password=self.user.password)
+        ).client_response()
+
+    def get_all_users(self):
+        pass
 
     def create_user(self):
         """
         Returns a new created user response.
         """
-        new_user_id = self.database.insert_user_document(new_user_document=self.user.document())
-        self.user.id = new_user_id
+        self.database.insert_user_document(new_user_document=self.user.document())
         new_user_response = self.user.client_response()
         return new_user_response
 

@@ -255,3 +255,11 @@ class FlaskAppWrapper(object):
             methods=[HttpMethods.POST],
             resource_class_kwargs=user_controller_kwargs,
         )
+
+        self._api.add_resource(
+            UserController,
+            '/Users/Get/<username>/<password>',
+            endpoint='/Users/Get/<username>/<password>',
+            methods=[HttpMethods.GET],
+            resource_class_kwargs=user_controller_kwargs,
+        )

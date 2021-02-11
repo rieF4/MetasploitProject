@@ -8,37 +8,37 @@ from metasploit.api.errors import BadEmailError, BadFirstNameOrLastName, BadPass
 
 class User(object):
 
-    def __init__(self, first_name, last_name, email, username, password, _id=None):
+    def __init__(self, is_new_user=False, first_name=None, last_name=None, email=None, username=None, password=None, _id=None):
         """
         Args:
             first_name (str):
         """
-        if len(password) < 8:
-            raise BadPasswordLength(password=password)
-        try:
-            validate_email(email=email)
-        except EmailNotValidError:
-            raise BadEmailError(email=email)
+        if is_new_user:
+            if len(password) < 8:
+                raise BadPasswordLength(password=password)
+            try:
+                validate_email(email=email)
+            except EmailNotValidError:
+                raise BadEmailError(email=email)
 
-        if first_name.isalpha() and last_name.isalpha():
-            self._first_name = first_name
-            self._last_name = last_name
-        else:
-            raise BadFirstNameOrLastName(first_name=first_name, last_name=last_name)
+            if not first_name.isalpha() or not last_name.isalpha():
+                raise BadFirstNameOrLastName(first_name=first_name, last_name=last_name)
 
+        self._first_name = first_name
+        self._last_name = last_name
         self._email = email
         self._username = username
-        self._hashed_password = hashlib.sha256(password.encode('utf-8')).hexdigest() if not _id else password
-        if _id:
-            self._id = str(_id) if isinstance(ObjectId, _id) else _id
+        self._password = password
+        self._hashed_password = hashlib.sha256(password.encode('utf-8')).hexdigest()
+        self._id = hashlib.sha256(f"{username}".encode('utf-8')).hexdigest() if not _id else _id
 
     @property
     def id(self):
         return self._id
 
-    @id.setter
-    def id(self, new_id):
-        self._id = new_id
+    @property
+    def password(self):
+        return self._password
 
     @property
     def first_name(self):

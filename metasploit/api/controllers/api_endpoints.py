@@ -54,6 +54,9 @@ class UserController(ControllerApi):
     def post(self, *args, **kwargs):
         return self._create_user_endpoint()
 
+    def get(self, username, password):
+        return self._get_specific_user_endpoint(username=username, password=password)
+
     @response_decorator(HttpCodes.OK)
     def _create_user_endpoint(self):
         """
@@ -72,7 +75,23 @@ class UserController(ControllerApi):
         Returns:
             Response: a flask response.
         """
-        return ServiceWrapper(class_type=self._user_service_implementation, **request.json).create()
+        return ServiceWrapper(class_type=self._user_service_implementation, is_new_user=True, **request.json).create()
+
+    @response_decorator(HttpCodes.OK)
+    def _get_specific_user_endpoint(self, username, password):
+        """
+        Gets a single user endpoint.
+
+        Args:
+            username (str): user name.
+            password (str): user password.
+
+        Returns:
+            Response: a flask response.
+        """
+        return ServiceWrapper(
+            class_type=self._user_service_implementation, username=username, password=password
+        ).get_one()
 
 
 class InstancesController(ControllerApi):

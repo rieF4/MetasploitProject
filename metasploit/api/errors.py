@@ -125,6 +125,13 @@ class UserNotFoundError(ResourceNotFoundError):
     pass
 
 
+class DuplicateUserNameError(ApiException):
+
+    def __init__(self, username, error_code=HttpCodes.DUPLICATE):
+        err_msg = f"user name {username} already exists, please choose a different user name."
+        super().__init__(error_msg=err_msg, error_code=error_code)
+
+
 class UserOrPasswordAreInvalid(ApiException):
 
     def __init__(self, username, password, error_code=HttpCodes.BAD_REQUEST):
@@ -142,7 +149,7 @@ class BadEmailError(ApiException):
 class BadFirstNameOrLastName(ApiException):
 
     def __init__(self, first_name, last_name, error_code=HttpCodes.BAD_REQUEST):
-        err_msg = f"first name {first_name} or/and last name {last_name} must contain alphabetic characters only!"
+        err_msg = f"first name {first_name} and/or last name {last_name} must contain alphabetic characters only!"
         super().__init__(error_msg=err_msg, error_code=error_code)
 
 

@@ -59,11 +59,11 @@ class MetasploitService(Service):
 
 class UserService(Service):
 
-    def create_user(self):
+    def create_user(self, *args, **kwargs):
         pass
 
-    def get_user(self, user_id, username, password):
+    def get_user(self, *args, **kwargs):
         pass
 
-    def get_all_users(self):
+    def get_all_users(self, *args, **kwargs):
         pass

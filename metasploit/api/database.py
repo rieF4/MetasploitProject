@@ -6,7 +6,9 @@ from metasploit.api.errors import (
     InsertDatabaseError,
     AmazonResourceNotFoundError,
     DockerResourceNotFoundError,
-    UpdateDatabaseError
+    UpdateDatabaseError,
+    DuplicateUserNameError,
+    UserNotFoundError
 )
 
 db_client = MongoClient(
@@ -57,6 +59,28 @@ class DatabaseOperations(object):
             return document
         else:
             raise AmazonResourceNotFoundError(type=type, id=resource_id)
+
+    def get_user_document_by_id(self, user_id, username, password, type='User'):
+        """
+        Gets a user document from the DB by it's ID.
+
+        Args:
+            user_id (str): user ID.
+            username (str): user name.
+            password (str): user password.
+            type (str): resource type in this case (a user).
+
+        Returns:
+            dict: a user document in case it was found.
+
+        Raises:
+            UserNotFoundError: in case the user was not found.
+        """
+        user_document = self.collection_type.find_one(filter={global_constants.ID: user_id})
+        if user_document:
+            return user_document
+        else:
+            raise UserNotFoundError(type=type, id=f"username: {username}, password: {password}")
 
     def get_docker_document(self, amazon_resource_id, docker_resource_id, type="Container"):
         """
@@ -250,7 +274,6 @@ class DatabaseOperations(object):
                 }
             )
         except Exception as error:
-            print("problem in update docker document")
             raise UpdateDatabaseError(document=amazon_document, error_msg=str(error))
 
     def insert_amazon_document(self, new_amazon_document):
@@ -272,16 +295,15 @@ class DatabaseOperations(object):
         Args:
             new_user_document (dict): a new user document.
 
-        Returns:
-            str: the user ID that was allocated.
-
         Raises:
             InsertDatabaseError: in case insertion to the DB fails.
+            DuplicateUserNameError: in case there is a duplicate user name.
         """
         try:
-            new_user = self.collection_type.insert_one(document=new_user_document)
-            return str(new_user.inserted_id)
+            self.collection_type.insert_one(document=new_user_document)
         except Exception as error:
+            if "duplicate key error" in str(error):
+                raise DuplicateUserNameError(username=new_user_document.get("username"))
             raise InsertDatabaseError(document=new_user_document, error_msg=str(error))
 
     def delete_amazon_document(self, resource_id, type):
