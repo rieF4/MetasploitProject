@@ -81,12 +81,7 @@ class UserController(ControllerApi):
         Returns:
             Response: a flask response.
         """
-        return ServiceWrapper(
-            class_type=self._user_service_implementation,
-            is_new_user=True,
-            is_hashing_password_required=True,
-            **request.json
-        ).create()
+        return ServiceWrapper(class_type=self._user_service_implementation).create(**request.json)
 
     @response_decorator(HttpCodes.OK)
     def _get_specific_user_endpoint(self, username, password):
@@ -101,11 +96,8 @@ class UserController(ControllerApi):
             Response: a flask response.
         """
         return ServiceWrapper(
-            class_type=self._user_service_implementation,
-            is_hashing_password_required=True,
-            username=username,
-            password=password
-        ).get_one()
+            class_type=self._user_service_implementation
+        ).get_one(username=username, password=password)
 
     @response_decorator(HttpCodes.OK)
     def _get_all_users_endpoint(self):
@@ -125,7 +117,7 @@ class UserController(ControllerApi):
         Returns:
             Response: a flask response.
         """
-        return ServiceWrapper(class_type=self._user_service_implementation, username=username).delete_one()
+        return ServiceWrapper(class_type=self._user_service_implementation).delete_one(username=username)
 
 
 class InstancesController(ControllerApi):
