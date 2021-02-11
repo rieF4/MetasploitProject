@@ -271,3 +271,11 @@ class FlaskAppWrapper(object):
             methods=[HttpMethods.GET],
             resource_class_kwargs=user_controller_kwargs,
         )
+
+        self._api.add_resource(
+            UserController,
+            '/Users/Delete/<username>',
+            endpoint='/Users/Delete/<username>',
+            methods=[HttpMethods.DELETE],
+            resource_class_kwargs=user_controller_kwargs,
+        )

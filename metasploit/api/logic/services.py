@@ -67,3 +67,6 @@ class UserService(Service):
 
     def get_all_users(self, *args, **kwargs):
         pass
+
+    def delete_user(self, *args, **kwargs):
+        pass

@@ -28,6 +28,9 @@ class UserServiceImplementation(UserService):
     def get_all(self):
         return self.get_all_users()
 
+    def delete_one(self):
+        return self.delete_user()
+
     def get_user(self):
         """
         Returns an existing user document from the DB.
@@ -70,3 +73,12 @@ class UserServiceImplementation(UserService):
         new_user_response = self.user.client_response()
         return new_user_response
 
+    def delete_user(self):
+        """
+        Deletes a user from the DB.
+
+        Returns:
+            str: empty string as a response in case of success.
+        """
+        self.database.delete_amazon_document(resource_id=self.user.id, type=self.type)
+        return ''

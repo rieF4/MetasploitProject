@@ -60,6 +60,9 @@ class UserController(ControllerApi):
         else:
             return self._get_all_users_endpoint()
 
+    def delete(self, username):
+        return self._delete_user(username=username)
+
     @response_decorator(HttpCodes.OK)
     def _create_user_endpoint(self):
         """
@@ -113,6 +116,16 @@ class UserController(ControllerApi):
             Response: a flask response.
         """
         return ServiceWrapper(class_type=self._user_service_implementation).get_all()
+
+    @response_decorator(HttpCodes.NO_CONTENT)
+    def _delete_user(self, username):
+        """
+        Delete user endpoint.
+
+        Returns:
+            Response: a flask response.
+        """
+        return ServiceWrapper(class_type=self._user_service_implementation, username=username).delete_one()
 
 
 class InstancesController(ControllerApi):
