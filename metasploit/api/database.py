@@ -60,14 +60,13 @@ class DatabaseOperations(object):
         else:
             raise AmazonResourceNotFoundError(type=type, id=resource_id)
 
-    def get_user_document_by_id(self, user_id, username, password, type='User'):
+    def get_user_document_by_id(self, user_id, username, type='User'):
         """
         Gets a user document from the DB by it's ID.
 
         Args:
             user_id (str): user ID.
             username (str): user name.
-            password (str): user password.
             type (str): resource type in this case (a user).
 
         Returns:
@@ -80,7 +79,7 @@ class DatabaseOperations(object):
         if user_document:
             return user_document
         else:
-            raise UserNotFoundError(type=type, id=f"username: {username}, password: {password}")
+            raise UserNotFoundError(type=type, id=f"username: {username}")
 
     def get_docker_document(self, amazon_resource_id, docker_resource_id, type="Container"):
         """
@@ -115,7 +114,7 @@ class DatabaseOperations(object):
         amazon_document = self.get_amazon_document(resource_id=amazon_resource_id)
         return amazon_document[f"{type}s"]
 
-    def get_all_amazon_documents(self):
+    def get_all_documents(self):
         """
         Gets all documents from the DB of a specific collection.
 

@@ -55,7 +55,7 @@ class DockerServerServiceImplementation(DockerServerService):
         Returns:
             list(dict): docker server documents in case there are, empty list otherwise
         """
-        return self.database.get_all_amazon_documents()
+        return self.database.get_all_documents()
 
     @validate_json_request("ImageId", "InstanceType")
     def create_docker_server(self, docker_server_json):

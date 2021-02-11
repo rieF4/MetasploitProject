@@ -132,10 +132,10 @@ class DuplicateUserNameError(ApiException):
         super().__init__(error_msg=err_msg, error_code=error_code)
 
 
-class UserOrPasswordAreInvalid(ApiException):
+class PasswordIsInvalidError(ApiException):
 
-    def __init__(self, username, password, error_code=HttpCodes.BAD_REQUEST):
-        err_msg = f"username {username} or/and password {password} is invalid"
+    def __init__(self, password, error_code=HttpCodes.BAD_REQUEST):
+        err_msg = f"password {password} is in valid! please try again!"
         super().__init__(error_msg=err_msg, error_code=error_code)
 
 

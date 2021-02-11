@@ -8,7 +8,17 @@ from metasploit.api.errors import BadEmailError, BadFirstNameOrLastName, BadPass
 
 class User(object):
 
-    def __init__(self, is_new_user=False, first_name=None, last_name=None, email=None, username=None, password=None, _id=None):
+    def __init__(
+            self,
+            is_new_user=False,
+            is_hashing_password_required=False,
+            first_name=None,
+            last_name=None,
+            email=None,
+            username=None,
+            password=None,
+            _id=None
+    ):
         """
         Args:
             first_name (str):
@@ -29,7 +39,9 @@ class User(object):
         self._email = email
         self._username = username
         self._password = password
-        self._hashed_password = hashlib.sha256(password.encode('utf-8')).hexdigest()
+        self._hashed_password = hashlib.sha256(
+            password.encode('utf-8')
+        ).hexdigest() if is_hashing_password_required else password
         self._id = hashlib.sha256(f"{username}".encode('utf-8')).hexdigest() if not _id else _id
 
     @property
@@ -60,11 +72,8 @@ class User(object):
     def hashed_password(self):
         return self._hashed_password
 
-    def compare(self, user_to_compare):
-        return self._username == user_to_compare.user_name and self._hashed_password == user_to_compare.hashed_password
-
     def are_passwords_matched(self, password):
-        return self._hashed_password == hashlib.sha256(bytes(password)).hexdigest()
+        return self._hashed_password == password
 
     def client_response(self, response_type='User'):
         return create_new_response(obj=self, response_type=response_type)

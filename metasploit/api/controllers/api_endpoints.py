@@ -54,8 +54,11 @@ class UserController(ControllerApi):
     def post(self, *args, **kwargs):
         return self._create_user_endpoint()
 
-    def get(self, username, password):
-        return self._get_specific_user_endpoint(username=username, password=password)
+    def get(self, username=None, password=None):
+        if username and password:
+            return self._get_specific_user_endpoint(username=username, password=password)
+        else:
+            return self._get_all_users_endpoint()
 
     @response_decorator(HttpCodes.OK)
     def _create_user_endpoint(self):
@@ -75,7 +78,12 @@ class UserController(ControllerApi):
         Returns:
             Response: a flask response.
         """
-        return ServiceWrapper(class_type=self._user_service_implementation, is_new_user=True, **request.json).create()
+        return ServiceWrapper(
+            class_type=self._user_service_implementation,
+            is_new_user=True,
+            is_hashing_password_required=True,
+            **request.json
+        ).create()
 
     @response_decorator(HttpCodes.OK)
     def _get_specific_user_endpoint(self, username, password):
@@ -90,8 +98,21 @@ class UserController(ControllerApi):
             Response: a flask response.
         """
         return ServiceWrapper(
-            class_type=self._user_service_implementation, username=username, password=password
+            class_type=self._user_service_implementation,
+            is_hashing_password_required=True,
+            username=username,
+            password=password
         ).get_one()
+
+    @response_decorator(HttpCodes.OK)
+    def _get_all_users_endpoint(self):
+        """
+        Gets all the available users endpoint.
+
+        Returns:
+            Response: a flask response.
+        """
+        return ServiceWrapper(class_type=self._user_service_implementation).get_all()
 
 
 class InstancesController(ControllerApi):

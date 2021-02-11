@@ -263,3 +263,11 @@ class FlaskAppWrapper(object):
             methods=[HttpMethods.GET],
             resource_class_kwargs=user_controller_kwargs,
         )
+
+        self._api.add_resource(
+            UserController,
+            '/Users/Get',
+            endpoint='/Users/Get',
+            methods=[HttpMethods.GET],
+            resource_class_kwargs=user_controller_kwargs,
+        )

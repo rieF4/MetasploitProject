@@ -80,7 +80,7 @@ def update_containers_status(func):
     def wrapper(self, **kwargs):
         database = self.database
 
-        instance_documents = database.get_all_amazon_documents()
+        instance_documents = database.get_all_documents()
 
         for document in instance_documents:
             docker_server_instance = DockerServerInstanceOperations(instance_id=document[global_const.ID]).docker_server

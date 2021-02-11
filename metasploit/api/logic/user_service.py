@@ -3,6 +3,7 @@ from metasploit.api.logic.services import UserService
 from metasploit.api.database import DatabaseOperations, DatabaseCollections
 
 from metasploit.api.user.user import User
+from metasploit.api.errors import PasswordIsInvalidError
 
 
 class UserServiceImplementation(UserService):
@@ -14,9 +15,9 @@ class UserServiceImplementation(UserService):
     """
     type = "User"
 
-    def __init__(self, is_new_user=False, **kwargs):
+    def __init__(self, **kwargs):
         self.database = DatabaseOperations(collection_type=DatabaseCollections.USERS)
-        self.user = User(is_new_user=is_new_user, **kwargs)
+        self.user = User(**kwargs)
 
     def create(self):
         return self.create_user()
@@ -35,19 +36,35 @@ class UserServiceImplementation(UserService):
             dict: a user client response in case found.
 
         Raises:
-            UserNotFoundError: in case the user was not found in the DB.
+            PasswordIsInvalidError: in case the password is not correct.
         """
-        return User(
-            **self.database.get_user_document_by_id(
-                user_id=self.user.id, username=self.user.username, password=self.user.password)
-        ).client_response()
+        existing_user = User(**self.database.get_user_document_by_id(user_id=self.user.id, username=self.user.username))
+
+        if existing_user.are_passwords_matched(password=self.user.hashed_password):
+            return existing_user.client_response()
+        else:
+            raise PasswordIsInvalidError(password=self.user.password)
 
     def get_all_users(self):
-        pass
+        """
+        Gets all the existing users.
+
+        Returns:
+            list[dict]: a list of all available users.
+        """
+        users_response = []
+        all_available_users = self.database.get_all_documents()
+
+        for user in all_available_users:
+            users_response.append(User(**user).client_response())
+        return users_response
 
     def create_user(self):
         """
-        Returns a new created user response.
+        Creates a user in the DB and returns the new created user document.
+
+        Returns:
+            dict: a new user document.
         """
         self.database.insert_user_document(new_user_document=self.user.document())
         new_user_response = self.user.client_response()
