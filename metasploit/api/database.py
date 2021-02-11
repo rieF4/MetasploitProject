@@ -18,6 +18,7 @@ metasploit_db = db_client['Metasploit']
 class DatabaseCollections:
     INSTANCES = metasploit_db['instances']
     SECURITY_GROUPS = metasploit_db['securityGroups']
+    USERS = metasploit_db['users']
 
 
 class DatabaseOperations(object):
@@ -263,6 +264,25 @@ class DatabaseOperations(object):
             self.collection_type.insert_one(document=new_amazon_document)
         except Exception as error:
             raise InsertDatabaseError(document=new_amazon_document, error_msg=str(error))
+
+    def insert_user_document(self, new_user_document):
+        """
+        Inserts a user document into the DB.
+
+        Args:
+            new_user_document (dict): a new user document.
+
+        Returns:
+            str: the user ID that was allocated.
+
+        Raises:
+            InsertDatabaseError: in case insertion to the DB fails.
+        """
+        try:
+            new_user = self.collection_type.insert_one(document=new_user_document)
+            return str(new_user.inserted_id)
+        except Exception as error:
+            raise InsertDatabaseError(document=new_user_document, error_msg=str(error))
 
     def delete_amazon_document(self, resource_id, type):
         """

@@ -112,3 +112,21 @@ def create_new_response(obj, response_type='Instance'):
             "_id": obj.id,
             "tags": obj.tags
         }
+    elif response_type == 'User':
+        return {
+            "_id": obj.id,
+            "firstName": obj.first_name,
+            "lastName": obj.last_name,
+            "email": obj.email
+        }
+
+
+def fill_user_document(user):
+
+    return {
+        "email": user.email,
+        "firstName": user.first_name,
+        "lastName": user.last_name,
+        "userName": user.username,
+        "password": user.hashed_password,
+    }

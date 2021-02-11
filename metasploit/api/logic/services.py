@@ -57,3 +57,13 @@ class MetasploitService(Service):
         pass
 
 
+class UserService(Service):
+
+    def create_user(self):
+        pass
+
+    def get_user(self, user_id, username, password):
+        pass
+
+    def get_all_users(self):
+        pass

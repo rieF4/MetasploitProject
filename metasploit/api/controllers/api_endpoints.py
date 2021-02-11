@@ -40,6 +40,41 @@ class ControllerApi(Resource):
         pass
 
 
+class UserController(ControllerApi):
+    """
+    User service controller.
+
+    Attributes:
+        _user_service_implementation: a class which implements the service of the user service.
+    """
+
+    def __init__(self, user_service_implementation):
+        self._user_service_implementation = user_service_implementation
+
+    def post(self, *args, **kwargs):
+        return self._create_user_endpoint()
+
+    @response_decorator(HttpCodes.OK)
+    def _create_user_endpoint(self):
+        """
+        Creates a new user endpoint.
+
+        Example of a body request:
+
+        {
+            "first_name": "Guy",
+            "last_name": "Afik",
+            "username": "Great",
+            "password": "123456789", # must be more than 8 characters
+            "email": "guyafik423468@gmail.com"
+        }
+
+        Returns:
+            Response: a flask response.
+        """
+        return ServiceWrapper(class_type=self._user_service_implementation, **request.json).create()
+
+
 class InstancesController(ControllerApi):
     """
     Docker server controller.

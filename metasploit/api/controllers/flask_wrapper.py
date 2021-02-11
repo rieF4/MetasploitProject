@@ -8,7 +8,8 @@ from metasploit.api.response import (
 from .api_endpoints import (
     InstancesController,
     ContainersController,
-    MetasploitController
+    MetasploitController,
+    UserController
 )
 from metasploit.api.utils.helpers import (
     HttpMethods
@@ -16,6 +17,7 @@ from metasploit.api.utils.helpers import (
 from metasploit.api.logic.docker_server_service import DockerServerServiceImplementation
 from metasploit.api.logic.container_service import ContainerServiceImplementation
 from metasploit.api.logic.metasploit_service import MetasploitServiceImplementation
+from metasploit.api.logic.user_service import UserServiceImplementation
 
 
 class FlaskAppWrapper(object):
@@ -120,6 +122,7 @@ class FlaskAppWrapper(object):
         self._add_container_endpoints()
         self._add_docker_instance_endpoints()
         self._add_metasploit_endpoints()
+        self._add_user_endpoints()
 
     def _add_docker_instance_endpoints(self):
         """
@@ -235,4 +238,20 @@ class FlaskAppWrapper(object):
             endpoint='/DockerServerInstances/<instance_id>/Metasploit/<payload_name>/PayloadInfo',
             methods=[HttpMethods.GET],
             resource_class_kwargs=metasploit_controller_kwargs,
+        )
+
+    def _add_user_endpoints(self):
+        """
+        Add all endpoints that are related to user operations.
+        """
+        user_controller_kwargs = {
+            'user_service_implementation': UserServiceImplementation
+        }
+
+        self._api.add_resource(
+            UserController,
+            '/Users/Create',
+            endpoint='/Users/Create',
+            methods=[HttpMethods.POST],
+            resource_class_kwargs=user_controller_kwargs,
         )

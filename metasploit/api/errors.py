@@ -121,6 +121,38 @@ class DockerResourceNotFoundError(ResourceNotFoundError):
     pass
 
 
+class UserNotFoundError(ResourceNotFoundError):
+    pass
+
+
+class UserOrPasswordAreInvalid(ApiException):
+
+    def __init__(self, username, password, error_code=HttpCodes.BAD_REQUEST):
+        err_msg = f"username {username} or/and password {password} is invalid"
+        super().__init__(error_msg=err_msg, error_code=error_code)
+
+
+class BadEmailError(ApiException):
+
+    def __init__(self, email, error_code=HttpCodes.BAD_REQUEST):
+        err_msg = f"email {email} is invalid, please fill a correct email form"
+        super().__init__(error_msg=err_msg, error_code=error_code)
+
+
+class BadFirstNameOrLastName(ApiException):
+
+    def __init__(self, first_name, last_name, error_code=HttpCodes.BAD_REQUEST):
+        err_msg = f"first name {first_name} or/and last name {last_name} must contain alphabetic characters only!"
+        super().__init__(error_msg=err_msg, error_code=error_code)
+
+
+class BadPasswordLength(ApiException):
+
+    def __init__(self, password, error_code=HttpCodes.BAD_REQUEST):
+        err_msg = f"password {password} is less than 8 characters"
+        super().__init__(error_msg=err_msg, error_code=error_code)
+
+
 class DuplicateDockerResourceError(ApiException):
     """
     This class represents an exception for a resource that already exists in the DB.
