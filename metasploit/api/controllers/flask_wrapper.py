@@ -109,11 +109,11 @@ class FlaskAppWrapper(object):
         """
         return self._api
 
-    def run(self):
+    def run(self, host='0.0.0.0', debug=None):
         """
         Run flask app.
         """
-        self.app.run(debug=True)
+        self.app.run(host=host, debug=debug)
 
     def add_all_endpoints(self):
         """
