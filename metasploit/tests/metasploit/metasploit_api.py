@@ -72,7 +72,7 @@ def metasploit_api(test_client):
 
             return execute_rest_api_func(url=get_exploit_url, api_func=test_client.get)
 
-        def get_payload(self, instance_id, payload_name, get_payload_url=config.GET_EXPLOIT_URL):
+        def get_payload(self, instance_id, payload_name, get_payload_url=config.GET_PAYLOAD_URL):
             """
             Sends a GET request in order to get payload information from metasploit.
 

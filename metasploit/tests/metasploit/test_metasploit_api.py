@@ -23,7 +23,7 @@ from ..containers.containers_api import container_api  # noqa: F401
 
 from . import config
 from .metasploit_api import metasploit_api  # noqa: F401
-from .helpers import is_exploit_name_response_valid
+from .helpers import is_exploit_name_response_valid, is_payload_name_response_valid
 
 
 logger = logging.getLogger("MetasploitTests")
@@ -179,7 +179,7 @@ class TestGetExploitApi(object):
             ),
             pytest.param(
                 config.VALID_EXPLOIT_NAME_2,
-                id="get_exploit_details_of_a_aix_exploit/"
+                id="get_exploit_details_of_a_aix_exploit"
             ),
             pytest.param(
                 config.VALID_EXPLOIT_NAME_3,
@@ -207,4 +207,85 @@ class TestGetExploitApi(object):
             assert is_expected_code(actual_code=actual_status_code), (
                 f"actual {actual_status_code}, expected {HttpCodes.OK}"
             )
+
+
+@pytest.mark.usefixtures(
+    create_containers.__name__
+)
+class TestGetPayloadApi(object):
+
+    @pytest.mark.parametrize(
+        "invalid_payload_name",
+        [
+            pytest.param(
+                config.INVALID_PAYLOAD_NAME_1,
+                id="get_payload_of_invalid_payload_with_dots"
+            ),
+            pytest.param(
+                config.INVALID_PAYLOAD_NAME_2,
+                id="get_payload_of_invalid_payload_with_/"
+            ),
+            pytest.param(
+                config.INVALID_PAYLOAD_NAME_3,
+                id="get_payload_of_invalid_payload_name_that_does_not_exist"
+            )
+        ]
+    )
+    def test_get_invalid_payload_name(self, invalid_payload_name, docker_server_ids, metasploit_api):
+        """
+        Tests scenarios where trying to get invalid payload names should fail.
+        """
+        for docker_server_id in docker_server_ids:
+
+            response_body, actual_status_code = metasploit_api.get_payload(
+                instance_id=docker_server_id, payload_name=invalid_payload_name
+            )
+
+            logger.info(f"Verify get payload of {invalid_payload_name} on instance {docker_server_id} failed")
+            assert is_error_response_valid(error_response=response_body, code=HttpCodes.BAD_REQUEST), (
+                f"Failed to verify that {response_body} is an ERROR"
+            )
+
+            logger.info(f"Verify the status code is {HttpCodes.BAD_REQUEST}")
+            assert is_expected_code(actual_code=actual_status_code, expected_code=HttpCodes.BAD_REQUEST), (
+                f"actual {actual_status_code}, expected {HttpCodes.BAD_REQUEST}"
+            )
+
+    @pytest.mark.parametrize(
+        "payload_name",
+        [
+            pytest.param(
+                config.VALID_PAYLOAD_NAME_1,
+                id="get_payload_details_of_a_windows_payload"
+            ),
+            pytest.param(
+                config.VALID_PAYLOAD_NAME_2,
+                id="get_payload_details_of_a_unix_payload"
+            ),
+            pytest.param(
+                config.VALID_PAYLOAD_NAME_3,
+                id="get_payload_details_of_a_generic_payload"
+            )
+        ]
+    )
+    def test_get_payload_name_success(self, payload_name, docker_server_ids, metasploit_api):
+        """
+        Tests scenarios where trying to get a valid payload names should succeed.
+        """
+        for docker_server_id in docker_server_ids:
+            logger.info(f"Get payload {payload_name} in instance {docker_server_id}")
+            response_body, actual_status_code = metasploit_api.get_payload(
+                instance_id=docker_server_id, payload_name=payload_name
+            )
+
+            logger.info(f"Verify get payload of {payload_name} on instance {docker_server_id} succeeded")
+            assert is_payload_name_response_valid(payload_details_response_body=response_body), (
+                f"Payload details response {response_body} is not valid"
+            )
+
+            logger.info(f"Verify the status code is {HttpCodes.OK}")
+            assert is_expected_code(actual_code=actual_status_code), (
+                f"actual {actual_status_code}, expected {HttpCodes.OK}"
+            )
+
 

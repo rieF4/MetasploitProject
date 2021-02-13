@@ -23,4 +23,11 @@ VALID_EXPLOIT_NAME_1 = 'windows wins ms04_045_wins'
 VALID_EXPLOIT_NAME_2 = 'aix rpc_cmsd_opcode21'
 VALID_EXPLOIT_NAME_3 = 'unix ftp vsftpd_234_backdoor'
 
+INVALID_PAYLOAD_NAME_1 = "cmd.unix.interact"
+INVALID_PAYLOAD_NAME_2 = "cmd/unix/interact"
+INVALID_PAYLOAD_NAME_3 = "cmd unix interactt"
+
+VALID_PAYLOAD_NAME_1 = "windows meterpreter reverse_tcp"
+VALID_PAYLOAD_NAME_2 = "cmd unix interact"
+VALID_PAYLOAD_NAME_3 = "generic shell_reverse_tcp"
 
