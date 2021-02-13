@@ -15,7 +15,7 @@ def metasploit_api(test_client):
     This fixture provides the MetasploitApi object in order to make API calls.
 
     Returns:
-        MetasploitApi: a docker server object.
+        MetasploitApi: a metasploit api object.
     """
     class MetasploitApi(MetasploitApiInterface):
 

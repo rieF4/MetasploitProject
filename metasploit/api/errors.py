@@ -208,7 +208,7 @@ class BadJsonInput(ApiException):
     def __init__(self, bad_inputs, error_code=HttpCodes.BAD_REQUEST):
         msg = ""
         for input in bad_inputs:
-            msg += f"Missing required parameter: {input}  "
+            msg += f"Missing required parameter: {input} "
         super().__init__(error_msg=msg, error_code=error_code)
 
 

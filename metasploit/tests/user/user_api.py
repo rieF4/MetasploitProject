@@ -14,10 +14,10 @@ logger = logging.getLogger("UserApi")
 @pytest.fixture(scope="class")
 def user_api(test_client):
     """
-    This fixture provides the MetasploitApi object in order to make API calls.
+    This fixture provides the UserApi object in order to make API calls.
 
     Returns:
-        MetasploitApi: a docker server object.
+        UserApi: a user API object.
     """
 
     class UserApi(BaseApiInterface):
@@ -85,5 +85,5 @@ def user_api(test_client):
             logger.info(f"Send DELETE request, URL: {delete_user_url}")
 
             return execute_rest_api_func(url=delete_user_url, api_func=self._test_client.delete)
-        
+
     return UserApi(test_client=test_client)
